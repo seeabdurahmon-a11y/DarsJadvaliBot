@@ -398,6 +398,87 @@ body {
   border-radius: var(--radius-full);
 }
 
+/* Current Lesson Live Hero Banner */
+.current-lesson-hero {
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%);
+  color: #ffffff;
+  padding: 16px 18px;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px -4px rgba(37, 99, 235, 0.45);
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: fadeIn 0.3s ease;
+}
+
+.current-lesson-hero.is-break {
+  background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #38bdf8 100%);
+  box-shadow: 0 8px 24px -4px rgba(2, 132, 199, 0.4);
+}
+
+.hero-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.live-pulse-dot {
+  width: 8px;
+  height: 8px;
+  background: #4ade80;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+  animation: livePulse 1.8s infinite;
+}
+
+@keyframes livePulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(74, 222, 128, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+}
+
+.hero-tag {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.hero-time {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hero-subject {
+  font-size: 19px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  opacity: 0.95;
+}
+
+.hero-room-pill {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+}
+
 /* Lesson Cards */
 .lessons-list {
   display: flex;
@@ -415,7 +496,7 @@ body {
   align-items: center;
   gap: 14px;
   position: relative;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .lesson-card:active {
@@ -433,6 +514,20 @@ body {
   background: var(--primary-light);
 }
 
+/* Hozirgi dars uchun ko'k ajratilgan stil (Blue Highlight) */
+.lesson-card.is-current {
+  border: 2px solid #2563eb;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.09) 0%, rgba(59, 130, 246, 0.03) 100%), var(--bg-card);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2), 0 8px 16px -2px rgba(37, 99, 235, 0.15);
+  transform: scale(1.01);
+}
+
+.lesson-card.is-current::before {
+  background: #2563eb;
+  width: 6px;
+  box-shadow: 0 0 10px #2563eb;
+}
+
 .lesson-index-badge {
   width: 32px;
   height: 32px;
@@ -445,6 +540,35 @@ body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.lesson-index-badge.is-current-badge {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+}
+
+.active-now-tag {
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.4px;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
+.next-up-tag {
+  background: var(--bg-subtle);
+  color: var(--primary);
+  border: 1px solid var(--primary-light);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
 }
 
 .lesson-body {

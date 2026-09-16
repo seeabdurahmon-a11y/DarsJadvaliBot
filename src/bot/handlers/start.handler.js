@@ -41,20 +41,26 @@ export function registerStartHandlers(bot) {
     }
   });
 
-  // /help buyrug'i
-  bot.command('help', async (ctx) => {
-    let helpText = `📖 <b>MAKTAB Bot Buyruqlari:</b>\n\n` +
-      `🔹 /start — Botni ishga tushirish va asosiy menyu\n` +
-      `🔹 /help — Yordam ma'lumotlari\n` +
-      `🔹 /darsjadvali — Guruhda bugungi dars jadvalini olish (1 daqiqada o'chadi)\n` +
-      `🔹 /schedule — Dars jadvalini ko'rish\n`;
+  // /cods, /codes, /commands, /cmds, /help buyruqlari
+  bot.command(['cods', 'codes', 'commands', 'cmds', 'buyruqlar', 'komandalar', 'help'], async (ctx) => {
+    let helpText = `⚡️ <b>MAKTAB BOT BARCHA BUYRUQLARI:</b>\n\n` +
+      `👤 <b>Asosiy buyruqlar:</b>\n` +
+      `🔹 <code>/start</code> — Botni ishga tushirish va asosiy menyu\n` +
+      `🔹 <code>/hozir</code> — Hozir qaysi dars ketayotganini ko‘rish\n` +
+      `🔹 <code>/darsjadvali</code> — Bugungi dars jadvalini olish\n` +
+      `🔹 <code>/schedule</code> — Dars jadvalini ko‘rish\n` +
+      `🔹 <code>/cods</code> — Barcha buyruqlar ro‘yxati\n\n` +
+      `👥 <b>Guruh buyruqlari (Sinf guruhlari uchun):</b>\n` +
+      `🔹 <code>/hozir</code> — Guruh sinfining hozirgi darsini ko‘rish\n` +
+      `🔹 <code>/darsjadvali</code> — Guruhning bugungi jadvalini olish\n` +
+      `🔹 <code>/resend</code> — Guruhga dars jadvalini qaytadan tashlash <i>(Admin)</i>\n` +
+      `🔹 <code>/setclass 11-D</code> — Guruhni sinfga biriktirish <i>(Admin)</i>\n` +
+      `🔹 <code>/settime 06:00</code> — Dars yuborish vaqtini belgilash <i>(Admin)</i>\n`;
 
     if (ctx.isAdmin) {
-      helpText += `\n👑 <b>Admin buyruqlari:</b>\n` +
-        `🔹 /admin — Boshqaruv panelini ochish\n` +
-        `🔹 /setclass 11-D — Guruhni aniq bir sinfga mahkamlash (qotirish)\n` +
-        `🔹 /settime 06:00 — Guruhning dars yuborish vaqtini belgilash\n` +
-        `🔹 /addgroup — Sinf guruhini botga ulash\n`;
+      helpText += `\n👑 <b>Tizim Admini buyruqlari:</b>\n` +
+        `🔹 <code>/admin</code> — Boshqaruv panelini ochish\n` +
+        `🔹 <code>/addgroup</code> — Yangi sinf guruhini ulash\n`;
     }
 
     await ctx.reply(helpText, { parse_mode: 'HTML' });

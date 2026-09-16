@@ -16,9 +16,11 @@ export function getUserMainMenuKeyboard() {
   }
 
   keyboard
-    .text('📅 Bugungi jadval').text('📆 Ertangi jadval')
+    .text('🔔 Hozirgi dars').text('📅 Bugungi jadval')
     .row()
-    .text('📚 Haftalik jadval').text('ℹ️ Bot haqida')
+    .text('📆 Ertangi jadval').text('📚 Haftalik jadval')
+    .row()
+    .text('ℹ️ Bot haqida')
     .resized();
 
   return keyboard;

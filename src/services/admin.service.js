@@ -85,22 +85,11 @@ export const adminService = {
         dateHeader: `Bugun: ${today.formattedDate}`,
         lessons: [],
         groupName: group.name
-      }) + '\n\n<i>⏳ Ushbu xabar 5 daqiqadan so‘ng avtomatik o‘chiriladi.</i>';
+      });
 
       try {
-        const sent = await bot.api.sendMessage(group.telegram_chat_id, message, { parse_mode: 'HTML' });
+        await bot.api.sendMessage(group.telegram_chat_id, message, { parse_mode: 'HTML' });
         settingsRepo.recordSentSchedule(group.id, today.dateStr);
-
-        // 5 daqiqadan keyin xabarni o'chirish
-        setTimeout(async () => {
-          try {
-            await bot.api.deleteMessage(group.telegram_chat_id, sent.message_id);
-            logger.info(`[AUTO DELETE] ${group.name} guruhidagi dars jadvali xabari 5 daqiqadan so'ng o'chirildi.`);
-          } catch (delErr) {
-            // silent catch
-          }
-        }, 5 * 60 * 1000);
-
         return { success: true, count: 0 };
       } catch (err) {
         logger.error(`[SCHEDULER] Guruhga (${group.name}) xabar yuborishda xatolik:`, err);
@@ -113,29 +102,15 @@ export const adminService = {
       dateHeader: `Bugun: ${today.formattedDate}`,
       lessons,
       groupName: group.name
-    }) + '\n\n<i>⏳ Ushbu xabar 5 daqiqadan so‘ng avtomatik o‘chiriladi.</i>';
+    });
 
     try {
       const chunks = splitTelegramMessage(message, 3900);
-      const sentIds = [];
       for (const chunk of chunks) {
-        const sent = await bot.api.sendMessage(group.telegram_chat_id, chunk, { parse_mode: 'HTML' });
-        sentIds.push(sent.message_id);
+        await bot.api.sendMessage(group.telegram_chat_id, chunk, { parse_mode: 'HTML' });
       }
       settingsRepo.recordSentSchedule(group.id, today.dateStr);
       logger.info(`[SCHEDULER] Guruhga (${group.name}) ${lessons.length} ta dars jadvali muvaffaqiyatli yuborildi.`);
-
-      // 5 daqiqadan keyin xabarni o'chirish (300 000 ms)
-      setTimeout(async () => {
-        for (const msgId of sentIds) {
-          try {
-            await bot.api.deleteMessage(group.telegram_chat_id, msgId);
-          } catch (delErr) {
-            // silent catch if already deleted or permissions missing
-          }
-        }
-        logger.info(`[AUTO DELETE] ${group.name} guruhidagi dars jadvali xabari 5 daqiqadan so'ng o'chirildi.`);
-      }, 5 * 60 * 1000);
 
       return { success: true, count: lessons.length };
     } catch (err) {

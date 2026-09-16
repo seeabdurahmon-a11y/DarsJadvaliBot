@@ -1,6 +1,7 @@
 import { InlineKeyboard } from 'grammy';
 import { groupsRepo } from '../../database/groups.repo.js';
 import { scheduleService } from '../../services/schedule.service.js';
+import { adminService } from '../../services/admin.service.js';
 import { isValidTimeFormat } from '../../utils/date.util.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../utils/logger.js';
@@ -44,8 +45,7 @@ export function registerGroupHandlers(bot) {
           `🏫 <b>Ushbu guruh qaysi sinfga tegishli?</b>\n` +
           `Quyidagi ro‘yxatdan sinfingizni tanlang (yoki <code>/setclass 11-D</code> deb yozing):\n\n` +
           `⏰ <b>Avtomatik dars yuborish:</b> Har kuni ertalab soat <b>${group.send_time}</b> da\n` +
-          `⏳ <b>Avtomatik o‘chirish:</b> 5 daqiqadan so‘ng\n` +
-          `📖 <b>Bugungi darslarni ko‘rish:</b> <code>/darsjadvali</code>`,
+          `📖 <b>Bugungi darslarni ko‘rish:</b> <code>/darsjadvali</code> yoki <code>/resend</code> (qaytadan tashlash)`,
           { parse_mode: 'HTML', reply_markup: keyboard }
         );
       }
@@ -73,9 +73,8 @@ export function registerGroupHandlers(bot) {
           `✅ <b>GURUH MUVAFFAQIYATLI BIRIKTIRILDI!</b>\n\n` +
           `🏫 <b>Mahkamlangan sinf:</b> <b>${boundClass.name}</b>\n` +
           `🆔 <b>Guruh Chat ID:</b> <code>${ctx.chat.id}</code>\n` +
-          `⏰ <b>Avtomatik yuborish vaqti:</b> Har kuni soat <b>${boundClass.send_time}</b> da\n` +
-          `⏳ <b>Avtomatik o‘chirish:</b> 5 daqiqadan so‘ng\n\n` +
-          `📖 <i>Bugungi dars jadvalini olish uchun:</i> <code>/darsjadvali</code> (1 daqiqada o‘chadi)`,
+          `⏰ <b>Avtomatik yuborish vaqti:</b> Har kuni soat <b>${boundClass.send_time}</b> da\n\n` +
+          `📖 <i>Dars jadvalini olish uchun:</i> <code>/darsjadvali</code> yoki <code>/resend</code>`,
           { parse_mode: 'HTML' }
         );
       }
@@ -117,9 +116,8 @@ export function registerGroupHandlers(bot) {
         `✅ <b>GURUH MUVAFFAQIYATLI BIRIKTIRILDI!</b>\n\n` +
         `🏫 <b>Mahkamlangan sinf:</b> <b>${boundClass.name}</b>\n` +
         `🆔 <b>Guruh Chat ID:</b> <code>${ctx.chat.id}</code>\n` +
-        `⏰ <b>Avtomatik yuborish vaqti:</b> Har kuni soat <b>${boundClass.send_time}</b> da\n` +
-        `⏳ <b>Avtomatik o‘chirish:</b> 5 daqiqadan so‘ng\n\n` +
-        `📖 <i>Istalgan vaqtda bugungi dars jadvalini olish uchun:</i> <code>/darsjadvali</code> deb yozing (xabar 1 daqiqadan so‘ng avtomatik o‘chiriladi).`,
+        `⏰ <b>Avtomatik yuborish vaqti:</b> Har kuni soat <b>${boundClass.send_time}</b> da\n\n` +
+        `📖 <i>Dars jadvalini olish yoki qaytadan tashlash:</i> <code>/darsjadvali</code> yoki <code>/resend</code>`,
         { parse_mode: 'HTML' }
       );
     }
@@ -154,12 +152,49 @@ export function registerGroupHandlers(bot) {
 
     await ctx.reply(
       `✅ <b>Yuborish vaqti muvaffaqiyatli o'zgartirildi!</b>\n\n` +
-      `⏰ Endi har kuni soat <b>${text}</b> da dars jadvali guruhga avtomatik yuboriladi va 5 daqiqadan so‘ng o‘chiriladi.`,
+      `⏰ Endi har kuni soat <b>${text}</b> da dars jadvali guruhga avtomatik yuboriladi.`,
       { parse_mode: 'HTML' }
     );
   });
 
-  // /darsjadvali, /jadval, /schedule buyruqlari guruh ichida (1 daqiqadan keyin o'chadi)
+  // /resend, /send, /sendjadval, /tashlash, /qaytadan buyruqlari (Guruhga dars jadvalini qaytadan yuborish)
+  bot.command(['resend', 'send', 'sendjadval', 'tashlash', 'qaytadan', 'post'], async (ctx) => {
+    if (ctx.chat.type === 'private') {
+      return ctx.reply('ℹ️ Ushbu buyruq orqali guruhga dars jadvalini qaytadan yuborish uchun guruh ichida yozing: <code>/resend</code>', { parse_mode: 'HTML' });
+    }
+
+    const allowed = await canManageGroup(ctx);
+    if (!allowed) {
+      return ctx.reply('⛔ Faqat guruh adminlari dars jadvalini qaytadan yuborishi mumkin. Istalgan a\'zo esa <code>/darsjadvali</code> deb yozishi mumkin.');
+    }
+
+    const group = groupsRepo.getGroupByChatId(ctx.chat.id);
+
+    // Agar guruh hali biror sinfga biriktirilmagan bo'lsa
+    if (!group) {
+      const classes = groupsRepo.getAllGroups(true);
+      const keyboard = new InlineKeyboard();
+      classes.forEach((c, index) => {
+        keyboard.text(c.name, `bind_class_${c.id}`);
+        if ((index + 1) % 4 === 0) keyboard.row();
+      });
+
+      return ctx.reply(
+        `⚠️ <b>Ushbu guruh hali biror sinfga biriktirilmagan!</b>\n\n` +
+        `Iltimos, dars jadvalini yuborish uchun quyidagi ro‘yxatdan sinfni tanlang yoki <code>/setclass 11-D</code> deb yozing:`,
+        { parse_mode: 'HTML', reply_markup: keyboard }
+      );
+    }
+
+    const res = await adminService.sendTodayScheduleToGroup(bot, group, { force: true });
+    if (res.success) {
+      logger.info(`[MANUAL RESEND] ${ctx.from?.id} tomonidan ${group.name} guruhiga dars jadvali qaytadan tashlandi.`);
+    } else {
+      await ctx.reply(`⚠️ Dars jadvalini yuborishda xatolik yuz berdi: ${res.error || 'Noma\'lum xatolik'}`);
+    }
+  });
+
+  // /darsjadvali, /jadval, /schedule, /today buyruqlari guruh ichida
   bot.command(['darsjadvali', 'jadval', 'schedule', 'today'], async (ctx) => {
     const group = groupsRepo.getGroupByChatId(ctx.chat.id);
 
@@ -172,36 +207,39 @@ export function registerGroupHandlers(bot) {
         if ((index + 1) % 4 === 0) keyboard.row();
       });
 
-      const promptMsg = await ctx.reply(
+      return ctx.reply(
         `⚠️ <b>Ushbu guruh hali biror sinfga biriktirilmagan!</b>\n\n` +
         `Iltimos, dars jadvalini olish uchun quyidagi ro‘yxatdan sinfni tanlang yoki <code>/setclass 11-D</code> deb yozing:`,
         { parse_mode: 'HTML', reply_markup: keyboard }
       );
-
-      setTimeout(async () => {
-        try {
-          await ctx.api.deleteMessage(ctx.chat.id, promptMsg.message_id);
-        } catch (e) {}
-      }, 60 * 1000);
-      return;
     }
 
     const { formattedText } = scheduleService.getTodaySchedule(group.id);
-    const message = formattedText + '\n\n<i>⏳ Ushbu xabar 1 daqiqadan so‘ng avtomatik o‘chiriladi.</i>';
+    await ctx.reply(formattedText, { parse_mode: 'HTML' });
+  });
 
-    const sent = await ctx.reply(message, { parse_mode: 'HTML' });
+  // /hozir, /now, /current, /hozirgidars buyruqlari guruh ichida
+  bot.command(['hozir', 'now', 'current', 'hozirgidars'], async (ctx) => {
+    const group = groupsRepo.getGroupByChatId(ctx.chat.id);
 
-    // 1 daqiqadan keyin xabarni o'chirish (60 000 ms)
-    setTimeout(async () => {
-      try {
-        await ctx.api.deleteMessage(ctx.chat.id, sent.message_id);
-      } catch (e) {}
-      if (ctx.message?.message_id) {
-        try {
-          await ctx.api.deleteMessage(ctx.chat.id, ctx.message.message_id);
-        } catch (e) {}
-      }
-    }, 60 * 1000);
+    // Agar guruh hali biror sinfga biriktirilmagan bo'lsa
+    if (!group) {
+      const classes = groupsRepo.getAllGroups(true);
+      const keyboard = new InlineKeyboard();
+      classes.forEach((c, index) => {
+        keyboard.text(c.name, `bind_class_${c.id}`);
+        if ((index + 1) % 4 === 0) keyboard.row();
+      });
+
+      return ctx.reply(
+        `⚠️ <b>Ushbu guruh hali biror sinfga biriktirilmagan!</b>\n\n` +
+        `Iltimos, hozirgi darsni ko‘rish uchun quyidagi ro‘yxatdan sinfni tanlang yoki <code>/setclass 11-D</code> deb yozing:`,
+        { parse_mode: 'HTML', reply_markup: keyboard }
+      );
+    }
+
+    const { formattedText } = scheduleService.getCurrentLesson(group.id);
+    await ctx.reply(formattedText, { parse_mode: 'HTML' });
   });
 }
 

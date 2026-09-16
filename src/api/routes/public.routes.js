@@ -144,6 +144,22 @@ publicRouter.get('/schedule/today', (req, res) => {
 });
 
 /**
+ * GET /api/schedule/current (Hozirgi dars)
+ */
+publicRouter.get('/schedule/current', (req, res) => {
+  try {
+    const classId = req.query.classId ? parseInt(req.query.classId, 10) : null;
+    const current = scheduleService.getCurrentLesson(classId);
+    res.json({
+      success: true,
+      data: current
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * GET /api/schedule/tomorrow
  */
 publicRouter.get('/schedule/tomorrow', (req, res) => {

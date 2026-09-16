@@ -47,17 +47,87 @@ export const ScheduleView = {
       const info = mode === 'today' ? scheduleData.today : scheduleData.tomorrow;
       const lessons = scheduleData.lessons || [];
 
+      // Hozirgi darsni va tanaffusni aniqlash (faqat bugun uchun)
+      let currentLesson = null;
+      let nextLesson = null;
+      let pastLessons = [];
+      let nowTimeStr = null;
+
+      if (mode === 'today') {
+        try {
+          const now = new Date();
+          nowTimeStr = new Intl.DateTimeFormat('uz-UZ', {
+            timeZone: 'Asia/Tashkent',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          }).format(now);
+
+          lessons.forEach(l => {
+            if (l.start_time && l.end_time) {
+              if (nowTimeStr >= l.start_time && nowTimeStr <= l.end_time) {
+                currentLesson = l;
+              } else if (nowTimeStr < l.start_time && !nextLesson) {
+                nextLesson = l;
+              } else if (nowTimeStr > l.end_time) {
+                pastLessons.push(l);
+              }
+            }
+          });
+        } catch (e) {
+          console.warn('Time format error:', e);
+        }
+      }
+
       let html = `
         <div class="schedule-info-banner">
           <div>
             <div class="schedule-date-title">${mode === 'today' ? '📅 BUGUN' : '📆 ERTAGA'}</div>
-            <div style="font-size:12px;color:var(--text-muted);font-weight:600;">${info.formattedDate || ''}</div>
+            <div style="font-size:12px;color:var(--text-muted);font-weight:600;">${info.formattedDate || ''} ${nowTimeStr ? `• 🕐 ${nowTimeStr}` : ''}</div>
           </div>
           <div class="schedule-class-name" onclick="window.App.openClassModal()" style="cursor:pointer;" title="Sinfni o'zgartirish">
             🏫 ${scheduleData.formattedText ? (scheduleData.groupName || 'Sinf') : 'Sinf'} ▾
           </div>
         </div>
       `;
+
+      // Hozirgi dars holati banneri (ko'k banner)
+      if (mode === 'today' && lessons.length > 0) {
+        if (currentLesson) {
+          const emoji = this.getEmoji(currentLesson.subject);
+          html += `
+            <div class="current-lesson-hero">
+              <div class="hero-top-row">
+                <span class="live-pulse-dot"></span>
+                <span class="hero-tag">HOZIRGI DARS</span>
+                <span class="hero-time">⏰ ${currentLesson.start_time} — ${currentLesson.end_time}</span>
+              </div>
+              <div class="hero-subject">${emoji} ${currentLesson.subject}</div>
+              <div class="hero-meta">
+                ${currentLesson.teacher ? `<span>👨‍🏫 ${currentLesson.teacher}</span>` : ''}
+                ${currentLesson.room ? `<span class="hero-room-pill">🏫 ${currentLesson.room}-xona</span>` : ''}
+                ${nextLesson ? `<span style="margin-left:auto;opacity:0.9;">➡️ Keyingi: ${nextLesson.subject} (${nextLesson.start_time})</span>` : '<span style="margin-left:auto;opacity:0.9;">🏁 Oxirgi dars</span>'}
+              </div>
+            </div>
+          `;
+        } else if (pastLessons.length > 0 && nextLesson) {
+          const nextEmoji = this.getEmoji(nextLesson.subject);
+          html += `
+            <div class="current-lesson-hero is-break">
+              <div class="hero-top-row">
+                <span class="hero-tag">☕ HOZIR TANAFFUS</span>
+                <span class="hero-time">🕐 ${nowTimeStr}</span>
+              </div>
+              <div class="hero-subject">Keyingi dars: ${nextEmoji} ${nextLesson.subject}</div>
+              <div class="hero-meta">
+                <span>⏰ Boshlanishi: ${nextLesson.start_time} — ${nextLesson.end_time}</span>
+                ${nextLesson.teacher ? `<span>👨‍🏫 ${nextLesson.teacher}</span>` : ''}
+                ${nextLesson.room ? `<span class="hero-room-pill">🏫 ${nextLesson.room}-xona</span>` : ''}
+              </div>
+            </div>
+          `;
+        }
+      }
 
       if (lessons.length === 0) {
         html += `
@@ -71,13 +141,18 @@ export const ScheduleView = {
         html += `<div class="lessons-list">`;
         lessons.forEach((lesson, index) => {
           const emoji = this.getEmoji(lesson.subject);
+          const isThisCurrent = currentLesson && lesson.id === currentLesson.id;
+          const isNext = !currentLesson && nextLesson && lesson.id === nextLesson.id;
+
           html += `
-            <div class="lesson-card">
-              <div class="lesson-index-badge">${index + 1}</div>
+            <div class="lesson-card ${isThisCurrent ? 'is-current' : ''} ${isNext ? 'is-next' : ''}">
+              <div class="lesson-index-badge ${isThisCurrent ? 'is-current-badge' : ''}">${index + 1}</div>
               <div class="lesson-body">
                 <div class="lesson-time-wrap">
                   <span>⏰</span>
                   <span>${lesson.start_time} — ${lesson.end_time}</span>
+                  ${isThisCurrent ? '<span class="active-now-tag">🔵 HOZIRGI DARS</span>' : ''}
+                  ${isNext ? '<span class="next-up-tag">⏳ KEYINGI DARS</span>' : ''}
                 </div>
                 <div class="lesson-subject-name">
                   <span>${emoji}</span>

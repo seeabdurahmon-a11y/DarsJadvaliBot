@@ -56,6 +56,10 @@ export const Api = {
     const query = classId ? `?classId=${classId}` : '';
     return this.request(`/schedule/today${query}`);
   },
+  getCurrentLesson(classId = null) {
+    const query = classId ? `?classId=${classId}` : '';
+    return this.request(`/schedule/current${query}`);
+  },
   getTomorrowSchedule(classId = null) {
     const query = classId ? `?classId=${classId}` : '';
     return this.request(`/schedule/tomorrow${query}`);
