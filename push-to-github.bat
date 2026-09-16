@@ -1,6 +1,6 @@
 @echo off
 title GitHub ga yuklash (git push)
-cd /d "D:\madad-talim"
+cd /d "%~dp0"
 echo ====================================================
 echo    GitHub ga loyihani yuklash boshlanmoqda...
 echo ====================================================

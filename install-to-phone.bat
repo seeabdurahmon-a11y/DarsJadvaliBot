@@ -6,7 +6,7 @@ echo ====================================================
 echo.
 
 set ADB=C:\Users\Pro\AppData\Local\Android\Sdk\platform-tools\adb.exe
-set APK=D:\madad-talim\maktab-dars-jadvali.apk
+set APK=%~dp0maktab-dars-jadvali.apk
 
 echo Qurilmalar tekshirilmoqda...
 "%ADB%" devices

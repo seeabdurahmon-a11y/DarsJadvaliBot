@@ -54,7 +54,8 @@ $targetName = if ($download) { "Download (Загрузки) papkasi" } else { "T
 
 Write-Host "Fayl nusxalanmoqda: $targetName ga..."
 
-$apkFile = "D:\madad-talim\maktab-dars-jadvali.apk"
+$projectDir = (Get-Item "$PSScriptRoot\..").FullName
+$apkFile = Join-Path $projectDir "maktab-dars-jadvali.apk"
 if (-not (Test-Path $apkFile)) {
     Write-Host "APK fayl topilmadi: $apkFile"
     exit 1

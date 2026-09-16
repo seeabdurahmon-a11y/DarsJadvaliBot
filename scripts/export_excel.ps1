@@ -50,6 +50,7 @@ try {
   [System.GC]::WaitForPendingFinalizers()
 }
 
-$outputPath = "d:\madad-talim\data\excel_dump.json"
+$projectDir = (Get-Item "$PSScriptRoot\..").FullName
+$outputPath = Join-Path $projectDir "data\excel_dump.json"
 $allData | ConvertTo-Json -Depth 5 | Out-File -FilePath $outputPath -Encoding utf8
 Write-Output "Exported to $outputPath successfully!"
