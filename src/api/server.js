@@ -21,8 +21,8 @@ export function createWebServer(botInstance = null) {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Telegram Webhook Handler (Vercel yoki Serverless uchun)
-  if (botInstance) {
+  // Telegram Webhook Handler (Faqat Vercel yoki Serverless Webhook rejimida)
+  if (botInstance && (process.env.VERCEL || process.env.USE_WEBHOOK === 'true')) {
     const botHandler = webhookCallback(botInstance, 'express');
     app.use('/api/bot', botHandler);
     app.use('/api/webhook', botHandler);
