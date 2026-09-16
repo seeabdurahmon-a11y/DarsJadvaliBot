@@ -10,7 +10,7 @@ RUN apk add --no-cache python3 make g++ sqlite
 COPY package*.json ./
 
 # Paketlarni o'rnatish
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # Kodlarni nusxalash
 COPY . .
