@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="uz" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Maktab Dars Jadvali — Telegram Mini App</title>
+
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Sticky Top Header -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="school-badge">🏫</div>
+      <div class="brand-info">
+        <h1>MAKTAB</h1>
+        <p>Dars Jadvali</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button class="class-selector-btn" id="header-class-pill" onclick="window.App.openClassModal()">
+        🏫 Sinf tanlang ▾
+      </button>
+      <button class="theme-toggle-btn" onclick="window.App.toggleTheme()" title="Rejimni almashtirish">
+        🌓
+      </button>
+    </div>
+  </header>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Main Views Container -->
+  <main class="app-container">
+
+    <!-- VIEW 1: HOME (Bosh Sahifa) -->
+    <section class="view-section active" id="view-home">
+      <div class="welcome-card">
+        <div class="welcome-title" id="home-greeting">Assalomu alaykum!</div>
+        <div class="welcome-subtitle">Bugungi dars jadvalingizni va haftalik darslarni qulay ko‘ring.</div>
+        <div class="welcome-class-badge" id="home-current-class-badge" onclick="window.App.openClassModal()" style="cursor:pointer;">
+          🏫 Sinf tanlanmagan
+        </div>
+      </div>
+
+      <div class="quick-nav-grid">
+        <div class="quick-card" onclick="window.App.navigate('schedule'); window.ScheduleView.renderDaily(document.getElementById('daily-schedule-container'), window.App.currentClassId, 'today');">
+          <div class="quick-card-icon icon-blue">📅</div>
+          <div class="quick-card-title">Bugungi jadval</div>
+          <div class="quick-card-desc">Bugungi kun darslari</div>
+        </div>
+
+        <div class="quick-card" onclick="window.App.navigate('schedule'); window.ScheduleView.renderDaily(document.getElementById('daily-schedule-container'), window.App.currentClassId, 'tomorrow');">
+          <div class="quick-card-icon icon-indigo">📆</div>
+          <div class="quick-card-title">Ertangi jadval</div>
+          <div class="quick-card-desc">Ertaga bo‘ladigan darslar</div>
+        </div>
+
+        <div class="quick-card" onclick="window.App.navigate('week')">
+          <div class="quick-card-icon icon-teal">📚</div>
+          <div class="quick-card-title">Haftalik jadval</div>
+          <div class="quick-card-desc">Dush — Shanba jadvali</div>
+        </div>
+
+        <div class="quick-card" onclick="window.App.openClassModal()">
+          <div class="quick-card-icon icon-amber">🏫</div>
+          <div class="quick-card-title">Sinfni tanlash</div>
+          <div class="quick-card-desc">O‘z sinfingizni belgilang</div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">🔍 Qo‘shimcha imkoniyatlar</div>
+      </div>
+
+      <div class="quick-card" style="width:100%;margin-bottom:12px;" onclick="window.App.navigate('teacher')">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="quick-card-icon icon-indigo">👨‍🏫</div>
+          <div>
+            <div class="quick-card-title">O‘qituvchi jadvali</div>
+            <div class="quick-card-desc">Ustozlarning kunlik va haftalik darslari</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: DAILY SCHEDULE (Bugun & Ertaga) -->
+    <section class="view-section" id="view-schedule">
+      <div class="tab-pills">
+        <button class="tab-pill active" id="pill-tab-today" onclick="document.querySelectorAll('#view-schedule .tab-pill').forEach(p=>p.classList.remove('active')); this.classList.add('active'); window.ScheduleView.renderDaily(document.getElementById('daily-schedule-container'), window.App.currentClassId, 'today');">
+          📅 Bugun
+        </button>
+        <button class="tab-pill" id="pill-tab-tomorrow" onclick="document.querySelectorAll('#view-schedule .tab-pill').forEach(p=>p.classList.remove('active')); this.classList.add('active'); window.ScheduleView.renderDaily(document.getElementById('daily-schedule-container'), window.App.currentClassId, 'tomorrow');">
+          📆 Ertaga
+        </button>
+      </div>
+
+      <div id="daily-schedule-container"></div>
+    </section>
+
+    <!-- VIEW 3: WEEKLY SCHEDULE (Haftalik) -->
+    <section class="view-section" id="view-week">
+      <div id="week-view-container"></div>
+    </section>
+
+    <!-- VIEW 4: TEACHER SCHEDULE -->
+    <section class="view-section" id="view-teacher">
+      <div id="teacher-view-container"></div>
+    </section>
+
+    <!-- VIEW 5: PROFILE & SETTINGS -->
+    <section class="view-section" id="view-profile">
+      <div class="profile-card">
+        <div class="profile-avatar-wrap">👤</div>
+        <div class="profile-name" id="profile-name">Foydalanuvchi</div>
+        <div class="profile-username" id="profile-username">@username</div>
+
+        <div class="profile-class-setting">
+          <div style="text-align:left;">
+            <div style="font-size:11px;color:var(--text-muted);font-weight:700;">MENING SINFIM:</div>
+            <div style="font-size:14px;font-weight:800;color:var(--primary);" id="profile-class-text">7-A sinf</div>
+          </div>
+          <button class="class-selector-btn" onclick="window.App.openClassModal()">Sinfni o‘zgartirish</button>
+        </div>
+
+        <div class="profile-class-setting">
+          <div style="text-align:left;">
+            <div style="font-size:11px;color:var(--text-muted);font-weight:700;">ILOVA MAVZUSI:</div>
+            <div style="font-size:13px;font-weight:600;">Dark / Light rejim</div>
+          </div>
+          <button class="btn-icon-action" onclick="window.App.toggleTheme()">🌓 Almashtirish</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 6: ADMIN PANEL (Conditional) -->
+    <section class="view-section" id="view-admin">
+      <div id="admin-view-container"></div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Mobile Navigation Bar -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-view="home" onclick="window.App.navigate('home')">
+      <span class="nav-icon">🏠</span>
+      <span>Asosiy</span>
+    </button>
+    <button class="nav-item" data-view="schedule" onclick="window.App.navigate('schedule')">
+      <span class="nav-icon">📅</span>
+      <span>Jadval</span>
+    </button>
+    <button class="nav-item" data-view="week" onclick="window.App.navigate('week')">
+      <span class="nav-icon">📚</span>
+      <span>Hafta</span>
+    </button>
+    <button class="nav-item" data-view="teacher" onclick="window.App.navigate('teacher')">
+      <span class="nav-icon">👨‍🏫</span>
+      <span>Ustoz</span>
+    </button>
+    <button class="nav-item" data-view="profile" onclick="window.App.navigate('profile')">
+      <span class="nav-icon">⚙️</span>
+      <span>Profil</span>
+    </button>
+    <button class="nav-item" id="nav-admin-btn" data-view="admin" style="display:none;" onclick="window.App.navigate('admin')">
+      <span class="nav-icon">👑</span>
+      <span>Admin</span>
+    </button>
+  </nav>
+
+  <!-- Modal: Class Selector Bottom Sheet -->
+  <div class="modal-overlay" id="class-select-modal" onclick="if(event.target===this) window.App.closeModal();">
+    <div class="bottom-sheet">
+      <div class="sheet-header">
+        <div class="sheet-title">🏫 Sinfingizni tanlang</div>
+        <button class="sheet-close-btn" onclick="window.App.closeModal()">✕</button>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
+        Sinfingizni tanlang. Ushbu tanlov eslab qolinadi va keyingi safar darslar avtomatik ko‘rinadi.
+      </p>
+      <div class="class-grid" id="modal-class-grid"></div>
+    </div>
+  </div>
+
+  <!-- Generic Custom Modal -->
+  <div class="modal-overlay" id="custom-app-modal" onclick="if(event.target===this) window.App.closeModal();">
+    <div class="bottom-sheet">
+      <div class="sheet-header">
+        <div class="sheet-title" id="custom-modal-title">Sarlavha</div>
+        <button class="sheet-close-btn" onclick="window.App.closeModal()">✕</button>
+      </div>
+      <div id="custom-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Application Entry Point -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,367 @@
+import { Api } from './api.js';
+
+export const ScheduleView = {
+  activeDayTab: 'today', // 'today' | 'tomorrow'
+  activeWeekDay: 1, // 1=Dush..6=Shanba
+
+  getEmoji(subject) {
+    if (!subject) return '📚';
+    const s = subject.toLowerCase();
+    if (s.includes('matematika') || s.includes('algebra') || s.includes('geometriya')) return '📐';
+    if (s.includes('ona tili') || s.includes('o‘zbek') || s.includes('adabiyot')) return '📚';
+    if (s.includes('fizika')) return '⚡';
+    if (s.includes('kimyo')) return '🧪';
+    if (s.includes('biologiya') || s.includes('tabiat')) return '🧬';
+    if (s.includes('tarix')) return '🏛';
+    if (s.includes('geografiya')) return '🌍';
+    if (s.includes('ingliz')) return '🇬🇧';
+    if (s.includes('rus')) return '🇷🇺';
+    if (s.includes('informatika') || s.includes('it')) return '💻';
+    if (s.includes('jismoniy') || s.includes('sport')) return '⚽';
+    if (s.includes('musiqa')) return '🎵';
+    if (s.includes('rasm') || s.includes('san\'at')) return '🎨';
+    return '📖';
+  },
+
+  async renderDaily(container, currentClassId, mode = 'today') {
+    this.activeDayTab = mode;
+    container.innerHTML = `<div class="state-box"><div class="skeleton" style="height:120px;margin-bottom:12px;"></div><div class="skeleton" style="height:60px;"></div></div>`;
+
+    try {
+      if (!currentClassId) {
+        container.innerHTML = `
+          <div class="state-box">
+            <div class="state-icon">🏫</div>
+            <div class="state-title">Hali sinf tanlanmagan</div>
+            <div class="state-desc">Dars jadvalini ko‘rish uchun yuqoridagi "Sinfni tanlash" tugmasini bosing.</div>
+            <button class="class-selector-btn" onclick="window.App.openClassModal()">🏫 Sinfni tanlash</button>
+          </div>
+        `;
+        return;
+      }
+
+      const scheduleData = mode === 'today'
+        ? await Api.getTodaySchedule(currentClassId)
+        : await Api.getTomorrowSchedule(currentClassId);
+
+      const info = mode === 'today' ? scheduleData.today : scheduleData.tomorrow;
+      const lessons = scheduleData.lessons || [];
+
+      let html = `
+        <div class="schedule-info-banner">
+          <div>
+            <div class="schedule-date-title">${mode === 'today' ? '📅 BUGUN' : '📆 ERTAGA'}</div>
+            <div style="font-size:12px;color:var(--text-muted);font-weight:600;">${info.formattedDate || ''}</div>
+          </div>
+          <div class="schedule-class-name" onclick="window.App.openClassModal()" style="cursor:pointer;" title="Sinfni o'zgartirish">
+            🏫 ${scheduleData.formattedText ? (scheduleData.groupName || 'Sinf') : 'Sinf'} ▾
+          </div>
+        </div>
+      `;
+
+      if (lessons.length === 0) {
+        html += `
+          <div class="state-box">
+            <div class="state-icon">📭</div>
+            <div class="state-title">${mode === 'today' ? 'Bugun' : 'Ertaga'} darslar mavjud emas</div>
+            <div class="state-desc">Ushbu kunga jadval kiritilmagan yoki dam olish kuni.</div>
+          </div>
+        `;
+      } else {
+        html += `<div class="lessons-list">`;
+        lessons.forEach((lesson, index) => {
+          const emoji = this.getEmoji(lesson.subject);
+          html += `
+            <div class="lesson-card">
+              <div class="lesson-index-badge">${index + 1}</div>
+              <div class="lesson-body">
+                <div class="lesson-time-wrap">
+                  <span>⏰</span>
+                  <span>${lesson.start_time} — ${lesson.end_time}</span>
+                </div>
+                <div class="lesson-subject-name">
+                  <span>${emoji}</span>
+                  <span>${lesson.subject}</span>
+                </div>
+                <div class="lesson-meta-row">
+                  ${lesson.teacher ? `
+                    <div class="lesson-meta-item">
+                      <span>👨‍🏫</span>
+                      <span>${lesson.teacher}</span>
+                    </div>
+                  ` : ''}
+                  ${lesson.room ? `
+                    <div class="lesson-meta-item">
+                      <span class="lesson-room-pill">🏫 ${lesson.room}-xona</span>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        html += `</div>`;
+      }
+
+      container.innerHTML = html;
+    } catch (err) {
+      container.innerHTML = `
+        <div class="state-box">
+          <div class="state-icon">⚠️</div>
+          <div class="state-title">Jadvalni yuklashda xatolik</div>
+          <div class="state-desc">${err.message}</div>
+          <button class="class-selector-btn" onclick="window.App.refreshCurrentView()">🔄 Qayta urinish</button>
+        </div>
+      `;
+    }
+  },
+
+  async renderWeek(container, currentClassId) {
+    container.innerHTML = `<div class="state-box"><div class="skeleton" style="height:160px;"></div></div>`;
+
+    try {
+      if (!currentClassId) {
+        container.innerHTML = `
+          <div class="state-box">
+            <div class="state-icon">🏫</div>
+            <div class="state-title">Hali sinf tanlanmagan</div>
+            <div class="state-desc">Haftalik jadvalni ko‘rish uchun sinfingizni tanlang.</div>
+            <button class="class-selector-btn" onclick="window.App.openClassModal()">🏫 Sinfni tanlash</button>
+          </div>
+        `;
+        return;
+      }
+
+      const weekData = await Api.getWeekSchedule(currentClassId);
+      const days = weekData.days || [];
+
+      let html = `
+        <div class="section-header">
+          <div class="section-title">📚 Haftalik Dars Jadvali</div>
+        </div>
+        <div class="tab-pills" id="week-day-pills">
+      `;
+
+      days.forEach(d => {
+        const activeClass = d.dayOfWeek === this.activeWeekDay ? 'active' : '';
+        html += `
+          <button class="tab-pill ${activeClass}" onclick="window.ScheduleView.selectWeekDay(${d.dayOfWeek})">
+            ${d.dayName} (${d.lessons.length})
+          </button>
+        `;
+      });
+
+      html += `</div><div id="week-day-content">`;
+
+      const selectedDay = days.find(d => d.dayOfWeek === this.activeWeekDay) || days[0];
+      if (selectedDay) {
+        html += this.renderDayLessonsHtml(selectedDay);
+      }
+
+      html += `</div>`;
+      container.innerHTML = html;
+    } catch (err) {
+      container.innerHTML = `
+        <div class="state-box">
+          <div class="state-icon">⚠️</div>
+          <div class="state-title">Haftalik jadvalni yuklashda xatolik</div>
+          <div class="state-desc">${err.message}</div>
+          <button class="class-selector-btn" onclick="window.App.refreshCurrentView()">🔄 Qayta urinish</button>
+        </div>
+      `;
+    }
+  },
+
+  selectWeekDay(dayOfWeek) {
+    this.activeWeekDay = dayOfWeek;
+    const pills = document.querySelectorAll('#week-day-pills .tab-pill');
+    pills.forEach((p, idx) => {
+      p.classList.toggle('active', idx + 1 === dayOfWeek);
+    });
+
+    const contentDiv = document.getElementById('week-day-content');
+    if (contentDiv && window.App?.currentClassId) {
+      this.renderWeek(document.getElementById('week-view-container'), window.App.currentClassId);
+    }
+  },
+
+  renderDayLessonsHtml(dayObj) {
+    if (!dayObj.lessons || dayObj.lessons.length === 0) {
+      return `
+        <div class="state-box">
+          <div class="state-icon">📭</div>
+          <div class="state-title">${dayObj.dayName} kunida darslar yo‘q</div>
+          <div class="state-desc">Ushbu kunga dars jadvali kiritilmagan.</div>
+        </div>
+      `;
+    }
+
+    let html = `<div class="lessons-list">`;
+    dayObj.lessons.forEach((lesson, index) => {
+      const emoji = this.getEmoji(lesson.subject);
+      html += `
+        <div class="lesson-card">
+          <div class="lesson-index-badge">${index + 1}</div>
+          <div class="lesson-body">
+            <div class="lesson-time-wrap">
+              <span>⏰</span>
+              <span>${lesson.start_time} — ${lesson.end_time}</span>
+            </div>
+            <div class="lesson-subject-name">
+              <span>${emoji}</span>
+              <span>${lesson.subject}</span>
+            </div>
+            <div class="lesson-meta-row">
+              ${lesson.teacher ? `
+                <div class="lesson-meta-item">
+                  <span>👨‍🏫</span>
+                  <span>${lesson.teacher}</span>
+                </div>
+              ` : ''}
+              ${lesson.room ? `
+                <div class="lesson-meta-item">
+                  <span class="lesson-room-pill">🏫 ${lesson.room}-xona</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    html += `</div>`;
+    return html;
+  },
+
+  async renderTeacherSchedule(container) {
+    container.innerHTML = `<div class="state-box"><div class="skeleton" style="height:120px;"></div></div>`;
+
+    try {
+      const teachers = await Api.getTeachers();
+
+      if (teachers.length === 0) {
+        container.innerHTML = `
+          <div class="state-box">
+            <div class="state-icon">👨‍🏫</div>
+            <div class="state-title">O‘qituvchilar mavjud emas</div>
+            <div class="state-desc">Tizimga hali o‘qituvchilar ro‘yxati kiritilmagan.</div>
+          </div>
+        `;
+        return;
+      }
+
+      let html = `
+        <div class="section-header">
+          <div class="section-title">👨‍🏫 O‘qituvchi Dars Jadvali</div>
+        </div>
+        <div class="teacher-select-box">
+          <select class="custom-select" id="teacher-picker-select" onchange="window.ScheduleView.onTeacherSelected(this.value)">
+            <option value="">-- O‘qituvchini tanlang --</option>
+            ${teachers.map(t => `<option value="${t.id}">${t.last_name} ${t.first_name} (${t.subject || 'O‘qituvchi'})</option>`).join('')}
+          </select>
+        </div>
+        <div id="teacher-schedule-results">
+          <div class="state-box">
+            <div class="state-icon">🔍</div>
+            <div class="state-title">O‘qituvchini tanlang</div>
+            <div class="state-desc">Yuqoridagi ro‘yxatdan o‘qituvchini tanlab, uning dars jadvalini ko‘ring.</div>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    } catch (err) {
+      container.innerHTML = `
+        <div class="state-box">
+          <div class="state-icon">⚠️</div>
+          <div class="state-title">Xatolik yuz berdi</div>
+          <div class="state-desc">${err.message}</div>
+        </div>
+      `;
+    }
+  },
+
+  async onTeacherSelected(teacherId) {
+    const resultsContainer = document.getElementById('teacher-schedule-results');
+    if (!resultsContainer) return;
+
+    if (!teacherId) {
+      resultsContainer.innerHTML = `
+        <div class="state-box">
+          <div class="state-icon">🔍</div>
+          <div class="state-title">O‘qituvchini tanlang</div>
+          <div class="state-desc">Yuqoridagi ro‘yxatdan o‘qituvchini tanlab, uning dars jadvalini ko‘ring.</div>
+        </div>
+      `;
+      return;
+    }
+
+    resultsContainer.innerHTML = `<div class="state-box"><div class="skeleton" style="height:120px;"></div></div>`;
+
+    try {
+      const data = await Api.getTeacherSchedule(teacherId);
+      const teacher = data.teacher;
+      const week = data.week || [];
+
+      let html = `
+        <div class="teacher-card-badge">
+          <div class="teacher-avatar">${(teacher.first_name || 'U')[0]}</div>
+          <div class="teacher-info">
+            <h3>${teacher.last_name} ${teacher.first_name}</h3>
+            <p>📚 Fan: ${teacher.subject || 'Fan biriktirilmagan'}</p>
+            ${teacher.phone ? `<p>📞 ${teacher.phone}</p>` : ''}
+          </div>
+        </div>
+      `;
+
+      let totalLessons = 0;
+      week.forEach(day => {
+        if (day.lessons && day.lessons.length > 0) {
+          totalLessons += day.lessons.length;
+          html += `
+            <div class="week-day-group">
+              <div class="week-day-header">
+                <span>🗓 ${day.dayName}</span>
+                <span class="lesson-room-pill">${day.lessons.length} ta dars</span>
+              </div>
+              <div class="week-day-lessons">
+          `;
+
+          day.lessons.forEach(l => {
+            html += `
+              <div class="week-mini-lesson">
+                <div>
+                  <span class="time">${l.start_time}</span> — 
+                  <strong>${l.group_name || 'Sinf'}</strong> — 
+                  ${l.subject}
+                </div>
+                ${l.room ? `<span class="lesson-room-pill">xona: ${l.room}</span>` : ''}
+              </div>
+            `;
+          });
+
+          html += `</div></div>`;
+        }
+      });
+
+      if (totalLessons === 0) {
+        html += `
+          <div class="state-box">
+            <div class="state-icon">📭</div>
+            <div class="state-title">Darslar topilmadi</div>
+            <div class="state-desc">Ushbu o‘qituvchiga hozircha darslar biriktirilmagan.</div>
+          </div>
+        `;
+      }
+
+      resultsContainer.innerHTML = html;
+    } catch (err) {
+      resultsContainer.innerHTML = `
+        <div class="state-box">
+          <div class="state-icon">⚠️</div>
+          <div class="state-title">Xatolik</div>
+          <div class="state-desc">${err.message}</div>
+        </div>
+      `;
+    }
+  }
+};

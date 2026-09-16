@@ -1,0 +1,479 @@
+/* =========================================================
+   MADAD TA'LIM — 5-Stage Lesson Player & Quiz Engine
+   ========================================================= */
+
+.lesson-player-modal {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-app);
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition-normal);
+}
+
+.lesson-player-modal.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Player Navigation Topbar */
+.player-topbar {
+  height: 68px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  box-shadow: var(--shadow-xs);
+  z-index: 20;
+}
+
+.player-lesson-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.player-lesson-title {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+/* 5 Stage Stepper Indicator */
+.stage-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-muted);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+}
+
+.stage-step-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  transition: all var(--transition-fast);
+}
+
+.stage-step-btn.active {
+  background: var(--gradient-primary);
+  color: #ffffff;
+  box-shadow: 0 2px 8px var(--primary-glow);
+}
+
+.stage-step-btn.completed {
+  color: var(--success);
+  background: var(--success-light);
+}
+
+/* Player Body Viewport */
+.player-viewport {
+  flex: 1;
+  overflow-y: auto;
+  padding: 36px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-stage-content {
+  width: 100%;
+  max-width: 860px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Stage 1: Vocabulary Cards Grid */
+.vocab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.vocab-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+  position: relative;
+}
+
+.vocab-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-md);
+}
+
+.vocab-emoji {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.vocab-word {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--primary);
+  letter-spacing: -0.5px;
+}
+
+.vocab-phonetic {
+  font-size: 13px;
+  color: var(--text-subtle);
+  font-family: monospace;
+}
+
+.vocab-translation {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.vocab-example {
+  font-size: 13px;
+  color: var(--text-muted);
+  background: var(--bg-muted);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  width: 100%;
+  font-style: italic;
+}
+
+.audio-btn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: var(--radius-full);
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 13px;
+  transition: all var(--transition-fast);
+}
+
+.audio-btn-pill:hover {
+  background: var(--primary);
+  color: #fff;
+  transform: scale(1.05);
+}
+
+/* Stage 2: Pronunciation Wave & Repeat */
+.pronounce-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 40px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.pronounce-word-display {
+  font-size: 48px;
+  font-weight: 800;
+  color: var(--primary);
+  letter-spacing: -1px;
+}
+
+.audio-visualizer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 48px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.wave-bar {
+  width: 6px;
+  height: 14px;
+  background: var(--primary);
+  border-radius: 4px;
+  transition: height 0.1s ease;
+}
+
+.wave-bar.active {
+  animation: waveAnim 0.8s infinite ease-in-out alternate;
+}
+
+.wave-bar:nth-child(2) { animation-delay: 0.15s; }
+.wave-bar:nth-child(3) { animation-delay: 0.3s; }
+.wave-bar:nth-child(4) { animation-delay: 0.45s; }
+.wave-bar:nth-child(5) { animation-delay: 0.6s; }
+
+@keyframes waveAnim {
+  0% { height: 8px; }
+  100% { height: 44px; }
+}
+
+/* Stage 3: Yozish Mashqi (C _ T Spelling) */
+.spelling-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 36px;
+  box-shadow: var(--shadow-md);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.spelling-clue-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.spelling-letter-slots {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+
+.letter-slot {
+  width: 58px;
+  height: 64px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-strong);
+  background: var(--bg-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-main);
+  transition: all var(--transition-fast);
+}
+
+.letter-slot.filled-static {
+  background: var(--bg-surface);
+  border-color: var(--border-strong);
+}
+
+.letter-slot.blank-active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.letter-slot.correct {
+  border-color: var(--success);
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.letter-slot.wrong {
+  border-color: var(--danger);
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.spelling-input {
+  width: 100%;
+  max-width: 320px;
+  padding: 14px 20px;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--primary);
+  outline: none;
+  background: var(--bg-surface);
+  box-shadow: 0 4px 14px var(--primary-glow);
+}
+
+/* Stage 4: Active Recall Match Pairs */
+.match-game-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.match-tile {
+  background: var(--bg-surface);
+  border: 2px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.match-tile:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.match-tile.selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+  transform: scale(1.03);
+}
+
+.match-tile.matched {
+  border-color: var(--success);
+  background: var(--success-light);
+  color: var(--success);
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* Stage 5: Final Quiz */
+.quiz-container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 36px;
+  box-shadow: var(--shadow-lg);
+}
+
+.quiz-progress-bar {
+  height: 8px;
+  background: var(--bg-muted);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.quiz-progress-fill {
+  height: 100%;
+  background: var(--gradient-primary);
+  transition: width 0.3s ease;
+}
+
+.quiz-question-text {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 24px;
+  color: var(--text-main);
+}
+
+.quiz-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quiz-option-btn {
+  padding: 16px 20px;
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--border-subtle);
+  background: var(--bg-surface);
+  text-align: left;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: all var(--transition-fast);
+}
+
+.quiz-option-btn:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.quiz-option-btn.correct {
+  border-color: var(--success);
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.quiz-option-btn.wrong {
+  border-color: var(--danger);
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.option-letter {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--bg-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+/* Quiz Completion Modal */
+.quiz-result-card {
+  text-align: center;
+  padding: 30px;
+}
+
+.score-trophy {
+  font-size: 64px;
+  margin-bottom: 16px;
+  animation: bounceShort 1s infinite ease-in-out;
+}
+
+.score-badge-huge {
+  font-size: 40px;
+  font-weight: 900;
+  color: var(--primary);
+  letter-spacing: -1px;
+}
+
+.score-percent-badge {
+  display: inline-block;
+  font-size: 18px;
+  font-weight: 800;
+  padding: 6px 18px;
+  border-radius: var(--radius-full);
+  background: var(--success-light);
+  color: var(--success);
+  margin-top: 8px;
+}
+
+/* Player Footer */
+.player-footer {
+  height: 72px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+}

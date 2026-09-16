@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="uz" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MADAD TA'LIM — Ustozlar Platformasi</title>
+  <meta name="description" content="Ustozlar uchun AI va Internet asosidagi dars konstruktori, interaktiv topshiriqlar va zaif joylar tahlili platformasi">
+  
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/lesson-player.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="app-sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">🎓</div>
+        <div class="brand-info">
+          <h2>MADAD TA’LIM</h2>
+          <p>Ustozlar Dasturi</p>
+        </div>
+      </div>
+
+      <nav class="sidebar-menu">
+        <a href="javascript:void(0)" class="nav-item active" data-route="dashboard" onclick="window.AppRouter.navigate('dashboard')">
+          <span class="nav-icon">🏠</span>
+          <span>Bosh Sahifa</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-route="lessons" onclick="window.AppRouter.navigate('lessons')">
+          <span class="nav-icon">📚</span>
+          <span>Darslar</span>
+          <span class="nav-badge">4</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-route="groups" onclick="window.AppRouter.navigate('groups')">
+          <span class="nav-icon">👥</span>
+          <span>Guruhlar</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-route="ai-chat" onclick="window.AppRouter.navigate('ai-chat')">
+          <span class="nav-icon">🧠</span>
+          <span>AI Yordamchi</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-route="analytics" onclick="window.AppRouter.navigate('analytics')">
+          <span class="nav-icon">📊</span>
+          <span>Natijalar</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-route="new-lesson" onclick="window.AppRouter.navigate('new-lesson')">
+          <span class="nav-icon">➕</span>
+          <span>Yangi Dars</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" data-route="settings" onclick="window.AppRouter.navigate('settings')">
+          <span class="nav-icon">⚙</span>
+          <span>Sozlamalar</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="teacher-avatar">DK</div>
+        <div class="teacher-details">
+          <div class="teacher-name">Dilnoza Karimova</div>
+          <div class="teacher-role">Boshlang‘ich sinf ustozi</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="app-main">
+      <!-- Sticky Topbar -->
+      <header class="app-topbar">
+        <div class="topbar-left">
+          <div class="page-title-wrap">
+            <h1 id="topbar-title">Bosh Sahifa</h1>
+            <p id="topbar-subtitle">Ustoz boshqaruv markazi va bugungi darslar</p>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="topbar-search-input" placeholder="Dars yoki mavzuni izlash... (Enter)">
+          </div>
+
+          <button class="btn-icon" title="Mavzuni almashtirish" onclick="window.AppRouter.toggleTheme()">
+            🌓
+          </button>
+
+          <button class="btn btn-sm btn-primary" onclick="window.AppRouter.navigate('new-lesson')">
+            <span>⚡ Tezkor AI Dars</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Dynamic Content Render Target -->
+      <div class="content-body" id="main-content-area"></div>
+    </main>
+  </div>
+
+  <!-- ==========================================
+       5-Stage Interactive Lesson Player & Constructor Modal
+       ========================================== -->
+  <div class="lesson-player-modal" id="lesson-player-modal">
+    <div class="player-topbar">
+      <div class="player-lesson-info">
+        <button class="btn btn-sm btn-secondary" onclick="window.LessonPlayerModule.closePlayer()">
+          ✕ Chiqish
+        </button>
+        <div class="player-lesson-title" id="player-header-title">
+          🇬🇧 Animals (3-sinf)
+        </div>
+      </div>
+
+      <!-- 5 Stages Stepper Navigation -->
+      <div class="stage-stepper">
+        <button class="stage-step-btn active" id="step-btn-1" onclick="window.LessonPlayerModule.goToStage(1)">
+          <span>📖 1. Yangi mavzu</span>
+        </button>
+        <button class="stage-step-btn" id="step-btn-2" onclick="window.LessonPlayerModule.goToStage(2)">
+          <span>🔊 2. Talaffuz</span>
+        </button>
+        <button class="stage-step-btn" id="step-btn-3" onclick="window.LessonPlayerModule.goToStage(3)">
+          <span>✍️ 3. Yozish</span>
+        </button>
+        <button class="stage-step-btn" id="step-btn-4" onclick="window.LessonPlayerModule.goToStage(4)">
+          <span>🧠 4. Qaytarish</span>
+        </button>
+        <button class="stage-step-btn" id="step-btn-5" onclick="window.LessonPlayerModule.goToStage(5)">
+          <span>📝 5. Kunlik test</span>
+        </button>
+      </div>
+
+      <div>
+        <span class="badge badge-success">Ustoz & O‘quvchi rejimi</span>
+      </div>
+    </div>
+
+    <!-- Viewport for active stage -->
+    <div class="player-viewport" id="player-viewport-content"></div>
+  </div>
+
+  <!-- Generic Dialog Modal -->
+  <div class="modal-backdrop" id="generic-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="generic-modal-title">Modal Sarlavhasi</h3>
+        <button class="btn btn-sm btn-icon" onclick="window.AppRouter.closeGenericModal()">✕</button>
+      </div>
+      <div class="modal-body" id="generic-modal-body"></div>
+      <div class="modal-footer" id="generic-modal-footer"></div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- JavaScript Scripts -->
+  <script src="js/speech.js"></script>
+  <script src="js/data/initial-data.js"></script>
+  <script src="js/data/groups-data.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/modules/dashboard.js"></script>
+  <script src="js/modules/lesson-creator.js"></script>
+  <script src="js/modules/lesson-player.js"></script>
+  <script src="js/modules/groups.js"></script>
+  <script src="js/modules/analytics.js"></script>
+  <script src="js/modules/ai-assistant.js"></script>
+  <script src="js/modules/lessons-list.js"></script>
+  <script src="js/modules/settings.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
