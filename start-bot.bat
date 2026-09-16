@@ -1,6 +1,6 @@
 @echo off
 title @JadvaliBot 24/7 Supervisor
-cd /d "D:\madad-talim"
+cd /d "%~dp0"
 echo ===================================================
 echo     @JadvaliBot 24/7 Avtomatik Ishga Tushirish
 echo ===================================================

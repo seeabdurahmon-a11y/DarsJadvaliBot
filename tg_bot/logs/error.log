@@ -1,0 +1,13 @@
+[16/09/2026, 22:26:11] [ERROR] [BOT ERROR] Xatolik yuz berdi update_id=349412775: 
+GrammyError: Call to 'answerCallbackQuery' failed! (400: Bad Request: query is too old and response timeout expired or query ID is invalid)
+    at toGrammyError (D:\dars_jadvali\tg_bot\node_modules\grammy\out\core\error.js:47:12)
+    at ApiClient.callApi (D:\dars_jadvali\tg_bot\node_modules\grammy\out\core\client.js:101:48)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///D:/dars_jadvali/tg_bot/src/bot/handlers/schedule.handler.js:105:5
+    at async D:\dars_jadvali\tg_bot\node_modules\grammy\out\composer.js:578:13
+    at async D:\dars_jadvali\tg_bot\node_modules\grammy\out\composer.js:62:13
+    at async D:\dars_jadvali\tg_bot\node_modules\grammy\out\composer.js:578:13
+    at async D:\dars_jadvali\tg_bot\node_modules\grammy\out\composer.js:62:13
+    at async D:\dars_jadvali\tg_bot\node_modules\grammy\out\composer.js:578:13
+    at async D:\dars_jadvali\tg_bot\node_modules\grammy\out\composer.js:62:13 
+[16/09/2026, 22:26:11] [ERROR] [GRAMMY ERROR] Telegram API xatosi: Bad Request: query is too old and response timeout expired or query ID is invalid (code=400)  

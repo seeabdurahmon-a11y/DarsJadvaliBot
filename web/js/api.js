@@ -25,7 +25,14 @@ export const Api = {
         headers
       });
 
-      const data = await res.json();
+      let data;
+      const text = await res.text();
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        throw new Error(res.ok ? 'Noto‘g‘ri ma‘lumot formati' : `Server xatosi (${res.status})`);
+      }
+
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Server xatosi yuz berdi');
       }

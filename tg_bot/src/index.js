@@ -1,13 +1,12 @@
 import { config, validateConfig } from './config/index.js';
 import { getDatabase, closeDatabase } from './database/db.js';
 import { createBot } from './bot/bot.js';
-import { createWebServer } from './api/server.js';
 import { scheduler } from './scheduler/cron.scheduler.js';
 import { logger } from './utils/logger.js';
 
 let isShuttingDown = false;
 
-// Kutilmagan xatoliklar tufayli jarayon to'xtab qolishining oldini olish
+// Kutilmagan xatoliklar tufayli bot to'xtab qolishining oldini olish
 process.on('uncaughtException', (err) => {
   logger.error('[PROCESS UNCAUGHT EXCEPTION]', err);
 });
@@ -18,7 +17,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 async function main() {
   console.log('====================================================');
-  console.log('    MAKTAB — TELEGRAM BOT & MINI APP WEB SERVER     ');
+  console.log('       DARS JADVALI TELEGRAM BOTI (24/7 ACTIVE)     ');
   console.log('====================================================');
 
   const { isValid, errors } = validateConfig();
@@ -36,26 +35,19 @@ async function main() {
     // 2. Telegram botni yaratish
     const bot = createBot();
 
-    // 3. Web Server va Telegram Mini Appni ishga tushirish (Express)
-    const webServer = createWebServer(bot);
-    await webServer.start(config.PORT);
-
-    // 4. Telegram Web App Chat Menu Buttonni sozlash
+    // 3. Telegram Web App Chat Menu Buttonni sozlash (agar mavjud bo'lsa)
     await bot.setupMenuButton();
 
-    // 5. Avtomatik dars jadvalini yuboruvchi schedulerni ishga tushirish
+    // 4. Avtomatik dars jadvalini yuboruvchi schedulerni ishga tushirish
     scheduler.init(bot);
 
-    // 6. Graceful shutdown handler
+    // 5. Graceful shutdown handler
     const shutdown = async (signal) => {
       if (isShuttingDown) return;
       isShuttingDown = true;
 
-      logger.info(`[SHUTDOWN] Bot va Web Server to'xtatilmoqda (${signal})...`);
+      logger.info(`[SHUTDOWN] Bot to'xtatilmoqda (${signal})...`);
       scheduler.stop();
-      try {
-        await webServer.stop();
-      } catch (err) {}
       try {
         await bot.stop();
       } catch (err) {}
@@ -67,7 +59,7 @@ async function main() {
     process.on('SIGINT', () => shutdown('SIGINT'));
     process.on('SIGTERM', () => shutdown('SIGTERM'));
 
-    // 7. Bot pollingni bardoshli va avtomatik qayta ulanuvchi rejimda boshlash (24/7 Always Active)
+    // 6. Bot pollingni bardoshli va avtomatik qayta ulanuvchi rejimda boshlash (24/7 Always Active)
     try {
       await bot.api.deleteWebhook({ drop_pending_updates: false });
       logger.info('Telegram webhook tozalandi, Polling rejimida ulandi.');
@@ -78,7 +70,7 @@ async function main() {
     let retryCount = 0;
     while (!isShuttingDown) {
       try {
-        logger.info('🤖 Bot muvaffaqiyatli ishga tushirildi va xabarlarni kutmoqda...');
+        logger.info('🤖 DarsJadvaliBot ishga tushirildi va xabarlarni kutmoqda...');
         await bot.start({
           drop_pending_updates: false,
           onStart(botInfo) {
@@ -99,7 +91,7 @@ async function main() {
       }
     }
   } catch (error) {
-    logger.error('Tizimni ishga tushirishda jiddiy xatolik:', error);
+    logger.error('DarsJadvaliBotni ishga tushirishda jiddiy xatolik:', error);
     process.exit(1);
   }
 }

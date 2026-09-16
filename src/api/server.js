@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
 import fs from 'node:fs';
+import { webhookCallback } from 'grammy';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 import { telegramAuthMiddleware } from './middlewares/telegramAuth.js';
@@ -19,6 +20,102 @@ export function createWebServer(botInstance = null) {
   app.use(cors());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+
+  // Telegram Webhook Handler (Vercel yoki Serverless uchun)
+  if (botInstance) {
+    const botHandler = webhookCallback(botInstance, 'express');
+    app.use('/api/bot', botHandler);
+    app.use('/api/webhook', botHandler);
+  }
+
+  // Health check & System status endpoint
+  app.get('/api/health', async (req, res) => {
+    let webhookInfo = null;
+    let botUsername = null;
+    if (botInstance) {
+      try {
+        const me = await botInstance.api.getMe();
+        botUsername = me.username;
+        webhookInfo = await botInstance.api.getWebhookInfo();
+      } catch (e) {
+        webhookInfo = { error: e.message };
+      }
+    }
+    return res.json({
+      success: true,
+      status: 'online',
+      timestamp: new Date().toISOString(),
+      bot: {
+        configured: Boolean(botInstance),
+        username: botUsername,
+        webhook: webhookInfo
+      },
+      env: {
+        nodeEnv: process.env.NODE_ENV,
+        isVercel: Boolean(process.env.VERCEL),
+        tz: config.TZ
+      }
+    });
+  });
+
+  // Webhookni avtomatik ulash endpointi
+  app.get('/api/set-webhook', async (req, res) => {
+    if (!botInstance) {
+      return res.status(400).json({ success: false, error: 'Bot sozlanmagan (BOT_TOKEN yo‘q)' });
+    }
+    try {
+      const host = req.headers['x-forwarded-host'] || req.headers.host;
+      const proto = req.headers['x-forwarded-proto'] || 'https';
+      const webhookUrl = `${proto}://${host}/api/bot`;
+      await botInstance.api.setWebhook(webhookUrl);
+      const info = await botInstance.api.getWebhookInfo();
+      logger.info(`Webhook muvaffaqiyatli ulandi: ${webhookUrl}`);
+      return res.json({
+        success: true,
+        message: 'Telegram Webhook muvaffaqiyatli ulandi!',
+        webhookUrl,
+        info
+      });
+    } catch (err) {
+      logger.error('Webhook o‘rnatishda xatolik:', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Webhookni o'chirish endpointi (Polling rejimiga qaytish uchun)
+  app.get('/api/delete-webhook', async (req, res) => {
+    if (!botInstance) {
+      return res.status(400).json({ success: false, error: 'Bot sozlanmagan' });
+    }
+    try {
+      await botInstance.api.deleteWebhook();
+      return res.json({
+        success: true,
+        message: 'Telegram Webhook tozalandi! Endi Polling rejimida ishlash mumkin.'
+      });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Vercel Cron / Avtomatik dars jadvalini jo'natish endpointi
+  app.all('/api/cron', async (req, res) => {
+    if (!botInstance) {
+      return res.status(400).json({ success: false, error: 'Bot sozlanmagan' });
+    }
+    try {
+      const { scheduler } = await import('../scheduler/cron.scheduler.js');
+      await scheduler.checkAndSendSchedules(botInstance);
+      return res.json({
+        success: true,
+        message: 'Cron jadvali tekshirildi va yuborildi',
+        timestamp: new Date().toISOString()
+      });
+    } catch (cronErr) {
+      logger.error('Cron xatolik:', cronErr);
+      return res.status(500).json({ success: false, error: cronErr.message });
+    }
+  });
 
   // Telegram WebApp Authentication Middleware
   app.use(telegramAuthMiddleware);
