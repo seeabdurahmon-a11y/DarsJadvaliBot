@@ -5,6 +5,9 @@ import { AdminView } from './admin.js';
 
 export const App = {
   currentView: 'home', // 'home' | 'schedule' | 'week' | 'teacher' | 'profile' | 'admin'
+  currentSchoolId: 1,
+  currentSchoolCode: 'M-01',
+  currentSchoolName: '1-maktab',
   currentClassId: null,
   currentClassName: null,
   currentUser: null,
@@ -24,12 +27,27 @@ export const App = {
       this.currentUser = authData.user || TelegramApp.getUser();
       this.isAdmin = authData.isAdmin || false;
 
+      // School preference
+      if (authData.selectedSchoolCode) {
+        this.currentSchoolId = authData.selectedSchoolId;
+        this.currentSchoolCode = authData.selectedSchoolCode;
+        this.currentSchoolName = authData.selectedSchoolName;
+      } else {
+        const localCode = localStorage.getItem('maktab_selected_school_code');
+        const localName = localStorage.getItem('maktab_selected_school_name');
+        const localId = localStorage.getItem('maktab_selected_school_id');
+        if (localCode) {
+          this.currentSchoolCode = localCode;
+          this.currentSchoolName = localName || 'Maktab';
+          this.currentSchoolId = localId ? Number(localId) : 1;
+        }
+      }
+
       // Saved class preference
       if (authData.selectedGroupId) {
         this.currentClassId = authData.selectedGroupId;
         this.currentClassName = authData.selectedGroupName;
       } else {
-        // Local fallback
         const localClassId = localStorage.getItem('maktab_selected_class_id');
         const localClassName = localStorage.getItem('maktab_selected_class_name');
         if (localClassId) {
@@ -44,10 +62,10 @@ export const App = {
       console.warn('Auth init note:', err);
     }
 
-    // Default class if none selected: pick first active class
+    // Default class if none selected: pick first active class of this school
     if (!this.currentClassId) {
       try {
-        const classes = await Api.getClasses();
+        const classes = await Api.getClasses(this.currentSchoolCode);
         if (classes.length > 0) {
           this.currentClassId = classes[0].id;
           this.currentClassName = classes[0].name;
@@ -63,19 +81,25 @@ export const App = {
   updateHeaderClassPill() {
     const pill = document.getElementById('header-class-pill');
     if (pill) {
-      pill.innerHTML = `🏫 ${this.currentClassName || 'Sinf tanlang'} ▾`;
+      pill.innerHTML = `🏫 <b>${this.currentSchoolCode}</b> · ${this.currentClassName || 'Sinf'} ▾`;
     }
 
     const homeBadge = document.getElementById('home-current-class-badge');
     if (homeBadge) {
-      homeBadge.innerHTML = `🏫 ${this.currentClassName || 'Sinf tanlanmagan'}`;
+      homeBadge.innerHTML = `🏫 <b>${this.currentSchoolName}</b> (${this.currentSchoolCode}) — ${this.currentClassName || 'Sinf tanlanmagan'}`;
+    }
+
+    const schoolCodeCard = document.getElementById('home-school-code-pill');
+    if (schoolCodeCard) {
+      schoolCodeCard.innerText = `🔑 Maktab Kodi: ${this.currentSchoolCode}`;
     }
   },
 
   updateAdminNavVisibility() {
     const adminNavBtn = document.getElementById('nav-admin-btn');
     if (adminNavBtn) {
-      adminNavBtn.style.display = this.isAdmin ? 'flex' : 'none';
+      // Always show Admin tab so school admins / zavuchs can login with their code
+      adminNavBtn.style.display = 'flex';
     }
   },
 
@@ -147,10 +171,12 @@ export const App = {
     const nameEl = document.getElementById('profile-name');
     const userEl = document.getElementById('profile-username');
     const classEl = document.getElementById('profile-class-text');
+    const schoolEl = document.getElementById('profile-school-text');
 
     if (nameEl) nameEl.innerText = this.currentUser?.first_name || 'Foydalanuvchi';
     if (userEl) userEl.innerText = this.currentUser?.username ? `@${this.currentUser.username}` : (this.currentUser?.id ? `ID: ${this.currentUser.id}` : 'Telegram Mini App');
     if (classEl) classEl.innerText = this.currentClassName || 'Tanlanmagan';
+    if (schoolEl) schoolEl.innerText = `${this.currentSchoolName} (${this.currentSchoolCode})`;
   },
 
   // Modal Dialogs
@@ -165,9 +191,9 @@ export const App = {
     grid.innerHTML = `<div class="skeleton" style="height:80px;grid-column:1/-1;"></div>`;
 
     try {
-      const classes = await Api.getClasses();
+      const classes = await Api.getClasses(this.currentSchoolCode);
       if (classes.length === 0) {
-        grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);">Sinflar mavjud emas</div>`;
+        grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);">Ushbu maktabda sinflar mavjud emas</div>`;
         return;
       }
 
@@ -191,21 +217,92 @@ export const App = {
     this.currentClassId = classId;
     this.currentClassName = className;
 
-    // Save to localStorage
     localStorage.setItem('maktab_selected_class_id', String(classId));
     localStorage.setItem('maktab_selected_class_name', className);
 
-    // Save to API if user is authenticated
     try {
       await Api.saveUserPreference(classId, this.currentUser?.id);
-    } catch (e) {
-      // offline fallback
-    }
+    } catch (e) {}
 
     this.updateHeaderClassPill();
     this.closeModal();
     this.showToast(`Sinf tanlandi: ${className}`, 'success');
     this.renderCurrentView();
+  },
+
+  async openSchoolModal() {
+    TelegramApp.haptic('light');
+    const modal = document.getElementById('custom-app-modal');
+    if (!modal) return;
+
+    const bodyHtml = `
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:6px;">MAKTAB KODINI KIRITING:</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="school-code-input" class="form-input" placeholder="Masalan: M-01 yoki M-12" style="text-transform:uppercase;font-weight:800;font-size:16px;">
+          <button class="btn btn-primary" onclick="window.App.submitSchoolCode()">Ulanish</button>
+        </div>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin:16px 0 8px 0;">YOKI RO‘YXATDAN TANLANG:</div>
+      <div id="school-modal-list" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+        <div class="skeleton" style="height:50px;"></div>
+      </div>
+    `;
+
+    this.showCustomModal('🏫 Maktabni tanlash / Kod kiritish', bodyHtml);
+
+    try {
+      const schools = await Api.getSchools();
+      const listEl = document.getElementById('school-modal-list');
+      if (listEl) {
+        listEl.innerHTML = schools.map(s => `
+          <div style="padding:10px 12px;border-radius:8px;background:var(--bg-card);border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="window.App.selectSchool(${s.id}, '${s.code}', '${s.name}')">
+            <div>
+              <div style="font-weight:700;font-size:14px;">${s.name}</div>
+              <div style="font-size:11px;color:var(--text-muted);">${s.region || 'O‘zbekiston'} · ${s.groupsCount || 0} ta sinf</div>
+            </div>
+            <span class="badge" style="background:var(--primary);color:#fff;font-weight:800;font-size:12px;">${s.code}</span>
+          </div>
+        `).join('');
+      }
+    } catch (e) {}
+  },
+
+  async submitSchoolCode() {
+    const input = document.getElementById('school-code-input');
+    const code = input?.value?.trim();
+    if (!code) {
+      return this.showToast('Iltimos, maktab kodini kiriting', 'error');
+    }
+
+    try {
+      const school = await Api.getSchoolByCode(code);
+      if (school) {
+        this.selectSchool(school.id, school.code, school.name);
+      }
+    } catch (err) {
+      this.showToast(`"${code}" kodli maktab topilmadi`, 'error');
+    }
+  },
+
+  selectSchool(schoolId, schoolCode, schoolName) {
+    this.currentSchoolId = schoolId;
+    this.currentSchoolCode = schoolCode;
+    this.currentSchoolName = schoolName;
+    this.currentClassId = null;
+    this.currentClassName = null;
+
+    localStorage.setItem('maktab_selected_school_id', String(schoolId));
+    localStorage.setItem('maktab_selected_school_code', schoolCode);
+    localStorage.setItem('maktab_selected_school_name', schoolName);
+    localStorage.removeItem('maktab_selected_class_id');
+    localStorage.removeItem('maktab_selected_class_name');
+
+    this.closeModal();
+    this.showToast(`Maktab ulandi: ${schoolName} (${schoolCode})`, 'success');
+    this.updateHeaderClassPill();
+    this.openClassModal(); // Prompt class selection for this new school
   },
 
   showCustomModal(title, bodyHtml) {
@@ -215,10 +312,8 @@ export const App = {
     const bodyEl = document.getElementById('custom-modal-body');
 
     if (!modal) return;
-
     if (titleEl) titleEl.innerText = title;
     if (bodyEl) bodyEl.innerHTML = bodyHtml;
-
     modal.classList.add('active');
   },
 

@@ -66,7 +66,8 @@ test('API 1: GET /api/config qaytaradi', async () => {
   assert.strictEqual(res.status, 200);
   const data = await res.json();
   assert.strictEqual(data.success, true);
-  assert.strictEqual(data.data.schoolName, 'MAKTAB');
+  assert.ok(data.data.schoolName);
+  assert.ok(data.data.schoolCode);
 });
 
 test('API 2: GET /api/classes sinflar ro‘yxatini darslar soni bilan qaytaradi', async () => {
@@ -184,3 +185,76 @@ test('API 8: Xabar shabloni API (GET, POST preview, POST save, POST reset)', asy
   const previewData = await previewRes.json();
   assert.ok(previewData.data.preview.includes('Test Header'));
 });
+
+test('API 9: Maktablar ro‘yxati (GET /api/schools) va kod bo‘yicha olish (GET /api/schools/:code)', async () => {
+  const listRes = await fetch(`${baseUrl}/schools`);
+  assert.strictEqual(listRes.status, 200);
+  const listData = await listRes.json();
+  assert.strictEqual(listData.success, true);
+  assert.ok(Array.isArray(listData.data));
+  assert.ok(listData.data.length >= 1);
+
+  const codeRes = await fetch(`${baseUrl}/schools/M-01`);
+  assert.strictEqual(codeRes.status, 200);
+  const codeData = await codeRes.json();
+  assert.strictEqual(codeData.success, true);
+  assert.strictEqual(codeData.data.code, 'M-01');
+});
+
+test('API 10: Yangi maktab ro‘yxatdan o‘tkazish (POST /api/schools/register) va login qilish', async () => {
+  const regRes = await fetch(`${baseUrl}/schools/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code: 'M-99',
+      name: '99-Prezident maktabi',
+      admin_password: 'testpassword123',
+      default_send_time: '07:30'
+    })
+  });
+  assert.strictEqual(regRes.status, 200);
+  const regData = await regRes.json();
+  assert.strictEqual(regData.success, true);
+  assert.strictEqual(regData.school.code, 'M-99');
+
+  const loginRes = await fetch(`${baseUrl}/schools/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code: 'M-99',
+      password: 'testpassword123'
+    })
+  });
+  assert.strictEqual(loginRes.status, 200);
+  const loginData = await loginRes.json();
+  assert.strictEqual(loginData.success, true);
+  assert.strictEqual(loginData.token, 'M-99:testpassword123');
+});
+
+test('API 11: Maktab admini jadvalni ommaviy import qilishi (POST /api/admin/import-timetable)', async () => {
+  const importRes = await fetch(`${baseUrl}/admin/import-timetable`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-School-Token': 'M-99:testpassword123'
+    },
+    body: JSON.stringify({
+      classes: [
+        {
+          name: '11-B sinf',
+          send_time: '07:00',
+          lessons: [
+            { day_of_week: 1, start_time: '08:00', end_time: '08:45', subject: 'Informatika', teacher: 'Sobirov B.', room: '101' }
+          ]
+        }
+      ]
+    })
+  });
+
+  assert.strictEqual(importRes.status, 200);
+  const importData = await importRes.json();
+  assert.strictEqual(importData.success, true);
+  assert.strictEqual(importData.insertedClasses, 1);
+  assert.strictEqual(importData.insertedLessons, 1);
+});
+

@@ -13,6 +13,17 @@ export const Api = {
       ...options.headers
     };
 
+    // School auth token
+    const schoolToken = localStorage.getItem('maktab_school_token');
+    if (schoolToken) {
+      headers['Authorization'] = `Bearer ${schoolToken}`;
+    }
+
+    const schoolCode = localStorage.getItem('maktab_selected_school_code');
+    if (schoolCode) {
+      headers['X-School-Code'] = schoolCode;
+    }
+
     // Dev test fallback when outside Telegram
     const devId = localStorage.getItem('maktab_dev_telegram_id');
     if (devId && !TelegramApp.isInsideTelegram()) {
@@ -37,7 +48,7 @@ export const Api = {
         throw new Error(data.error || 'Server xatosi yuz berdi');
       }
 
-      return data.data;
+      return data.data !== undefined ? data.data : data;
     } catch (err) {
       console.error(`API Error [${endpoint}]:`, err);
       throw err;
@@ -52,9 +63,30 @@ export const Api = {
     return this.request('/config');
   },
 
+  // Schools
+  getSchools() {
+    return this.request('/schools');
+  },
+  getSchoolByCode(code) {
+    return this.request(`/schools/${code}`);
+  },
+  loginSchool(code, password) {
+    return this.request('/schools/login', {
+      method: 'POST',
+      body: JSON.stringify({ code, password })
+    });
+  },
+  registerSchool(payload) {
+    return this.request('/schools/register', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+
   // Classes & Schedule
-  getClasses() {
-    return this.request('/classes');
+  getClasses(schoolCode = null) {
+    const query = schoolCode ? `?schoolCode=${schoolCode}` : '';
+    return this.request(`/classes${query}`);
   },
   getClassSchedule(id) {
     return this.request(`/classes/${id}/schedule`);
@@ -77,14 +109,16 @@ export const Api = {
   },
 
   // Teachers & Subjects
-  getTeachers() {
-    return this.request('/teachers');
+  getTeachers(schoolCode = null) {
+    const query = schoolCode ? `?schoolCode=${schoolCode}` : '';
+    return this.request(`/teachers${query}`);
   },
   getTeacherSchedule(id) {
     return this.request(`/teachers/${id}/schedule`);
   },
-  getSubjects() {
-    return this.request('/subjects');
+  getSubjects(schoolCode = null) {
+    const query = schoolCode ? `?schoolCode=${schoolCode}` : '';
+    return this.request(`/subjects${query}`);
   },
 
   // User Preferences
@@ -100,8 +134,9 @@ export const Api = {
   },
 
   // Admin Endpoints
-  getAdminStats() {
-    return this.request('/admin/stats');
+  getAdminStats(schoolCode = null) {
+    const query = schoolCode ? `?schoolCode=${schoolCode}` : '';
+    return this.request(`/admin/stats${query}`);
   },
   createClass(payload) {
     return this.request('/admin/classes', {
@@ -170,6 +205,13 @@ export const Api = {
   deleteLesson(id) {
     return this.request(`/admin/lessons/${id}`, {
       method: 'DELETE'
+    });
+  },
+
+  importTimetable(payload) {
+    return this.request('/admin/import-timetable', {
+      method: 'POST',
+      body: JSON.stringify(payload)
     });
   },
 

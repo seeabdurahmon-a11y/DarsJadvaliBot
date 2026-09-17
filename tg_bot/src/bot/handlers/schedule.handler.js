@@ -1,5 +1,6 @@
 import { InlineKeyboard } from 'grammy';
 import { scheduleService } from '../../services/schedule.service.js';
+import { schoolsRepo } from '../../database/schools.repo.js';
 import { groupsRepo } from '../../database/groups.repo.js';
 import { usersRepo } from '../../database/users.repo.js';
 import { getClassesGridInlineKeyboard } from '../keyboards/user.keyboard.js';
@@ -7,17 +8,20 @@ import { replySafely } from '../../utils/telegram-sender.util.js';
 import { escapeHtml } from '../../utils/formatter.js';
 
 export function registerScheduleHandlers(bot) {
-  // Yordamchi: Foydalanuvchining biriktirilgan sinfini olish
-  function getUserGroup(telegramId) {
-    if (!telegramId) return null;
+  // Yordamchi: Foydalanuvchining biriktirilgan maktabi va sinfini olish
+  function getUserContext(telegramId) {
+    if (!telegramId) return { user: null, school: null, group: null, schoolId: 1 };
     const user = usersRepo.getUserByTelegramId(telegramId);
-    if (user && user.selected_group_id) {
-      const group = groupsRepo.getGroupById(user.selected_group_id);
-      if (group && group.is_active) {
-        return group;
-      }
+    let schoolId = user?.selected_school_id || 1;
+    let school = schoolsRepo.getSchoolById(schoolId) || schoolsRepo.getSchoolById(1);
+    let group = null;
+
+    if (user?.selected_group_id) {
+      group = groupsRepo.getGroupById(user.selected_group_id);
+      if (group && !group.is_active) group = null;
     }
-    return null;
+
+    return { user, school, group, schoolId: school?.id || 1 };
   }
 
   // Yordamchi: Jadval ostiga qo'shiladigan inline tugmalar
@@ -30,15 +34,14 @@ export function registerScheduleHandlers(bot) {
   }
 
   // ==========================================
-  // 🏫 MENING SINFIM / SINF BIRIKTIRISH BO'LIMI
+  // 🏫 MENING SINFIM & MAKTABIM BO'LIMI
   // ==========================================
 
-  // "🏫 Mening sinfim" menyu tugmasi va buyruqlar
   bot.hears(['🏫 Mening sinfim', 'Mening sinfim', 'Sinfim', 'sinfim', 'sinf'], async (ctx) => {
     if (ctx.chat.type !== 'private') return;
 
-    const group = getUserGroup(ctx.from?.id);
-    const groups = groupsRepo.getAllGroups(true);
+    const { school, group, schoolId } = getUserContext(ctx.from?.id);
+    const groups = groupsRepo.getAllGroups(true, schoolId);
 
     if (group) {
       const keyboard = new InlineKeyboard()
@@ -48,36 +51,41 @@ export function registerScheduleHandlers(bot) {
         .text('📆 Ertangi jadval', `user_tmr_grp_${group.id}`)
         .text('📚 Haftalik jadval', `user_week_grp_${group.id}`)
         .row()
-        .text('🔄 Sinfni o‘zgartirish', 'user_change_sinf');
+        .text('🔄 Sinfni o‘zgartirish', 'user_change_sinf')
+        .text('🔑 Maktabni almashtirish', 'user_change_school');
 
       return ctx.reply(
-        `🏫 <b>Sizning biriktirilgan sinfingiz:</b> <b>${escapeHtml(group.name)}</b>\n\n` +
-        `Dars jadvalini olish uchun quyidagi tugmalardan birini tanlang yoki sinfingizni o‘zgartiring:`,
+        `🏫 <b>Maktab:</b> <b>${escapeHtml(school?.name || 'Maktab')}</b> (Kodi: <code>${school?.code || 'M-01'}</code>)\n` +
+        `👥 <b>Sizning sinfingiz:</b> <b>${escapeHtml(group.name)}</b>\n\n` +
+        `Dars jadvalini olish uchun quyidagi tugmalardan foydalaning:`,
         { parse_mode: 'HTML', reply_markup: keyboard }
       );
     }
 
     // Sinf hali tanlanmagan bo'lsa
     const keyboard = getClassesGridInlineKeyboard(groups, 'user_bind_sinf_');
+    keyboard.row().text('🔑 Boshqa maktabga ulanish (Kod)', 'user_change_school');
+
     await ctx.reply(
-      `🏫 <b>O‘zingiz o‘qiydigan yoki qiziqqan sinfni tanlang:</b>\n\n` +
-      `💡 <i>Sinfingizni biriktirib qo‘ysangiz, bot sizga har doim to‘g‘ridan-to‘g‘ri o‘z sinfingiz dars jadvalini taqdim etadi.</i>`,
+      `🏫 <b>Maktab:</b> <b>${escapeHtml(school?.name || 'Maktab')}</b> (Kodi: <code>${school?.code || 'M-01'}</code>)\n\n` +
+      `Quyidagi ro‘yxatdan o‘z sinfingizni tanlang:`,
       { parse_mode: 'HTML', reply_markup: keyboard }
     );
   });
 
-  // /sinf, /sinfim, /mysinf, /myclass, /tanlash buyruqlari
+  // /sinf buyrug'i
   bot.command(['sinf', 'sinfim', 'mysinf', 'myclass', 'tanlash', 'class'], async (ctx) => {
     if (ctx.chat.type !== 'private') return;
 
     const input = ctx.match?.trim();
-    const groups = groupsRepo.getAllGroups(true);
+    const { school, group, schoolId } = getUserContext(ctx.from?.id);
+    const groups = groupsRepo.getAllGroups(true, schoolId);
 
-    // 1. Foydalanuvchi to'g'ridan-to'g'ri sinf nomini yozgan bo'lsa (masalan: /sinf 11-D yoki /sinf 11D)
+    // 1. Foydalanuvchi sinf nomini to'g'ridan-to'g'ri yozgan bo'lsa (masalan: /sinf 11-D yoki /sinf 11D)
     if (input) {
-      const matchedGroup = groupsRepo.getGroupByName(input);
+      const matchedGroup = groupsRepo.getGroupByName(input, schoolId);
       if (matchedGroup) {
-        usersRepo.setSelectedGroup(ctx.from.id, matchedGroup.id);
+        usersRepo.setSelectedGroup(ctx.from.id, matchedGroup.id, schoolId);
 
         const keyboard = new InlineKeyboard()
           .text('📅 Bugungi jadval', `user_today_grp_${matchedGroup.id}`)
@@ -87,8 +95,9 @@ export function registerScheduleHandlers(bot) {
           .text('🔄 Sinfni o‘zgartirish', 'user_change_sinf');
 
         return ctx.reply(
-          `✅ <b>Sinfingiz muvaffaqiyatli saqlandi: ${escapeHtml(matchedGroup.name)}!</b>\n\n` +
-          `📌 Endi pastdagi <b>📅 Bugungi jadval</b> yoki <b>🔔 Hozirgi dars</b> tugmalarini bosganingizda to‘g‘ridan-to‘g‘ri ${escapeHtml(matchedGroup.name)} darslari ko‘rsatiladi.`,
+          `✅ <b>Sinfingiz muvaffaqiyatli saqlandi: ${escapeHtml(matchedGroup.name)}!</b>\n` +
+          `🏫 Maktab: <b>${escapeHtml(school?.name || 'Maktab')}</b>\n\n` +
+          `📌 Endi pastdagi tugmalardan foydalanganingizda to‘g‘ridan-to‘g‘ri ${escapeHtml(matchedGroup.name)} dars jadvali chiqadi.`,
           { parse_mode: 'HTML', reply_markup: keyboard }
         );
       } else {
@@ -102,7 +111,6 @@ export function registerScheduleHandlers(bot) {
     }
 
     // 2. Parametrsiz chaqirilganda
-    const group = getUserGroup(ctx.from?.id);
     if (group) {
       const keyboard = new InlineKeyboard()
         .text('📅 Bugungi jadval', `user_today_grp_${group.id}`)
@@ -112,21 +120,20 @@ export function registerScheduleHandlers(bot) {
         .text('🔄 Sinfni o‘zgartirish', 'user_change_sinf');
 
       return ctx.reply(
-        `🏫 <b>Sizning biriktirilgan sinfingiz:</b> <b>${escapeHtml(group.name)}</b>\n\n` +
-        `Quyidagi tugmalardan birini tanlang:`,
+        `🏫 <b>Maktab:</b> ${escapeHtml(school?.name || 'Maktab')}\n` +
+        `👥 <b>Sizning sinfingiz:</b> <b>${escapeHtml(group.name)}</b>`,
         { parse_mode: 'HTML', reply_markup: keyboard }
       );
     }
 
     const keyboard = getClassesGridInlineKeyboard(groups, 'user_bind_sinf_');
     await ctx.reply(
-      `🏫 <b>O‘zingiz o‘qiydigan sinfni tanlang:</b>\n\n` +
-      `Quyidagi ro‘yxatdan sinfingiz ustiga bosing:`,
+      `🏫 <b>O‘zingiz o‘qiydigan sinfni tanlang:</b>`,
       { parse_mode: 'HTML', reply_markup: keyboard }
     );
   });
 
-  // Callback: Sinfni tanlash / biriktirish (user_bind_sinf_<id>)
+  // Callback: Sinfni tanlash (user_bind_sinf_<id>)
   bot.callbackQuery(/^user_bind_sinf_(\d+)$/, async (ctx) => {
     const groupId = parseInt(ctx.match[1], 10);
     const group = groupsRepo.getGroupById(groupId);
@@ -135,7 +142,7 @@ export function registerScheduleHandlers(bot) {
       return ctx.answerCallbackQuery({ text: 'Sinf topilmadi', show_alert: true });
     }
 
-    usersRepo.setSelectedGroup(ctx.from.id, group.id);
+    usersRepo.setSelectedGroup(ctx.from.id, group.id, group.school_id);
     await ctx.answerCallbackQuery({ text: `✅ ${group.name} saqlandi!` });
 
     const keyboard = new InlineKeyboard()
@@ -155,7 +162,8 @@ export function registerScheduleHandlers(bot) {
   // Callback: Sinfni o'zgartirish (user_change_sinf)
   bot.callbackQuery('user_change_sinf', async (ctx) => {
     await ctx.answerCallbackQuery().catch(() => {});
-    const groups = groupsRepo.getAllGroups(true);
+    const { schoolId } = getUserContext(ctx.from?.id);
+    const groups = groupsRepo.getAllGroups(true, schoolId);
     const keyboard = getClassesGridInlineKeyboard(groups, 'user_bind_sinf_');
 
     await ctx.editMessageText(
@@ -165,11 +173,51 @@ export function registerScheduleHandlers(bot) {
     );
   });
 
+  // Callback: Maktabni almashtirish (user_change_school)
+  bot.callbackQuery('user_change_school', async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => {});
+    const schools = schoolsRepo.getAllSchools(true);
+
+    const keyboard = new InlineKeyboard();
+    schools.forEach((s, idx) => {
+      keyboard.text(`🏫 ${s.name} (${s.code})`, `user_select_sch_${s.id}`);
+      keyboard.row();
+    });
+
+    await ctx.editMessageText(
+      `🔑 <b>Maktabingizni tanlang yoki kodini kiriting:</b>\n\n` +
+      `Kodni to‘g‘ridan-to‘g‘ri yozish uchun: <code>/kod M-01</code> yoki <code>/kod M-12</code> deb yuboring.\n\nYoki quyidagi ro‘yxatdan tanlang:`,
+      { parse_mode: 'HTML', reply_markup: keyboard }
+    );
+  });
+
+  // Callback: Maktab tanlanganda (user_select_sch_<id>)
+  bot.callbackQuery(/^user_select_sch_(\d+)$/, async (ctx) => {
+    const schoolId = parseInt(ctx.match[1], 10);
+    const school = schoolsRepo.getSchoolById(schoolId);
+
+    if (!school) {
+      return ctx.answerCallbackQuery({ text: 'Maktab topilmadi', show_alert: true });
+    }
+
+    usersRepo.setSelectedSchool(ctx.from.id, school.id);
+    await ctx.answerCallbackQuery({ text: `✅ ${school.name} tanlandi!` });
+
+    const classes = groupsRepo.getAllGroups(true, school.id);
+    const keyboard = getClassesGridInlineKeyboard(classes, 'user_bind_sinf_');
+
+    await ctx.editMessageText(
+      `✅ <b>Maktab tanlandi: ${escapeHtml(school.name)} (Kodi: ${school.code})</b>\n\n` +
+      `Endi o‘z sinfingizni tanlang:`,
+      { parse_mode: 'HTML', reply_markup: keyboard }
+    );
+  });
+
   // Callback: Mening sinfim bosh menyusi (user_my_class_menu)
   bot.callbackQuery('user_my_class_menu', async (ctx) => {
     await ctx.answerCallbackQuery().catch(() => {});
-    const group = getUserGroup(ctx.from?.id);
-    const groups = groupsRepo.getAllGroups(true);
+    const { school, group, schoolId } = getUserContext(ctx.from?.id);
+    const groups = groupsRepo.getAllGroups(true, schoolId);
 
     if (group) {
       const keyboard = new InlineKeyboard()
@@ -179,19 +227,19 @@ export function registerScheduleHandlers(bot) {
         .text('📆 Ertangi jadval', `user_tmr_grp_${group.id}`)
         .text('📚 Haftalik jadval', `user_week_grp_${group.id}`)
         .row()
-        .text('🔄 Sinfni o‘zgartirish', 'user_change_sinf');
+        .text('🔄 Sinfni o‘zgartirish', 'user_change_sinf')
+        .text('🔑 Maktabni almashtirish', 'user_change_school');
 
       return ctx.editMessageText(
-        `🏫 <b>Sizning biriktirilgan sinfingiz:</b> <b>${escapeHtml(group.name)}</b>\n\n` +
-        `Quyidagi tugmalardan birini tanlang:`,
+        `🏫 <b>Maktab:</b> ${escapeHtml(school?.name || 'Maktab')} (Kodi: <code>${school?.code || 'M-01'}</code>)\n` +
+        `👥 <b>Sizning sinfingiz:</b> <b>${escapeHtml(group.name)}</b>`,
         { parse_mode: 'HTML', reply_markup: keyboard }
       );
     }
 
     const keyboard = getClassesGridInlineKeyboard(groups, 'user_bind_sinf_');
     await ctx.editMessageText(
-      `🏫 <b>O‘zingiz o‘qiydigan sinfni tanlang:</b>\n\n` +
-      `Quyidagi ro‘yxatdan sinfingiz ustiga bosing:`,
+      `🏫 <b>O‘zingiz o‘qiydigan sinfni tanlang:</b>`,
       { parse_mode: 'HTML', reply_markup: keyboard }
     );
   });
@@ -200,7 +248,8 @@ export function registerScheduleHandlers(bot) {
   bot.callbackQuery(/^user_other_grp_(now|today|tmr|week)$/, async (ctx) => {
     await ctx.answerCallbackQuery().catch(() => {});
     const type = ctx.match[1];
-    const groups = groupsRepo.getAllGroups(true);
+    const { schoolId } = getUserContext(ctx.from?.id);
+    const groups = groupsRepo.getAllGroups(true, schoolId);
     const keyboard = getClassesGridInlineKeyboard(groups, `user_${type}_grp_`, true);
 
     await ctx.editMessageText(
@@ -217,13 +266,13 @@ export function registerScheduleHandlers(bot) {
   bot.hears(['🔔 Hozirgi dars', 'Hozirgi dars', 'hozir'], async (ctx) => {
     if (ctx.chat.type !== 'private') return;
 
-    const userGroup = getUserGroup(ctx.from?.id);
-    if (userGroup) {
-      const { formattedText } = scheduleService.getCurrentLesson(userGroup.id);
-      return replySafely(ctx, formattedText, { reply_markup: getScheduleActionKeyboard(userGroup.id, 'now') });
+    const { group, schoolId } = getUserContext(ctx.from?.id);
+    if (group) {
+      const { formattedText } = scheduleService.getCurrentLesson(group.id);
+      return replySafely(ctx, formattedText, { reply_markup: getScheduleActionKeyboard(group.id, 'now') });
     }
 
-    const groups = groupsRepo.getAllGroups(true);
+    const groups = groupsRepo.getAllGroups(true, schoolId);
     if (groups.length > 1) {
       const keyboard = getClassesGridInlineKeyboard(groups, 'user_now_grp_', true);
       return ctx.reply(
@@ -241,24 +290,18 @@ export function registerScheduleHandlers(bot) {
   bot.command(['hozir', 'now', 'current', 'hozirgidars'], async (ctx) => {
     if (ctx.chat.type !== 'private') return;
 
-    const userGroup = getUserGroup(ctx.from?.id);
-    if (userGroup) {
-      const { formattedText } = scheduleService.getCurrentLesson(userGroup.id);
-      return replySafely(ctx, formattedText, { reply_markup: getScheduleActionKeyboard(userGroup.id, 'now') });
+    const { group, schoolId } = getUserContext(ctx.from?.id);
+    if (group) {
+      const { formattedText } = scheduleService.getCurrentLesson(group.id);
+      return replySafely(ctx, formattedText, { reply_markup: getScheduleActionKeyboard(group.id, 'now') });
     }
 
-    const groups = groupsRepo.getAllGroups(true);
-    if (groups.length > 1) {
-      const keyboard = getClassesGridInlineKeyboard(groups, 'user_now_grp_', true);
-      return ctx.reply(
-        `👥 <b>Qaysi sinf bo‘yicha hozirgi darsni ko‘rmoqchisiz?</b>`,
-        { parse_mode: 'HTML', reply_markup: keyboard }
-      );
-    }
-
-    const groupId = groups.length === 1 ? groups[0].id : null;
-    const { formattedText } = scheduleService.getCurrentLesson(groupId);
-    await replySafely(ctx, formattedText);
+    const groups = groupsRepo.getAllGroups(true, schoolId);
+    const keyboard = getClassesGridInlineKeyboard(groups, 'user_now_grp_', true);
+    return ctx.reply(`👥 <b>Qaysi sinf bo‘yicha hozirgi darsni ko‘rmoqchisiz?</b>`, {
+      parse_mode: 'HTML',
+      reply_markup: keyboard
+    });
   });
 
   // ==========================================
@@ -268,13 +311,13 @@ export function registerScheduleHandlers(bot) {
   bot.hears('📅 Bugungi jadval', async (ctx) => {
     if (ctx.chat.type !== 'private') return;
 
-    const userGroup = getUserGroup(ctx.from?.id);
-    if (userGroup) {
-      const { formattedText } = scheduleService.getTodaySchedule(userGroup.id);
-      return replySafely(ctx, formattedText, { reply_markup: getScheduleActionKeyboard(userGroup.id, 'today') });
+    const { group, schoolId } = getUserContext(ctx.from?.id);
+    if (group) {
+      const { formattedText } = scheduleService.getTodaySchedule(group.id);
+      return replySafely(ctx, formattedText, { reply_markup: getScheduleActionKeyboard(group.id, 'today') });
     }
 
-    const groups = groupsRepo.getAllGroups(true);
+    const groups = groupsRepo.getAllGroups(true, schoolId);
     if (groups.length > 1) {
       const keyboard = getClassesGridInlineKeyboard(groups, 'user_today_grp_', true);
       return ctx.reply(
@@ -296,24 +339,18 @@ export function registerScheduleHandlers(bot) {
   bot.hears('📆 Ertangi jadval', async (ctx) => {
     if (ctx.chat.type !== 'private') return;
 
-    const userGroup = getUserGroup(ctx.from?.id);
-    if (userGroup) {
-      const { formattedText } = scheduleService.getTomorrowSchedule(userGroup.id);
-      return replySafely(ctx, formattedText, { reply_markup: getScheduleActionKeyboard(userGroup.id, 'tmr') });
+    const { group, schoolId } = getUserContext(ctx.from?.id);
+    if (group) {
+      const { formattedText } = scheduleService.getTomorrowSchedule(group.id);
+      return replySafely(ctx, formattedText, { reply_markup: getScheduleActionKeyboard(group.id, 'tmr') });
     }
 
-    const groups = groupsRepo.getAllGroups(true);
-    if (groups.length > 1) {
-      const keyboard = getClassesGridInlineKeyboard(groups, 'user_tmr_grp_', true);
-      return ctx.reply(
-        `👥 <b>Qaysi sinf bo‘yicha ertangi dars jadvalini ko‘rmoqchisiz?</b>`,
-        { parse_mode: 'HTML', reply_markup: keyboard }
-      );
-    }
-
-    const groupId = groups.length === 1 ? groups[0].id : null;
-    const { formattedText } = scheduleService.getTomorrowSchedule(groupId);
-    await replySafely(ctx, formattedText);
+    const groups = groupsRepo.getAllGroups(true, schoolId);
+    const keyboard = getClassesGridInlineKeyboard(groups, 'user_tmr_grp_', true);
+    return ctx.reply(`👥 <b>Qaysi sinf bo‘yicha ertangi dars jadvalini ko‘rmoqchisiz?</b>`, {
+      parse_mode: 'HTML',
+      reply_markup: keyboard
+    });
   });
 
   // ==========================================
@@ -323,28 +360,22 @@ export function registerScheduleHandlers(bot) {
   bot.hears('📚 Haftalik jadval', async (ctx) => {
     if (ctx.chat.type !== 'private') return;
 
-    const userGroup = getUserGroup(ctx.from?.id);
-    if (userGroup) {
-      const { formattedText } = scheduleService.getWeeklySchedule(userGroup.id);
-      return replySafely(ctx, formattedText, { reply_markup: getScheduleActionKeyboard(userGroup.id, 'week') });
+    const { group, schoolId } = getUserContext(ctx.from?.id);
+    if (group) {
+      const { formattedText } = scheduleService.getWeeklySchedule(group.id);
+      return replySafely(ctx, formattedText, { reply_markup: getScheduleActionKeyboard(group.id, 'week') });
     }
 
-    const groups = groupsRepo.getAllGroups(true);
-    if (groups.length > 1) {
-      const keyboard = getClassesGridInlineKeyboard(groups, 'user_week_grp_', true);
-      return ctx.reply(
-        `👥 <b>Qaysi sinf bo‘yicha haftalik dars jadvalini ko‘rmoqchisiz?</b>`,
-        { parse_mode: 'HTML', reply_markup: keyboard }
-      );
-    }
-
-    const groupId = groups.length === 1 ? groups[0].id : null;
-    const { formattedText } = scheduleService.getWeeklySchedule(groupId);
-    await replySafely(ctx, formattedText);
+    const groups = groupsRepo.getAllGroups(true, schoolId);
+    const keyboard = getClassesGridInlineKeyboard(groups, 'user_week_grp_', true);
+    return ctx.reply(`👥 <b>Qaysi sinf bo‘yicha haftalik dars jadvalini ko‘rmoqchisiz?</b>`, {
+      parse_mode: 'HTML',
+      reply_markup: keyboard
+    });
   });
 
   // ==========================================
-  // 🎯 INLINE CALLBACK QUERYLAR (Tanlangan sinf jadvallari)
+  // 🎯 INLINE CALLBACKS (Jadvallar)
   // ==========================================
 
   bot.callbackQuery(/^user_now_grp_(.+)$/, async (ctx) => {

@@ -1,13 +1,21 @@
 import { getDatabase } from './db.js';
 
 export const lessonsRepo = {
-  addLesson({ group_id, day_of_week, date = null, start_time, end_time, subject, teacher = null, room = null }) {
+  addLesson({ school_id = null, group_id, day_of_week, date = null, start_time, end_time, subject, teacher = null, room = null }) {
     const db = getDatabase();
+    let effectiveSchoolId = school_id;
+
+    if (!effectiveSchoolId && group_id) {
+      const grp = db.prepare(`SELECT school_id FROM groups WHERE id = ?`).get(group_id);
+      effectiveSchoolId = grp ? grp.school_id : 1;
+    }
+
     const stmt = db.prepare(`
-      INSERT INTO lessons (group_id, day_of_week, date, start_time, end_time, subject, teacher, room)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO lessons (school_id, group_id, day_of_week, date, start_time, end_time, subject, teacher, room)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const info = stmt.run(
+      effectiveSchoolId || 1,
       group_id,
       day_of_week,
       date || null,
@@ -30,7 +38,7 @@ export const lessonsRepo = {
     `).get(id);
   },
 
-  getLessonsByDay(dayOfWeek, groupId = null) {
+  getLessonsByDay(dayOfWeek, groupId = null, schoolId = null) {
     const db = getDatabase();
     let query = `
       SELECT l.*, g.name as group_name, g.telegram_chat_id
@@ -44,12 +52,16 @@ export const lessonsRepo = {
       query += ` AND l.group_id = ?`;
       params.push(groupId);
     }
+    if (schoolId) {
+      query += ` AND (l.school_id = ? OR g.school_id = ?)`;
+      params.push(schoolId, schoolId);
+    }
 
     query += ` ORDER BY l.start_time ASC, g.name ASC`;
     return db.prepare(query).all(...params);
   },
 
-  getWeeklyLessons(groupId = null) {
+  getWeeklyLessons(groupId = null, schoolId = null) {
     const db = getDatabase();
     let query = `
       SELECT l.*, g.name as group_name, g.telegram_chat_id
@@ -62,6 +74,10 @@ export const lessonsRepo = {
     if (groupId) {
       query += ` AND l.group_id = ?`;
       params.push(groupId);
+    }
+    if (schoolId) {
+      query += ` AND (l.school_id = ? OR g.school_id = ?)`;
+      params.push(schoolId, schoolId);
     }
 
     query += ` ORDER BY l.day_of_week ASC, l.start_time ASC, g.name ASC`;
@@ -73,6 +89,7 @@ export const lessonsRepo = {
     const current = this.getLessonById(id);
     if (!current) return null;
 
+    const school_id = fields.school_id !== undefined ? fields.school_id : current.school_id;
     const group_id = fields.group_id !== undefined ? fields.group_id : current.group_id;
     const day_of_week = fields.day_of_week !== undefined ? fields.day_of_week : current.day_of_week;
     const date = fields.date !== undefined ? fields.date : current.date;
@@ -84,9 +101,9 @@ export const lessonsRepo = {
 
     db.prepare(`
       UPDATE lessons
-      SET group_id = ?, day_of_week = ?, date = ?, start_time = ?, end_time = ?, subject = ?, teacher = ?, room = ?, updated_at = CURRENT_TIMESTAMP
+      SET school_id = ?, group_id = ?, day_of_week = ?, date = ?, start_time = ?, end_time = ?, subject = ?, teacher = ?, room = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(group_id, day_of_week, date, start_time, end_time, subject, teacher, room, id);
+    `).run(school_id, group_id, day_of_week, date, start_time, end_time, subject, teacher, room, id);
 
     return this.getLessonById(id);
   },
@@ -96,7 +113,7 @@ export const lessonsRepo = {
     return db.prepare(`DELETE FROM lessons WHERE id = ?`).run(id);
   },
 
-  getAllLessons(groupId = null) {
+  getAllLessons(groupId = null, schoolId = null) {
     const db = getDatabase();
     let query = `
       SELECT l.*, g.name as group_name, g.telegram_chat_id
@@ -109,12 +126,20 @@ export const lessonsRepo = {
       query += ` AND l.group_id = ?`;
       params.push(groupId);
     }
+    if (schoolId) {
+      query += ` AND (l.school_id = ? OR g.school_id = ?)`;
+      params.push(schoolId, schoolId);
+    }
     query += ` ORDER BY l.day_of_week ASC, l.start_time ASC`;
     return db.prepare(query).all(...params);
   },
 
-  getLessonsCount() {
+  getLessonsCount(schoolId = null) {
     const db = getDatabase();
+    if (schoolId) {
+      const res = db.prepare(`SELECT COUNT(*) as count FROM lessons WHERE school_id = ?`).get(schoolId);
+      return res ? res.count : 0;
+    }
     const res = db.prepare(`SELECT COUNT(*) as count FROM lessons`).get();
     return res ? res.count : 0;
   }

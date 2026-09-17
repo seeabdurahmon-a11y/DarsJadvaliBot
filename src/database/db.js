@@ -56,18 +56,31 @@ export function getDatabase(dbPath = null) {
 
 function initSchema(db) {
   db.exec(`
+    CREATE TABLE IF NOT EXISTS schools (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT UNIQUE NOT NULL,
+      name TEXT NOT NULL,
+      region TEXT DEFAULT '',
+      admin_password TEXT DEFAULT 'admin123',
+      default_send_time TEXT DEFAULT '06:00',
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       telegram_id TEXT UNIQUE NOT NULL,
       username TEXT,
       first_name TEXT,
       is_admin INTEGER DEFAULT 0,
+      selected_school_id INTEGER,
       selected_group_id INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS groups (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      school_id INTEGER DEFAULT 1,
       telegram_chat_id TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
       send_time TEXT DEFAULT '06:00',
@@ -77,6 +90,7 @@ function initSchema(db) {
 
     CREATE TABLE IF NOT EXISTS teachers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      school_id INTEGER DEFAULT 1,
       first_name TEXT NOT NULL,
       last_name TEXT NOT NULL,
       subject TEXT,
@@ -86,7 +100,8 @@ function initSchema(db) {
 
     CREATE TABLE IF NOT EXISTS subjects (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL,
+      school_id INTEGER DEFAULT 1,
+      name TEXT NOT NULL,
       emoji TEXT DEFAULT '📚',
       code TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -94,6 +109,7 @@ function initSchema(db) {
 
     CREATE TABLE IF NOT EXISTS lessons (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      school_id INTEGER DEFAULT 1,
       group_id INTEGER NOT NULL,
       day_of_week INTEGER NOT NULL,
       date TEXT,
@@ -115,6 +131,7 @@ function initSchema(db) {
 
     CREATE TABLE IF NOT EXISTS sent_schedules (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      school_id INTEGER DEFAULT 1,
       group_id INTEGER NOT NULL,
       schedule_date TEXT NOT NULL,
       sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -126,12 +143,36 @@ function initSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_sent_schedules_lookup ON sent_schedules(group_id, schedule_date);
   `);
 
-  // Safe migration for selected_group_id on existing users table
-  try {
-    db.exec(`ALTER TABLE users ADD COLUMN selected_group_id INTEGER;`);
-  } catch (e) {
-    // Column already exists
+  // Multi-school migration for existing tables
+  const columnMigrations = [
+    `ALTER TABLE users ADD COLUMN selected_school_id INTEGER;`,
+    `ALTER TABLE users ADD COLUMN selected_group_id INTEGER;`,
+    `ALTER TABLE groups ADD COLUMN school_id INTEGER DEFAULT 1;`,
+    `ALTER TABLE teachers ADD COLUMN school_id INTEGER DEFAULT 1;`,
+    `ALTER TABLE subjects ADD COLUMN school_id INTEGER DEFAULT 1;`,
+    `ALTER TABLE lessons ADD COLUMN school_id INTEGER DEFAULT 1;`,
+    `ALTER TABLE sent_schedules ADD COLUMN school_id INTEGER DEFAULT 1;`
+  ];
+
+  for (const sql of columnMigrations) {
+    try {
+      db.exec(sql);
+    } catch (e) {
+      // Column already exists
+    }
   }
+
+  // Safe indexes creation after columns exist
+  try {
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_lessons_school ON lessons(school_id);`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_groups_school ON groups(school_id);`);
+  } catch (e) {}
+
+  // Ensure default school #1 exists
+  db.prepare(`
+    INSERT OR IGNORE INTO schools (id, code, name, region, admin_password, default_send_time, is_active)
+    VALUES (1, 'M-01', '1-umumiy o‘rta ta’lim maktabi', 'Toshkent shahar', 'admin123', '06:00', 1)
+  `).run();
 
   // Standart sozlamalarni kiritish
   const insertSetting = db.prepare(`

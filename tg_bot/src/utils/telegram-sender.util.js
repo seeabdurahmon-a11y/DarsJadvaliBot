@@ -66,17 +66,34 @@ export function splitTelegramMessage(text, maxLength = 3900) {
  */
 export async function replySafely(ctx, text, extra = {}) {
   if (!text || text.trim() === '') {
-    return ctx.reply('ℹ️ Ma\'lumot topilmadi.', extra);
+    try {
+      return await ctx.reply('ℹ️ Ma\'lumot topilmadi.', extra);
+    } catch (e) {
+      logger.warn('[TELEGRAM SENDER] Bo‘sh xabar yuborishda xatolik:', e.message);
+      return null;
+    }
   }
 
   const chunks = splitTelegramMessage(text, 3900);
   if (chunks.length === 1) {
-    return ctx.reply(chunks[0], { parse_mode: 'HTML', ...extra });
+    try {
+      return await ctx.reply(chunks[0], { parse_mode: 'HTML', ...extra });
+    } catch (err) {
+      if (err.description && (err.description.includes('can\'t parse entities') || err.description.includes('entity'))) {
+        try {
+          return await ctx.reply(chunks[0], { ...extra });
+        } catch (e2) {
+          logger.warn('[TELEGRAM SENDER] Oddiy matn yuborishda xatolik:', e2.message);
+          return null;
+        }
+      }
+      logger.warn('[TELEGRAM SENDER] Xabarni yuborishda ogohlantirish:', err.message);
+      return null;
+    }
   }
 
   const sentMessages = [];
   for (let i = 0; i < chunks.length; i++) {
-    // Tugmalarni faqat oxirgi xabarga qo'shish
     const messageExtra = {
       parse_mode: 'HTML',
       ...(i === chunks.length - 1 ? extra : {})
@@ -85,10 +102,17 @@ export async function replySafely(ctx, text, extra = {}) {
       const sent = await ctx.reply(chunks[i], messageExtra);
       sentMessages.push(sent);
     } catch (err) {
-      logger.error(`[TELEGRAM SENDER] Bo'laklangan xabarni yuborishda xatolik (bo'lak ${i + 1}/${chunks.length}):`, err);
+      if (err.description && (err.description.includes('can\'t parse entities') || err.description.includes('entity'))) {
+        try {
+          const sent = await ctx.reply(chunks[i], { ...(i === chunks.length - 1 ? extra : {}) });
+          sentMessages.push(sent);
+          continue;
+        } catch (e2) {}
+      }
+      logger.warn(`[TELEGRAM SENDER] Bo'laklangan xabarni yuborishda ogohlantirish (bo'lak ${i + 1}/${chunks.length}):`, err.message);
     }
   }
-  return sentMessages[0];
+  return sentMessages[0] || null;
 }
 
 /**
@@ -96,7 +120,11 @@ export async function replySafely(ctx, text, extra = {}) {
  */
 export async function editOrReplySafely(ctx, text, extra = {}) {
   if (!text || text.trim() === '') {
-    return ctx.editMessageText('ℹ️ Ma\'lumot topilmadi.', extra);
+    try {
+      return await ctx.editMessageText('ℹ️ Ma\'lumot topilmadi.', extra);
+    } catch (e) {
+      return null;
+    }
   }
 
   const chunks = splitTelegramMessage(text, 3900);
@@ -105,20 +133,24 @@ export async function editOrReplySafely(ctx, text, extra = {}) {
     try {
       return await ctx.editMessageText(chunks[0], { parse_mode: 'HTML', ...extra });
     } catch (err) {
-      // Agar xabar o'zgarmagan bo'lsa xatoni e'tiborsiz qoldiramiz
       if (err.message && err.message.includes('message is not modified')) {
-        return;
+        return null;
       }
-      // Boshqa holatda reply sifatida yuborish
-      return ctx.reply(chunks[0], { parse_mode: 'HTML', ...extra });
+      try {
+        return await ctx.reply(chunks[0], { parse_mode: 'HTML', ...extra });
+      } catch (replyErr) {
+        logger.warn('[TELEGRAM SENDER] editOrReplySafely reply error:', replyErr.message);
+        return null;
+      }
     }
   }
 
-  // Agar matn uzun bo'lsa: 1-bo'lakni tahrirlaymiz, qolganlarini yangi xabar qilib yuboramiz
   try {
     await ctx.editMessageText(chunks[0], { parse_mode: 'HTML' });
   } catch (err) {
-    await ctx.reply(chunks[0], { parse_mode: 'HTML' });
+    try {
+      await ctx.reply(chunks[0], { parse_mode: 'HTML' });
+    } catch (e) {}
   }
 
   for (let i = 1; i < chunks.length; i++) {
@@ -129,7 +161,7 @@ export async function editOrReplySafely(ctx, text, extra = {}) {
     try {
       await ctx.reply(chunks[i], messageExtra);
     } catch (err) {
-      logger.error(`[TELEGRAM SENDER] Bo'laklangan xabarni yuborishda xatolik (bo'lak ${i + 1}/${chunks.length}):`, err);
+      logger.warn(`[TELEGRAM SENDER] Bo'laklangan xabarni yuborishda ogohlantirish (bo'lak ${i + 1}/${chunks.length}):`, err.message);
     }
   }
 }

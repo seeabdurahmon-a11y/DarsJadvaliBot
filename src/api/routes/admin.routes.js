@@ -1,5 +1,6 @@
 import express from 'express';
 import { requireAdminMiddleware } from '../middlewares/telegramAuth.js';
+import { schoolsRepo } from '../../database/schools.repo.js';
 import { groupsRepo } from '../../database/groups.repo.js';
 import { lessonsRepo } from '../../database/lessons.repo.js';
 import { teachersRepo } from '../../database/teachers.repo.js';
@@ -15,21 +16,39 @@ export const adminRouter = express.Router();
 // Apply requireAdminMiddleware to all routes in adminRouter
 adminRouter.use(requireAdminMiddleware);
 
+function getEffectiveSchoolId(req) {
+  if (req.body?.school_id) return Number(req.body.school_id);
+  if (req.query?.schoolId) return Number(req.query.schoolId);
+  if (req.query?.schoolCode) {
+    const s = schoolsRepo.getSchoolByCode(req.query.schoolCode);
+    if (s) return s.id;
+  }
+  return req.schoolId || 1;
+}
+
 /**
  * GET /api/admin/stats
  */
 adminRouter.get('/stats', (req, res) => {
   try {
-    const stats = adminService.getStats();
-    const teachersCount = teachersRepo.getTeachersCount();
-    const subjectsCount = subjectsRepo.getSubjectsCount();
+    const schoolId = getEffectiveSchoolId(req);
+    const school = schoolsRepo.getSchoolById(schoolId);
+    const groups = groupsRepo.getAllGroupsWithStats(schoolId);
+    const teachersCount = teachersRepo.getTeachersCount(schoolId);
+    const subjectsCount = subjectsRepo.getSubjectsCount(schoolId);
+    const lessonsCount = lessonsRepo.getLessonsCount(schoolId);
+    const usersCount = usersRepo.getUsersCount(schoolId);
 
     res.json({
       success: true,
       data: {
-        ...stats,
+        school,
+        classesCount: groups.length,
+        groupsCount: groups.length,
+        lessonsCount,
         teachersCount,
-        subjectsCount
+        subjectsCount,
+        usersCount
       }
     });
   } catch (err) {
@@ -38,16 +57,75 @@ adminRouter.get('/stats', (req, res) => {
 });
 
 /**
- * CLASSES CRUD
+ * TEMPLATE MANAGEMENT
+ */
+adminRouter.get('/template', (req, res) => {
+  try {
+    const template = templateUtil.getTemplate();
+    const isCustom = templateUtil.isCustom();
+    const defaults = templateUtil.getDefaults();
+    res.json({ success: true, data: { ...template, isCustom, defaults } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+adminRouter.post('/template/preview', (req, res) => {
+  try {
+    const { header, lesson_format, footer, show_teacher, show_room } = req.body;
+    const sampleGroup = { name: '10-A sinf' };
+    const sampleDateInfo = getTodayInfo();
+    const sampleLessons = [
+      { lesson_number: 1, start_time: '08:00', end_time: '08:45', subject: 'Matematika', teacher: 'Aliyev A.', room: '204' },
+      { lesson_number: 2, start_time: '08:50', end_time: '09:35', subject: 'Ona tili', teacher: 'Karimova N.', room: '102' }
+    ];
+
+    const preview = templateUtil.formatCustomSchedule(
+      { header, lesson_format, footer, show_teacher, show_room },
+      sampleGroup,
+      sampleLessons,
+      sampleDateInfo
+    );
+
+    res.json({ success: true, data: { preview } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+adminRouter.post('/template', (req, res) => {
+  try {
+    const { header, lesson_format, footer, show_teacher, show_room } = req.body;
+    const saved = templateUtil.saveTemplate({ header, lesson_format, footer, show_teacher, show_room });
+    res.json({ success: true, data: saved, message: 'Shablon muvaffaqiyatli saqlandi' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+adminRouter.post('/template/reset', (req, res) => {
+  try {
+    const defaults = templateUtil.resetTemplate();
+    res.json({ success: true, data: defaults, message: 'Shablon standart holatga qaytarildi' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * CLASSES CRUD (Scoped to school)
  */
 adminRouter.post('/classes', (req, res) => {
   try {
     const { name, send_time, telegram_chat_id } = req.body;
+    const schoolId = getEffectiveSchoolId(req);
+
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, error: 'Sinf nomi kiritilishi shart' });
     }
 
     const newClass = groupsRepo.addGroup({
+      school_id: schoolId,
       name: name.trim(),
       send_time: send_time || undefined,
       telegram_chat_id: telegram_chat_id || undefined
@@ -82,16 +160,18 @@ adminRouter.delete('/classes/:id', (req, res) => {
 });
 
 /**
- * TEACHERS CRUD
+ * TEACHERS CRUD (Scoped to school)
  */
 adminRouter.post('/teachers', (req, res) => {
   try {
     const { first_name, last_name, subject, phone } = req.body;
+    const schoolId = getEffectiveSchoolId(req);
+
     if (!first_name || !last_name) {
       return res.status(400).json({ success: false, error: 'Ism va familiya kiritilishi shart' });
     }
 
-    const teacher = teachersRepo.addTeacher({ first_name, last_name, subject, phone });
+    const teacher = teachersRepo.addTeacher({ school_id: schoolId, first_name, last_name, subject, phone });
     res.json({ success: true, data: teacher });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -126,11 +206,13 @@ adminRouter.delete('/teachers/:id', (req, res) => {
 adminRouter.post('/subjects', (req, res) => {
   try {
     const { name, emoji, code } = req.body;
+    const schoolId = getEffectiveSchoolId(req);
+
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, error: 'Fan nomi kiritilishi shart' });
     }
 
-    const subject = subjectsRepo.addSubject({ name, emoji, code });
+    const subject = subjectsRepo.addSubject({ school_id: schoolId, name, emoji, code });
     res.json({ success: true, data: subject });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -147,38 +229,27 @@ adminRouter.delete('/subjects/:id', (req, res) => {
 });
 
 /**
- * LESSONS CRUD
+ * LESSONS CRUD (Add / Edit / Delete)
  */
-adminRouter.get('/lessons', (req, res) => {
-  try {
-    const groupId = req.query.classId ? parseInt(req.query.classId, 10) : null;
-    const lessons = lessonsRepo.getAllLessons(groupId);
-    res.json({ success: true, data: lessons });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
 adminRouter.post('/lessons', (req, res) => {
   try {
     const { group_id, day_of_week, start_time, end_time, subject, teacher, room, date } = req.body;
+    const schoolId = getEffectiveSchoolId(req);
 
-    if (!group_id || day_of_week === undefined || !start_time || !end_time || !subject) {
-      return res.status(400).json({
-        success: false,
-        error: 'Sinf, hafta kuni, boshlanish/tugash vaqti va fan majburiy'
-      });
+    if (!group_id || !day_of_week || !start_time || !end_time || !subject) {
+      return res.status(400).json({ success: false, error: 'Majburiy maydonlar to‘ldirilmagan' });
     }
 
     const lesson = lessonsRepo.addLesson({
-      group_id: parseInt(group_id, 10),
-      day_of_week: parseInt(day_of_week, 10),
+      school_id: schoolId,
+      group_id: Number(group_id),
+      day_of_week: Number(day_of_week),
       start_time,
       end_time,
       subject,
-      teacher,
-      room,
-      date
+      teacher: teacher || null,
+      room: room || null,
+      date: date || null
     });
 
     res.json({ success: true, data: lesson });
@@ -209,78 +280,52 @@ adminRouter.delete('/lessons/:id', (req, res) => {
 });
 
 /**
- * MESSAGE TEMPLATE
+ * BULK TIMETABLE IMPORT (Sayt orqali to'liq jadvalni 1 zumda yuklash)
  */
-adminRouter.get('/template', (req, res) => {
+adminRouter.post('/import-timetable', (req, res) => {
   try {
-    const template = templateUtil.getTemplate();
-    res.json({ success: true, data: template });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+    const { classes } = req.body;
+    const schoolId = getEffectiveSchoolId(req);
 
-adminRouter.post('/template', (req, res) => {
-  try {
-    const { header, footer, body } = req.body;
-    const validation = templateUtil.validateTemplate({ header, footer, body });
-
-    if (!validation.isValid) {
-      return res.status(400).json({ success: false, error: validation.errors.join(', ') });
+    if (!Array.isArray(classes) || classes.length === 0) {
+      return res.status(400).json({ success: false, error: 'Sinflar ma’lumotlari massiv shaklida bo‘lishi kerak' });
     }
 
-    const saved = templateUtil.saveTemplate({ header, footer, body });
-    res.json({ success: true, data: saved });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+    let insertedClasses = 0;
+    let insertedLessons = 0;
 
-adminRouter.post('/template/reset', (req, res) => {
-  try {
-    const def = templateUtil.resetTemplate();
-    res.json({ success: true, data: def });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+    for (const cls of classes) {
+      if (!cls.name) continue;
+      const group = groupsRepo.addGroup({
+        school_id: schoolId,
+        name: cls.name.trim(),
+        send_time: cls.send_time || '06:00'
+      });
+      insertedClasses++;
 
-adminRouter.post('/template/preview', (req, res) => {
-  try {
-    const { header, footer, body, classId } = req.body;
-    const preview = templateUtil.generatePreview({ header, footer, body }, classId);
-    res.json({ success: true, data: { preview } });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-/**
- * BROADCAST / SEND NOW
- */
-adminRouter.post('/send-now', async (req, res) => {
-  try {
-    const { classId } = req.body;
-    const bot = req.app.get('telegramBot');
-
-    if (!bot) {
-      return res.status(500).json({ success: false, error: 'Telegram Bot instansiyasi topilmadi' });
-    }
-
-    let result;
-    if (classId && classId !== 'all') {
-      const classItem = groupsRepo.getGroupById(classId);
-      if (!classItem) {
-        return res.status(404).json({ success: false, error: 'Sinf topilmadi' });
+      if (Array.isArray(cls.lessons)) {
+        for (const l of cls.lessons) {
+          if (!l.subject || !l.day_of_week || !l.start_time || !l.end_time) continue;
+          lessonsRepo.addLesson({
+            school_id: schoolId,
+            group_id: group.id,
+            day_of_week: Number(l.day_of_week),
+            start_time: l.start_time,
+            end_time: l.end_time,
+            subject: l.subject,
+            teacher: l.teacher || null,
+            room: l.room || null
+          });
+          insertedLessons++;
+        }
       }
-      result = await adminService.sendScheduleToGroup(bot, classItem);
-    } else {
-      result = await adminService.sendScheduleToAllGroups(bot);
     }
 
     res.json({
       success: true,
-      data: result
+      message: `Muvaffaqiyatli import qilindi: ${insertedClasses} ta sinf, ${insertedLessons} ta dars`,
+      insertedClasses,
+      insertedLessons
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -288,22 +333,33 @@ adminRouter.post('/send-now', async (req, res) => {
 });
 
 /**
- * SEND TIME
+ * POST /api/admin/broadcast
  */
-adminRouter.post('/send-time', (req, res) => {
+adminRouter.post('/broadcast', async (req, res) => {
   try {
-    const { send_time, classId } = req.body;
-    if (!send_time || !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(send_time.trim())) {
-      return res.status(400).json({ success: false, error: 'Noto‘g‘ri vaqt formati (HH:mm bo‘lishi kerak)' });
+    const bot = req.app.get('telegramBot');
+    if (!bot) {
+      return res.status(400).json({ success: false, error: 'Telegram bot faol emas' });
     }
 
-    if (classId && classId !== 'all') {
-      groupsRepo.setGroupSendTime(classId, send_time.trim());
-    } else {
-      settingsRepo.setSetting('default_send_time', send_time.trim());
+    const { classId } = req.body;
+    const schoolId = getEffectiveSchoolId(req);
+
+    if (classId) {
+      const group = groupsRepo.getGroupById(classId);
+      if (!group) return res.status(404).json({ success: false, error: 'Sinf topilmadi' });
+      const result = await adminService.sendTodayScheduleToGroup(bot, group, { force: true });
+      return res.json({ success: true, result });
     }
 
-    res.json({ success: true, message: `Yuborish vaqti ${send_time.trim()} ga muvaffaqiyatli o‘zgartirildi` });
+    const groups = groupsRepo.getAllGroups(true, schoolId);
+    const results = [];
+    for (const grp of groups) {
+      const r = await adminService.sendTodayScheduleToGroup(bot, grp, { force: true });
+      results.push({ group: grp.name, result: r });
+    }
+
+    res.json({ success: true, total: groups.length, details: results });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

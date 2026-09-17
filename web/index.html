@@ -20,11 +20,11 @@
 
   <!-- Sticky Top Header -->
   <header class="app-header">
-    <div class="brand-section">
+    <div class="brand-section" onclick="window.App.openSchoolModal()" style="cursor:pointer;">
       <div class="school-badge">🏫</div>
       <div class="brand-info">
-        <h1>MAKTAB</h1>
-        <p>Dars Jadvali</p>
+        <h1 id="app-brand-title">MAKTAB</h1>
+        <p id="app-brand-subtitle">Dars Jadvali</p>
       </div>
     </div>
 
@@ -52,6 +52,16 @@
         <div class="welcome-class-badge" id="home-current-class-badge" onclick="window.App.openClassModal()" style="cursor:pointer;">
           🏫 Sinf tanlanmagan
         </div>
+      </div>
+
+      <!-- School Code Banner -->
+      <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:12px;">
+        <div style="font-weight:800;font-size:13px;color:var(--primary);" id="home-school-code-pill">
+          🔑 Maktab Kodi: M-01
+        </div>
+        <button class="btn-sm" style="font-size:11px;padding:4px 8px;border-radius:6px;background:var(--primary);color:#fff;border:none;cursor:pointer;" onclick="window.App.openSchoolModal()">
+          O‘zgartirish / Kod
+        </button>
       </div>
 
       <div class="quick-nav-grid">
@@ -93,6 +103,16 @@
           </div>
         </div>
       </div>
+
+      <div class="quick-card" style="width:100%;margin-bottom:12px;" onclick="window.App.openSchoolModal()">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="quick-card-icon icon-blue">🔑</div>
+          <div>
+            <div class="quick-card-title">Boshqa maktabga ulanish</div>
+            <div class="quick-card-desc">Maktab kodini kiritish yoki ro‘yxatdan tanlash</div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- VIEW 2: DAILY SCHEDULE (Bugun & Ertaga) -->
@@ -128,8 +148,16 @@
 
         <div class="profile-class-setting">
           <div style="text-align:left;">
+            <div style="font-size:11px;color:var(--text-muted);font-weight:700;">MENING MAKTABIM:</div>
+            <div style="font-size:14px;font-weight:800;color:var(--primary);" id="profile-school-text">1-maktab (M-01)</div>
+          </div>
+          <button class="class-selector-btn" onclick="window.App.openSchoolModal()">Maktabni o‘zgartirish</button>
+        </div>
+
+        <div class="profile-class-setting">
+          <div style="text-align:left;">
             <div style="font-size:11px;color:var(--text-muted);font-weight:700;">MENING SINFIM:</div>
-            <div style="font-size:14px;font-weight:800;color:var(--primary);" id="profile-class-text">7-A sinf</div>
+            <div style="font-size:14px;font-weight:800;color:var(--primary);" id="profile-class-text">Tanlanmagan</div>
           </div>
           <button class="class-selector-btn" onclick="window.App.openClassModal()">Sinfni o‘zgartirish</button>
         </div>
@@ -144,7 +172,7 @@
       </div>
     </section>
 
-    <!-- VIEW 6: ADMIN PANEL (Conditional) -->
+    <!-- VIEW 6: ADMIN PANEL (Conditional / School Login) -->
     <section class="view-section" id="view-admin">
       <div id="admin-view-container"></div>
     </section>
@@ -173,9 +201,9 @@
       <span class="nav-icon">⚙️</span>
       <span>Profil</span>
     </button>
-    <button class="nav-item" id="nav-admin-btn" data-view="admin" style="display:none;" onclick="window.App.navigate('admin')">
+    <button class="nav-item" id="nav-admin-btn" data-view="admin" onclick="window.App.navigate('admin')">
       <span class="nav-icon">👑</span>
-      <span>Admin</span>
+      <span>Admin / Zavuch</span>
     </button>
   </nav>
 

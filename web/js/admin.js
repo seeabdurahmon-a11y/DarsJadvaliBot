@@ -2,21 +2,31 @@ import { Api } from './api.js';
 import { TelegramApp } from './telegram.js';
 
 export const AdminView = {
-  currentTab: 'stats', // 'stats' | 'classes' | 'teachers' | 'subjects' | 'lessons' | 'template' | 'broadcast'
+  currentTab: 'stats', // 'stats' | 'classes' | 'teachers' | 'subjects' | 'lessons' | 'import' | 'broadcast'
 
   async render(container) {
+    // Check if user is logged in as Admin (via Telegram or School Token)
+    const token = localStorage.getItem('maktab_school_token');
+    if (!window.App.isAdmin && !token) {
+      return this.renderLoginView(container);
+    }
+
     container.innerHTML = `
-      <div class="section-header">
-        <div class="section-title">⚙️ ADMIN BOSHQARUV PANELI</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);font-weight:700;">MAKTAB BOSHQARUV PANELI</div>
+          <div style="font-size:15px;font-weight:800;color:var(--primary);">${window.App.currentSchoolName || 'Maktab'} <span style="background:var(--primary);color:#fff;font-size:11px;padding:2px 6px;border-radius:4px;margin-left:4px;">${window.App.currentSchoolCode}</span></div>
+        </div>
+        <button class="btn-sm" style="background:var(--danger);color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;" onclick="window.AdminView.logout()">🚪 Chiqish</button>
       </div>
 
-      <div class="tab-pills" id="admin-pills">
+      <div class="tab-pills" id="admin-pills" style="overflow-x:auto;white-space:nowrap;">
         <button class="tab-pill active" onclick="window.AdminView.switchTab('stats')">📊 Statistika</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('classes')">🏫 Sinflar</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('teachers')">👨‍🏫 O‘qituvchilar</button>
+        <button class="tab-pill" onclick="window.AdminView.switchTab('teachers')">👨‍🏫 Ustozlar</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('subjects')">📚 Fanlar</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('lessons')">📅 Dars jadvali</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('template')">📩 Xabar shabloni</button>
+        <button class="tab-pill" onclick="window.AdminView.switchTab('import')">📥 Jadval yuklash</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('broadcast')">📤 Hozir yuborish</button>
       </div>
 
@@ -26,6 +36,129 @@ export const AdminView = {
     `;
 
     this.loadTabContent();
+  },
+
+  renderLoginView(container) {
+    container.innerHTML = `
+      <div class="welcome-card" style="margin-bottom:16px;">
+        <div class="welcome-title">🔐 Maktab Boshqaruv Paneli</div>
+        <div class="welcome-subtitle">Dars jadvalini tahrirlash, sinflar va o‘qituvchilarni kiritish uchun maktab parolini kiriting.</div>
+      </div>
+
+      <div class="profile-card" style="text-align:left;">
+        <div class="form-group">
+          <label class="form-label">Maktab Kodi:</label>
+          <input type="text" id="admin-login-code" class="form-control" value="${window.App.currentSchoolCode || 'M-01'}" placeholder="Masalan: M-01" style="text-transform:uppercase;font-weight:700;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Admin Paroli:</label>
+          <input type="password" id="admin-login-pwd" class="form-control" placeholder="Parolni kiriting">
+        </div>
+
+        <button class="admin-action-btn" style="margin-top:10px;" onclick="window.AdminView.submitLogin()">🔑 Tizimga kirish</button>
+
+        <hr style="margin:20px 0;border:none;border-top:1px solid var(--border);">
+
+        <div style="text-align:center;">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Yangi maktabni tizimga ulamoqchimisiz?</div>
+          <button class="btn-icon-action" style="width:100%;padding:10px;" onclick="window.AdminView.openRegisterSchoolModal()">➕ Yangi maktab ro‘yxatdan o‘tkazish</button>
+        </div>
+      </div>
+    `;
+  },
+
+  async submitLogin() {
+    const code = document.getElementById('admin-login-code')?.value?.trim();
+    const password = document.getElementById('admin-login-pwd')?.value?.trim();
+
+    if (!code || !password) {
+      return window.App.showToast('Maktab kodi va parolini kiriting', 'error');
+    }
+
+    try {
+      window.App.showToast('Kirilmoqda...', 'info');
+      const res = await Api.loginSchool(code, password);
+      localStorage.setItem('maktab_school_token', res.token);
+      localStorage.setItem('maktab_selected_school_code', res.school.code);
+      localStorage.setItem('maktab_selected_school_name', res.school.name);
+      localStorage.setItem('maktab_selected_school_id', String(res.school.id));
+
+      window.App.isAdmin = true;
+      window.App.currentSchoolCode = res.school.code;
+      window.App.currentSchoolName = res.school.name;
+      window.App.currentSchoolId = res.school.id;
+      window.App.updateHeaderClassPill();
+
+      window.App.showToast(`Xush kelibsiz, ${res.school.name}!`, 'success');
+      const container = document.getElementById('admin-view-container');
+      if (container) this.render(container);
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
+    }
+  },
+
+  logout() {
+    localStorage.removeItem('maktab_school_token');
+    window.App.isAdmin = false;
+    window.App.showToast('Admin paneldan chiqildi', 'info');
+    const container = document.getElementById('admin-view-container');
+    if (container) this.render(container);
+  },
+
+  openRegisterSchoolModal() {
+    const bodyHtml = `
+      <div class="form-group">
+        <label class="form-label">Maktab nomi:</label>
+        <input type="text" id="reg-school-name" class="form-control" placeholder="Masalan: 12-IDUM yoki 45-maktab">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Maktab kodi (Ixtiyoriy):</label>
+        <input type="text" id="reg-school-code" class="form-control" placeholder="Bo‘sh qoldirilsa M-02 kabi avtomatik beriladi" style="text-transform:uppercase;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Viloyat / Tuman:</label>
+        <input type="text" id="reg-school-region" class="form-control" placeholder="Masalan: Toshkent shahar, Yunusobod">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Admin Paroli:</label>
+        <input type="text" id="reg-school-pwd" class="form-control" value="admin123">
+      </div>
+      <button class="admin-action-btn" onclick="window.AdminView.submitRegisterSchool()">🚀 Maktabni Yaratish</button>
+    `;
+    window.App.showCustomModal('➕ Yangi Maktab Ro‘yxatdan O‘tkazish', bodyHtml);
+  },
+
+  async submitRegisterSchool() {
+    const name = document.getElementById('reg-school-name')?.value?.trim();
+    const code = document.getElementById('reg-school-code')?.value?.trim();
+    const region = document.getElementById('reg-school-region')?.value?.trim();
+    const admin_password = document.getElementById('reg-school-pwd')?.value?.trim();
+
+    if (!name) {
+      return window.App.showToast('Maktab nomini kiriting', 'error');
+    }
+
+    try {
+      const res = await Api.registerSchool({ name, code, region, admin_password });
+      window.App.closeModal();
+      window.App.showToast(res.message, 'success');
+      localStorage.setItem('maktab_school_token', res.token);
+      localStorage.setItem('maktab_selected_school_code', res.school.code);
+      localStorage.setItem('maktab_selected_school_name', res.school.name);
+      localStorage.setItem('maktab_selected_school_id', String(res.school.id));
+
+      window.App.isAdmin = true;
+      window.App.currentSchoolCode = res.school.code;
+      window.App.currentSchoolName = res.school.name;
+      window.App.currentSchoolId = res.school.id;
+      window.App.updateHeaderClassPill();
+
+      const container = document.getElementById('admin-view-container');
+      if (container) this.render(container);
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
+    }
   },
 
   switchTab(tab) {
@@ -56,8 +189,8 @@ export const AdminView = {
         await this.renderSubjects(body);
       } else if (this.currentTab === 'lessons') {
         await this.renderLessons(body);
-      } else if (this.currentTab === 'template') {
-        await this.renderTemplate(body);
+      } else if (this.currentTab === 'import') {
+        await this.renderImport(body);
       } else if (this.currentTab === 'broadcast') {
         await this.renderBroadcast(body);
       }
@@ -74,11 +207,24 @@ export const AdminView = {
 
   // 1. STATS
   async renderStats(container) {
-    const stats = await Api.getAdminStats();
+    const stats = await Api.getAdminStats(window.App.currentSchoolCode);
     container.innerHTML = `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);font-weight:700;">BOTGA ULANISH KODI:</div>
+            <div style="font-size:20px;font-weight:800;color:var(--primary);">${window.App.currentSchoolCode}</div>
+          </div>
+          <button class="btn-sm" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:700;" onclick="navigator.clipboard?.writeText('${window.App.currentSchoolCode}'); window.App.showToast('Kodi nusxalandi: ${window.App.currentSchoolCode}', 'success');">📋 Kodni nusxalash</button>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">
+          💡 <i>O‘quvchilar va guruhlar botga kirib <b>${window.App.currentSchoolCode}</b> deb yozsa, to‘g‘ridan-to‘g‘ri ushbu maktab dars jadvali ochiladi.</i>
+        </div>
+      </div>
+
       <div class="admin-stats-grid">
         <div class="stat-box">
-          <div class="stat-val">${stats.groupsCount || stats.classesCount || 0}</div>
+          <div class="stat-val">${stats.classesCount || 0}</div>
           <div class="stat-label">🏫 Sinflar</div>
         </div>
         <div class="stat-box">
@@ -93,28 +239,20 @@ export const AdminView = {
           <div class="stat-val">${stats.lessonsCount || 0}</div>
           <div class="stat-label">📅 Darslar</div>
         </div>
-        <div class="stat-box">
-          <div class="stat-val">${stats.usersCount || 0}</div>
-          <div class="stat-label">👥 Foydalanuvchilar</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-val">${stats.todaySentCount || 0}</div>
-          <div class="stat-label">📤 Bugun yuborilgan</div>
-        </div>
       </div>
     `;
   },
 
   // 2. CLASSES
   async renderClasses(container) {
-    const classes = await Api.getClasses();
+    const classes = await Api.getClasses(window.App.currentSchoolCode);
     let html = `
       <button class="admin-action-btn" onclick="window.AdminView.openAddClassModal()">➕ Yangi Sinf Qo‘shish</button>
       <div class="lessons-list">
     `;
 
     if (classes.length === 0) {
-      html += `<div class="state-box"><div class="state-title">Hozircha sinflar yo‘q</div></div>`;
+      html += `<div class="state-box"><div class="state-title">Ushbu maktabda hozircha sinflar yo‘q</div></div>`;
     } else {
       classes.forEach(c => {
         html += `
@@ -131,36 +269,33 @@ export const AdminView = {
         `;
       });
     }
-
     html += `</div>`;
     container.innerHTML = html;
   },
 
   openAddClassModal() {
-    window.App.showCustomModal('➕ Yangi Sinf Qo‘shish', `
+    const bodyHtml = `
       <div class="form-group">
-        <label class="form-label">Sinf Nomi (masalan 7-A):</label>
-        <input type="text" id="modal-class-name" class="form-control" placeholder="10-B sinf">
+        <label class="form-label">Sinf Nomi:</label>
+        <input type="text" id="add-class-name" class="form-control" placeholder="Masalan: 10-A sinf">
       </div>
       <div class="form-group">
-        <label class="form-label">Yuborish Vaqti (standart 06:00):</label>
-        <input type="time" id="modal-class-time" class="form-control" value="06:00">
+        <label class="form-label">Dars jadvalini yuborish vaqti:</label>
+        <input type="time" id="add-class-time" class="form-control" value="06:00">
       </div>
-      <button class="admin-action-btn" onclick="window.AdminView.saveNewClass()">💾 Saqlash</button>
-    `);
+      <button class="admin-action-btn" onclick="window.AdminView.submitAddClass()">💾 Sinfni Saqlash</button>
+    `;
+    window.App.showCustomModal('➕ Yangi Sinf Qo‘shish', bodyHtml);
   },
 
-  async saveNewClass() {
-    const name = document.getElementById('modal-class-name')?.value;
-    const time = document.getElementById('modal-class-time')?.value;
+  async submitAddClass() {
+    const name = document.getElementById('add-class-name')?.value?.trim();
+    const send_time = document.getElementById('add-class-time')?.value?.trim();
 
-    if (!name || !name.trim()) {
-      window.App.showToast('Sinf nomini kiriting!', 'error');
-      return;
-    }
+    if (!name) return window.App.showToast('Sinf nomini kiriting', 'error');
 
     try {
-      await Api.createClass({ name: name.trim(), send_time: time });
+      await Api.createClass({ name, send_time, school_id: window.App.currentSchoolId });
       window.App.closeModal();
       window.App.showToast('Sinf muvaffaqiyatli qo‘shildi!', 'success');
       this.loadTabContent();
@@ -170,27 +305,28 @@ export const AdminView = {
   },
 
   openEditClassModal(id, currentName, currentTime) {
-    window.App.showCustomModal('✏️ Sinfni Tahrirlash', `
+    const bodyHtml = `
       <div class="form-group">
         <label class="form-label">Sinf Nomi:</label>
-        <input type="text" id="modal-edit-class-name" class="form-control" value="${currentName}">
+        <input type="text" id="edit-class-name" class="form-control" value="${currentName}">
       </div>
       <div class="form-group">
-        <label class="form-label">Yuborish Vaqti:</label>
-        <input type="time" id="modal-edit-class-time" class="form-control" value="${currentTime}">
+        <label class="form-label">Yuborish vaqti:</label>
+        <input type="time" id="edit-class-time" class="form-control" value="${currentTime || '06:00'}">
       </div>
-      <button class="admin-action-btn" onclick="window.AdminView.saveEditClass(${id})">💾 Saqlash</button>
-    `);
+      <button class="admin-action-btn" onclick="window.AdminView.submitEditClass(${id})">💾 O‘zgarishlarni Saqlash</button>
+    `;
+    window.App.showCustomModal('✏️ Sinfni Tahrirlash', bodyHtml);
   },
 
-  async saveEditClass(id) {
-    const name = document.getElementById('modal-edit-class-name')?.value;
-    const time = document.getElementById('modal-edit-class-time')?.value;
+  async submitEditClass(id) {
+    const name = document.getElementById('edit-class-name')?.value?.trim();
+    const send_time = document.getElementById('edit-class-time')?.value?.trim();
 
     try {
-      await Api.updateClass(id, { name: name.trim(), send_time: time });
+      await Api.updateClass(id, { name, send_time });
       window.App.closeModal();
-      window.App.showToast('Sinf o‘zgartirildi!', 'success');
+      window.App.showToast('Sinf yangilandi!', 'success');
       this.loadTabContent();
     } catch (err) {
       window.App.showToast(err.message, 'error');
@@ -198,7 +334,7 @@ export const AdminView = {
   },
 
   async deleteClass(id, name) {
-    if (confirm(`Haqiqatan ham ${name} sinfini o‘chirmoqchimisiz? Barcha darslari o‘chadi!`)) {
+    if (confirm(`Haqiqatan ham "${name}" sinfini o‘chirmoqchimisiz?`)) {
       try {
         await Api.deleteClass(id);
         window.App.showToast('Sinf o‘chirildi', 'success');
@@ -211,9 +347,9 @@ export const AdminView = {
 
   // 3. TEACHERS
   async renderTeachers(container) {
-    const teachers = await Api.getTeachers();
+    const teachers = await Api.getTeachers(window.App.currentSchoolCode);
     let html = `
-      <button class="admin-action-btn" onclick="window.AdminView.openAddTeacherModal()">➕ Yangi O‘qituvchi Qo‘shish</button>
+      <button class="admin-action-btn" onclick="window.AdminView.openAddTeacherModal()">➕ O‘qituvchi Qo‘shish</button>
       <div class="lessons-list">
     `;
 
@@ -225,65 +361,57 @@ export const AdminView = {
           <div class="admin-list-item">
             <div>
               <div class="admin-item-title">👨‍🏫 ${t.last_name} ${t.first_name}</div>
-              <div class="admin-item-subtitle">📚 ${t.subject || 'Fan yo‘q'} ${t.phone ? `| 📞 ${t.phone}` : ''}</div>
+              <div class="admin-item-subtitle">📖 ${t.subject || 'Fan biriktirilmagan'} ${t.phone ? `| 📞 ${t.phone}` : ''}</div>
             </div>
             <div class="admin-btn-group">
-              <button class="btn-icon-action danger" onclick="window.AdminView.deleteTeacher(${t.id}, '${t.last_name}')">🗑</button>
+              <button class="btn-icon-action danger" onclick="window.AdminView.deleteTeacher(${t.id})">🗑</button>
             </div>
           </div>
         `;
       });
     }
-
     html += `</div>`;
     container.innerHTML = html;
   },
 
   openAddTeacherModal() {
-    window.App.showCustomModal('➕ Yangi O‘qituvchi', `
-      <div class="form-group">
-        <label class="form-label">Ism:</label>
-        <input type="text" id="modal-t-first" class="form-control" placeholder="Anvar">
-      </div>
+    const bodyHtml = `
       <div class="form-group">
         <label class="form-label">Familiya:</label>
-        <input type="text" id="modal-t-last" class="form-control" placeholder="Aliyev">
+        <input type="text" id="add-t-last" class="form-control" placeholder="Masalan: Aliyev">
       </div>
       <div class="form-group">
-        <label class="form-label">Asosiy Fan:</label>
-        <input type="text" id="modal-t-sub" class="form-control" placeholder="Matematika">
+        <label class="form-label">Ism:</label>
+        <input type="text" id="add-t-first" class="form-control" placeholder="Masalan: Rustam">
       </div>
       <div class="form-group">
-        <label class="form-label">Telefon (ixtiyoriy):</label>
-        <input type="tel" id="modal-t-phone" class="form-control" placeholder="+998901234567">
+        <label class="form-label">Fani:</label>
+        <input type="text" id="add-t-subj" class="form-control" placeholder="Masalan: Matematika">
       </div>
-      <button class="admin-action-btn" onclick="window.AdminView.saveNewTeacher()">💾 Saqlash</button>
-    `);
+      <button class="admin-action-btn" onclick="window.AdminView.submitAddTeacher()">💾 O‘qituvchini Saqlash</button>
+    `;
+    window.App.showCustomModal('➕ Yangi O‘qituvchi Qo‘shish', bodyHtml);
   },
 
-  async saveNewTeacher() {
-    const first_name = document.getElementById('modal-t-first')?.value;
-    const last_name = document.getElementById('modal-t-last')?.value;
-    const subject = document.getElementById('modal-t-sub')?.value;
-    const phone = document.getElementById('modal-t-phone')?.value;
+  async submitAddTeacher() {
+    const last_name = document.getElementById('add-t-last')?.value?.trim();
+    const first_name = document.getElementById('add-t-first')?.value?.trim();
+    const subject = document.getElementById('add-t-subj')?.value?.trim();
 
-    if (!first_name || !last_name) {
-      window.App.showToast('Ism va familiyani kiriting!', 'error');
-      return;
-    }
+    if (!last_name || !first_name) return window.App.showToast('Familiya va ism kiritilishi shart', 'error');
 
     try {
-      await Api.createTeacher({ first_name, last_name, subject, phone });
+      await Api.createTeacher({ last_name, first_name, subject, school_id: window.App.currentSchoolId });
       window.App.closeModal();
-      window.App.showToast('O‘qituvchi muvaffaqiyatli qo‘shildi!', 'success');
+      window.App.showToast('O‘qituvchi saqlandi', 'success');
       this.loadTabContent();
     } catch (err) {
       window.App.showToast(err.message, 'error');
     }
   },
 
-  async deleteTeacher(id, name) {
-    if (confirm(`${name} ni o‘chirmoqchimisiz?`)) {
+  async deleteTeacher(id) {
+    if (confirm('O‘qituvchini o‘chirmoqchimisiz?')) {
       try {
         await Api.deleteTeacher(id);
         window.App.showToast('O‘qituvchi o‘chirildi', 'success');
@@ -296,60 +424,65 @@ export const AdminView = {
 
   // 4. SUBJECTS
   async renderSubjects(container) {
-    const subjects = await Api.getSubjects();
+    const subjects = await Api.getSubjects(window.App.currentSchoolCode);
     let html = `
       <button class="admin-action-btn" onclick="window.AdminView.openAddSubjectModal()">➕ Yangi Fan Qo‘shish</button>
       <div class="lessons-list">
     `;
 
-    subjects.forEach(s => {
-      html += `
-        <div class="admin-list-item">
-          <div class="admin-item-title">${s.emoji || '📚'} ${s.name}</div>
-          <button class="btn-icon-action danger" onclick="window.AdminView.deleteSubject(${s.id}, '${s.name}')">🗑</button>
-        </div>
-      `;
-    });
-
+    if (subjects.length === 0) {
+      html += `<div class="state-box"><div class="state-title">Fanlar yo‘q</div></div>`;
+    } else {
+      subjects.forEach(s => {
+        html += `
+          <div class="admin-list-item">
+            <div>
+              <div class="admin-item-title">${s.emoji || '📚'} ${s.name}</div>
+            </div>
+            <div class="admin-btn-group">
+              <button class="btn-icon-action danger" onclick="window.AdminView.deleteSubject(${s.id})">🗑</button>
+            </div>
+          </div>
+        `;
+      });
+    }
     html += `</div>`;
     container.innerHTML = html;
   },
 
   openAddSubjectModal() {
-    window.App.showCustomModal('➕ Yangi Fan', `
+    const bodyHtml = `
       <div class="form-group">
         <label class="form-label">Fan Nomi:</label>
-        <input type="text" id="modal-sub-name" class="form-control" placeholder="Kimyo">
+        <input type="text" id="add-s-name" class="form-control" placeholder="Masalan: Kimyo">
       </div>
       <div class="form-group">
-        <label class="form-label">Emoji (ixtiyoriy):</label>
-        <input type="text" id="modal-sub-emoji" class="form-control" placeholder="🧪">
+        <label class="form-label">Emoji (Ixtiyoriy):</label>
+        <input type="text" id="add-s-emoji" class="form-control" placeholder="Masalan: 🧪">
       </div>
-      <button class="admin-action-btn" onclick="window.AdminView.saveNewSubject()">💾 Saqlash</button>
-    `);
+      <button class="admin-action-btn" onclick="window.AdminView.submitAddSubject()">💾 Fanni Saqlash</button>
+    `;
+    window.App.showCustomModal('➕ Yangi Fan Qo‘shish', bodyHtml);
   },
 
-  async saveNewSubject() {
-    const name = document.getElementById('modal-sub-name')?.value;
-    const emoji = document.getElementById('modal-sub-emoji')?.value;
+  async submitAddSubject() {
+    const name = document.getElementById('add-s-name')?.value?.trim();
+    const emoji = document.getElementById('add-s-emoji')?.value?.trim();
 
-    if (!name || !name.trim()) {
-      window.App.showToast('Fan nomini kiriting!', 'error');
-      return;
-    }
+    if (!name) return window.App.showToast('Fan nomini kiriting', 'error');
 
     try {
-      await Api.createSubject({ name: name.trim(), emoji: emoji || undefined });
+      await Api.createSubject({ name, emoji, school_id: window.App.currentSchoolId });
       window.App.closeModal();
-      window.App.showToast('Fan qo‘shildi!', 'success');
+      window.App.showToast('Fan saqlandi', 'success');
       this.loadTabContent();
     } catch (err) {
       window.App.showToast(err.message, 'error');
     }
   },
 
-  async deleteSubject(id, name) {
-    if (confirm(`${name} fanini o‘chirmoqchimisiz?`)) {
+  async deleteSubject(id) {
+    if (confirm('Fanni o‘chirmoqchimisiz?')) {
       try {
         await Api.deleteSubject(id);
         window.App.showToast('Fan o‘chirildi', 'success');
@@ -360,141 +493,126 @@ export const AdminView = {
     }
   },
 
-  // 5. LESSONS CONSTRUCTOR
+  // 5. LESSONS (Dars jadvali)
   async renderLessons(container) {
-    const classes = await Api.getClasses();
-    const selectedClassId = window.App.currentClassId || (classes[0] ? classes[0].id : null);
-    const lessons = await Api.getAdminLessons(selectedClassId);
+    const classes = await Api.getClasses(window.App.currentSchoolCode);
+
+    if (classes.length === 0) {
+      container.innerHTML = `<div class="state-box"><div class="state-title">Avval sinflar qo‘shing</div></div>`;
+      return;
+    }
+
+    const selectedClassId = this.adminSelectedClassId || classes[0].id;
+    this.adminSelectedClassId = selectedClassId;
+
+    const scheduleData = await Api.getClassSchedule(selectedClassId);
+    const weekly = scheduleData.weekly || {};
 
     let html = `
       <div class="form-group">
         <label class="form-label">Sinfni tanlang:</label>
-        <select class="custom-select" onchange="window.AdminView.onLessonClassFilter(this.value)">
-          ${classes.map(c => `<option value="${c.id}" ${c.id == selectedClassId ? 'selected' : ''}>${c.name}</option>`).join('')}
+        <select class="custom-select" id="admin-class-select" onchange="window.AdminView.adminSelectedClassId = Number(this.value); window.AdminView.loadTabContent();">
+          ${classes.map(c => `<option value="${c.id}" ${c.id === selectedClassId ? 'selected' : ''}>${c.name}</option>`).join('')}
         </select>
       </div>
 
       <button class="admin-action-btn" onclick="window.AdminView.openAddLessonModal(${selectedClassId})">➕ Dars Qo‘shish</button>
-      <div class="lessons-list">
     `;
 
-    const dayNames = ['', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
+    const dayNames = { 1: 'Dushanba', 2: 'Seshanba', 3: 'Chorshanba', 4: 'Payshanba', 5: 'Juma', 6: 'Shanba' };
 
-    if (lessons.length === 0) {
-      html += `<div class="state-box"><div class="state-title">Bu sinfda darslar yo‘q</div></div>`;
-    } else {
-      lessons.forEach(l => {
-        html += `
-          <div class="admin-list-item">
-            <div>
-              <div class="admin-item-title">${l.subject} (${dayNames[l.day_of_week] || ''})</div>
-              <div class="admin-item-subtitle">⏰ ${l.start_time} - ${l.end_time} | 👨‍🏫 ${l.teacher || 'Ustoz yo‘q'} ${l.room ? `| xona: ${l.room}` : ''}</div>
+    for (let day = 1; day <= 6; day++) {
+      const dayLessons = weekly[day]?.lessons || [];
+      html += `
+        <div style="margin-top:16px;">
+          <div class="section-title" style="margin-bottom:8px;font-size:14px;color:var(--primary);">🗓 ${dayNames[day]}</div>
+          <div class="lessons-list">
+      `;
+
+      if (dayLessons.length === 0) {
+        html += `<div style="padding:10px;color:var(--text-muted);font-size:12px;background:var(--bg-card);border-radius:8px;">Darslar yo‘q</div>`;
+      } else {
+        dayLessons.forEach((l, idx) => {
+          html += `
+            <div class="admin-list-item">
+              <div>
+                <div class="admin-item-title">${idx + 1}. ${l.subject}</div>
+                <div class="admin-item-subtitle">🕐 ${l.start_time} - ${l.end_time} ${l.teacher ? `| 👨‍🏫 ${l.teacher}` : ''} ${l.room ? `| 🏫 ${l.room}` : ''}</div>
+              </div>
+              <div class="admin-btn-group">
+                <button class="btn-icon-action danger" onclick="window.AdminView.deleteLesson(${l.id})">🗑</button>
+              </div>
             </div>
-            <div class="admin-btn-group">
-              <button class="btn-icon-action danger" onclick="window.AdminView.deleteLesson(${l.id})">🗑</button>
-            </div>
-          </div>
-        `;
-      });
+          `;
+        });
+      }
+      html += `</div></div>`;
     }
 
-    html += `</div>`;
     container.innerHTML = html;
   },
 
-  onLessonClassFilter(classId) {
-    window.App.currentClassId = classId;
-    this.loadTabContent();
-  },
-
-  async openAddLessonModal(selectedClassId) {
-    const classes = await Api.getClasses();
-    const subjects = await Api.getSubjects();
-    const teachers = await Api.getTeachers();
-
-    window.App.showCustomModal('➕ Dars Qo‘shish', `
+  openAddLessonModal(groupId) {
+    const bodyHtml = `
       <div class="form-group">
-        <label class="form-label">Sinf:</label>
-        <select id="modal-l-class" class="custom-select">
-          ${classes.map(c => `<option value="${c.id}" ${c.id == selectedClassId ? 'selected' : ''}>${c.name}</option>`).join('')}
+        <label class="form-label">Hafta kuni:</label>
+        <select id="add-l-day" class="custom-select">
+          <option value="1">Dushanba</option>
+          <option value="2">Seshanba</option>
+          <option value="3">Chorshanba</option>
+          <option value="4">Payshanba</option>
+          <option value="5">Juma</option>
+          <option value="6">Shanba</option>
         </select>
       </div>
-
       <div class="form-group">
-        <label class="form-label">Hafta Kuni:</label>
-        <select id="modal-l-day" class="custom-select">
-          <option value="1">1 - Dushanba</option>
-          <option value="2">2 - Seshanba</option>
-          <option value="3">3 - Chorshanba</option>
-          <option value="4">4 - Payshanba</option>
-          <option value="5">5 - Juma</option>
-          <option value="6">6 - Shanba</option>
-        </select>
-      </div>
-
-      <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <div>
-          <label class="form-label">Boshlanish:</label>
-          <input type="time" id="modal-l-start" class="form-control" value="08:00">
-        </div>
-        <div>
-          <label class="form-label">Tugash:</label>
-          <input type="time" id="modal-l-end" class="form-control" value="08:45">
+        <label class="form-label">Dars vaqti:</label>
+        <div style="display:flex;gap:8px;">
+          <input type="time" id="add-l-start" class="form-control" value="08:30">
+          <span style="align-self:center;">—</span>
+          <input type="time" id="add-l-end" class="form-control" value="09:15">
         </div>
       </div>
-
       <div class="form-group">
-        <label class="form-label">Fan:</label>
-        <input type="text" id="modal-l-sub" class="form-control" list="sub-list" placeholder="Matematika">
-        <datalist id="sub-list">
-          ${subjects.map(s => `<option value="${s.name}">`).join('')}
-        </datalist>
+        <label class="form-label">Fan nomi:</label>
+        <input type="text" id="add-l-subj" class="form-control" placeholder="Masalan: Matematika">
       </div>
-
       <div class="form-group">
-        <label class="form-label">O‘qituvchi:</label>
-        <input type="text" id="modal-l-teacher" class="form-control" list="teacher-list" placeholder="Aliyev A.">
-        <datalist id="teacher-list">
-          ${teachers.map(t => `<option value="${t.last_name} ${t.first_name[0]}.">`).join('')}
-        </datalist>
+        <label class="form-label">O‘qituvchi (Ixtiyoriy):</label>
+        <input type="text" id="add-l-teacher" class="form-control" placeholder="Masalan: Rustam aka">
       </div>
-
       <div class="form-group">
-        <label class="form-label">Xona (masalan 204):</label>
-        <input type="text" id="modal-l-room" class="form-control" placeholder="204">
+        <label class="form-label">Xona (Ixtiyoriy):</label>
+        <input type="text" id="add-l-room" class="form-control" placeholder="Masalan: 204">
       </div>
-
-      <button class="admin-action-btn" onclick="window.AdminView.saveNewLesson()">💾 Saqlash</button>
-    `);
+      <button class="admin-action-btn" onclick="window.AdminView.submitAddLesson(${groupId})">💾 Darsni Saqlash</button>
+    `;
+    window.App.showCustomModal('➕ Dars Qo‘shish', bodyHtml);
   },
 
-  async saveNewLesson() {
-    const group_id = document.getElementById('modal-l-class')?.value;
-    const day_of_week = document.getElementById('modal-l-day')?.value;
-    const start_time = document.getElementById('modal-l-start')?.value;
-    const end_time = document.getElementById('modal-l-end')?.value;
-    const subject = document.getElementById('modal-l-sub')?.value;
-    const teacher = document.getElementById('modal-l-teacher')?.value;
-    const room = document.getElementById('modal-l-room')?.value;
+  async submitAddLesson(groupId) {
+    const day_of_week = document.getElementById('add-l-day')?.value;
+    const start_time = document.getElementById('add-l-start')?.value;
+    const end_time = document.getElementById('add-l-end')?.value;
+    const subject = document.getElementById('add-l-subj')?.value?.trim();
+    const teacher = document.getElementById('add-l-teacher')?.value?.trim();
+    const room = document.getElementById('add-l-room')?.value?.trim();
 
-    if (!subject || !start_time || !end_time) {
-      window.App.showToast('Fan va vaqtlarni to‘liq kiriting!', 'error');
-      return;
-    }
+    if (!subject) return window.App.showToast('Fan nomini kiriting', 'error');
 
     try {
       await Api.createLesson({
-        group_id,
+        school_id: window.App.currentSchoolId,
+        group_id: groupId,
         day_of_week,
         start_time,
         end_time,
-        subject: subject.trim(),
-        teacher: teacher ? teacher.trim() : null,
-        room: room ? room.trim() : null
+        subject,
+        teacher,
+        room
       });
-
       window.App.closeModal();
-      window.App.showToast('Dars muvaffaqiyatli saqlandi!', 'success');
+      window.App.showToast('Dars qo‘shildi', 'success');
       this.loadTabContent();
     } catch (err) {
       window.App.showToast(err.message, 'error');
@@ -513,97 +631,50 @@ export const AdminView = {
     }
   },
 
-  // 6. MESSAGE TEMPLATE
-  async renderTemplate(container) {
-    const template = await Api.getTemplate();
+  // 6. IMPORT (Jadval yuklash)
+  async renderImport(container) {
     container.innerHTML = `
-      <div class="form-group">
-        <label class="form-label">Sarlavha (Header):</label>
-        <input type="text" id="tpl-header" class="form-control" value="${template.header || ''}">
+      <div class="welcome-card" style="margin-bottom:16px;">
+        <div class="welcome-title">📥 Dars Jadvallarini Ommaviy Yuklash</div>
+        <div class="welcome-subtitle">Barcha sinflar va darslarni 1 zumda saytga kiritish</div>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Pastki Matn (Footer):</label>
-        <input type="text" id="tpl-footer" class="form-control" value="${template.footer || ''}">
-      </div>
+      <div class="profile-card" style="text-align:left;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Format namunasi (JSON):</div>
+        <textarea id="import-json-text" class="template-textarea" style="height:160px;font-family:monospace;font-size:11px;" placeholder='[
+  {
+    "name": "11-A sinf",
+    "lessons": [
+      { "day_of_week": 1, "start_time": "08:30", "end_time": "09:15", "subject": "Matematika", "teacher": "Aliyev" },
+      { "day_of_week": 1, "start_time": "09:20", "end_time": "10:05", "subject": "Ona tili", "teacher": "Karimova" }
+    ]
+  }
+]'></textarea>
 
-      <div class="form-group">
-        <label class="form-label">To‘liq Shablon Tuzilishi (Body):</label>
-        <textarea id="tpl-body" class="template-textarea">${template.body || ''}</textarea>
+        <button class="admin-action-btn" style="margin-top:10px;" onclick="window.AdminView.submitImport()">🚀 Jadvalni Bazaga Yuklash</button>
       </div>
-
-      <div class="template-chips">
-        <span class="chip" onclick="window.AdminView.insertPlaceholder('{{header}}')">{{header}}</span>
-        <span class="chip" onclick="window.AdminView.insertPlaceholder('{{date}}')">{{date}}</span>
-        <span class="chip" onclick="window.AdminView.insertPlaceholder('{{group}}')">{{group}}</span>
-        <span class="chip" onclick="window.AdminView.insertPlaceholder('{{lessons}}')">{{lessons}}</span>
-        <span class="chip" onclick="window.AdminView.insertPlaceholder('{{footer}}')">{{footer}}</span>
-      </div>
-
-      <div class="admin-btn-group" style="margin-bottom:14px;">
-        <button class="admin-action-btn" style="flex:1;" onclick="window.AdminView.saveTemplate()">💾 Saqlash</button>
-        <button class="btn-icon-action" style="padding:10px;" onclick="window.AdminView.previewTemplate()">👁 Ko‘rib chiqish</button>
-        <button class="btn-icon-action danger" style="padding:10px;" onclick="window.AdminView.resetTemplate()">🔄 Reset</button>
-      </div>
-
-      <div id="tpl-preview-area"></div>
     `;
   },
 
-  insertPlaceholder(tag) {
-    const textarea = document.getElementById('tpl-body');
-    if (textarea) {
-      textarea.value += (textarea.value ? '\n\n' : '') + tag;
-    }
-  },
-
-  async saveTemplate() {
-    const header = document.getElementById('tpl-header')?.value;
-    const footer = document.getElementById('tpl-footer')?.value;
-    const body = document.getElementById('tpl-body')?.value;
+  async submitImport() {
+    const jsonStr = document.getElementById('import-json-text')?.value?.trim();
+    if (!jsonStr) return window.App.showToast('Jadval ma’lumotini kiriting', 'error');
 
     try {
-      await Api.saveTemplate({ header, footer, body });
-      window.App.showToast('Shablon saqlandi!', 'success');
+      const parsed = JSON.parse(jsonStr);
+      const classes = Array.isArray(parsed) ? parsed : [parsed];
+      window.App.showToast('Yuklanmoqda...', 'info');
+      const res = await Api.importTimetable({ classes, school_id: window.App.currentSchoolId });
+      window.App.showToast(res.message, 'success');
+      this.switchTab('classes');
     } catch (err) {
-      window.App.showToast(err.message, 'error');
+      window.App.showToast(`Xatolik: ${err.message}`, 'error');
     }
   },
 
-  async resetTemplate() {
-    if (confirm('Shablonni standart holatga qaytarmoqchimisiz?')) {
-      try {
-        await Api.resetTemplate();
-        window.App.showToast('Standart holat tiklandi', 'success');
-        this.loadTabContent();
-      } catch (err) {
-        window.App.showToast(err.message, 'error');
-      }
-    }
-  },
-
-  async previewTemplate() {
-    const header = document.getElementById('tpl-header')?.value;
-    const footer = document.getElementById('tpl-footer')?.value;
-    const body = document.getElementById('tpl-body')?.value;
-    const previewArea = document.getElementById('tpl-preview-area');
-
-    try {
-      const res = await Api.previewTemplate({ header, footer, body });
-      if (previewArea) {
-        previewArea.innerHTML = `
-          <div class="section-title" style="margin-bottom:6px;">👁 Ko‘rib chiqish:</div>
-          <div class="preview-box">${res.preview}</div>
-        `;
-      }
-    } catch (err) {
-      window.App.showToast(err.message, 'error');
-    }
-  },
-
-  // 7. BROADCAST (SEND NOW) & SEND TIME
+  // 7. BROADCAST (Telegram guruhlarga yuborish)
   async renderBroadcast(container) {
-    const classes = await Api.getClasses();
+    const classes = await Api.getClasses(window.App.currentSchoolCode);
 
     container.innerHTML = `
       <div class="welcome-card" style="margin-bottom:16px;">
@@ -620,15 +691,6 @@ export const AdminView = {
       </div>
 
       <button class="admin-action-btn" onclick="window.AdminView.triggerBroadcast()">🚀 Hozir Yuborish</button>
-
-      <hr style="margin:20px 0;border:none;border-top:1px solid var(--border);">
-
-      <div class="section-title" style="margin-bottom:10px;">⏰ Standart Yuborish Vaqti</div>
-      <div class="form-group">
-        <label class="form-label">Har kuni avtomatik yuborish vaqti:</label>
-        <input type="time" id="global-send-time" class="form-control" value="06:00">
-      </div>
-      <button class="btn-icon-action" style="width:100%;padding:10px;" onclick="window.AdminView.saveSendTime()">⏰ Vaqtni Saqlash</button>
     `;
   },
 
@@ -637,21 +699,11 @@ export const AdminView = {
     if (confirm('Bugungi dars jadvali Telegram guruhlariga yuborilsinmi?')) {
       try {
         window.App.showToast('Yuborilmoqda...', 'info');
-        const res = await Api.sendNow(classId);
+        await Api.sendNow(classId);
         window.App.showToast(`Muvaffaqiyatli yuborildi!`, 'success');
       } catch (err) {
         window.App.showToast(err.message, 'error');
       }
-    }
-  },
-
-  async saveSendTime() {
-    const time = document.getElementById('global-send-time')?.value;
-    try {
-      await Api.updateSendTime(time, 'all');
-      window.App.showToast(`Yuborish vaqti ${time} ga o‘zgartirildi`, 'success');
-    } catch (err) {
-      window.App.showToast(err.message, 'error');
     }
   }
 };

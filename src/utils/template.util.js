@@ -175,13 +175,29 @@ export const templateUtil = {
     return {
       header: s.header,
       footer: s.footer,
-      body: s.template
+      body: s.template,
+      isCustom: s.isCustom,
+      defaults: {
+        header: DEFAULT_TEMPLATE_HEADER,
+        footer: DEFAULT_TEMPLATE_FOOTER,
+        body: DEFAULT_TEMPLATE
+      }
+    };
+  },
+  isCustom() {
+    return Boolean(settingsRepo.get('schedule_template', null));
+  },
+  getDefaults() {
+    return {
+      header: DEFAULT_TEMPLATE_HEADER,
+      footer: DEFAULT_TEMPLATE_FOOTER,
+      body: DEFAULT_TEMPLATE
     };
   },
   saveTemplate(payload) {
     if (typeof payload === 'string') {
       settingsRepo.set('schedule_template', payload);
-    } else {
+    } else if (payload && typeof payload === 'object') {
       if (payload.body) settingsRepo.set('schedule_template', payload.body);
       if (payload.header) settingsRepo.set('template_header', payload.header);
       if (payload.footer) settingsRepo.set('template_footer', payload.footer);
@@ -204,6 +220,17 @@ export const templateUtil = {
   },
   generatePreview(payload) {
     return getPreviewScheduleMessage(payload);
+  },
+  formatCustomSchedule(options, group, lessons, dateInfo) {
+    return renderScheduleMessage({
+      template: options?.body || options?.template || null,
+      header: options?.header || null,
+      footer: options?.footer || null,
+      group: group?.name || '10-A sinf',
+      lessons: lessons || [],
+      date: dateInfo?.formattedDate,
+      day: dateInfo?.dayName
+    });
   }
 };
 

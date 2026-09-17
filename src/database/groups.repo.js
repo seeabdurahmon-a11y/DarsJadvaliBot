@@ -2,7 +2,7 @@ import { getDatabase } from './db.js';
 import { config } from '../config/index.js';
 
 export const groupsRepo = {
-  addGroup({ telegram_chat_id = null, name, send_time = config.DEFAULT_SEND_TIME }) {
+  addGroup({ school_id = 1, telegram_chat_id = null, name, send_time = config.DEFAULT_SEND_TIME }) {
     const db = getDatabase();
     const cleanName = name.trim();
     const cleanSendTime = send_time ? send_time.trim() : config.DEFAULT_SEND_TIME;
@@ -11,14 +11,15 @@ export const groupsRepo = {
       : `class_${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now()}`;
 
     const stmt = db.prepare(`
-      INSERT INTO groups (telegram_chat_id, name, send_time, is_active)
-      VALUES (?, ?, ?, 1)
+      INSERT INTO groups (school_id, telegram_chat_id, name, send_time, is_active)
+      VALUES (?, ?, ?, ?, 1)
       ON CONFLICT(telegram_chat_id) DO UPDATE SET
+        school_id = excluded.school_id,
         name = excluded.name,
         send_time = excluded.send_time,
         is_active = 1
     `);
-    stmt.run(finalChatId, cleanName, cleanSendTime);
+    stmt.run(school_id || 1, finalChatId, cleanName, cleanSendTime);
     return this.getGroupByChatId(finalChatId);
   },
 
@@ -41,22 +42,34 @@ export const groupsRepo = {
       .trim();
   },
 
-  getGroupByName(name) {
+  getGroupByName(name, schoolId = null) {
     if (!name) return null;
     const db = getDatabase();
     const clean = String(name).trim();
     const norm = this.normalizeClassName(clean);
 
     // 1. Direct case-insensitive match
-    let group = db.prepare(`SELECT * FROM groups WHERE LOWER(name) = LOWER(?) AND is_active = 1`).get(clean);
+    let query = `SELECT * FROM groups WHERE LOWER(name) = LOWER(?) AND is_active = 1`;
+    let params = [clean];
+    if (schoolId) {
+      query += ` AND school_id = ?`;
+      params.push(schoolId);
+    }
+    let group = db.prepare(query).get(...params);
     if (group) return group;
 
     // 2. Direct with 'sinf' appended
-    group = db.prepare(`SELECT * FROM groups WHERE LOWER(name) = LOWER(?) AND is_active = 1`).get(`${clean} sinf`);
+    query = `SELECT * FROM groups WHERE LOWER(name) = LOWER(?) AND is_active = 1`;
+    params = [`${clean} sinf`];
+    if (schoolId) {
+      query += ` AND school_id = ?`;
+      params.push(schoolId);
+    }
+    group = db.prepare(query).get(...params);
     if (group) return group;
 
-    // 3. Normalized comparison against all active groups (e.g. '11d' -> '11-D sinf')
-    const all = this.getAllGroups(true);
+    // 3. Normalized comparison against all active groups
+    const all = this.getAllGroups(true, schoolId);
     for (const g of all) {
       if (this.normalizeClassName(g.name) === norm) {
         return g;
@@ -76,27 +89,48 @@ export const groupsRepo = {
     return null;
   },
 
-  getAllGroups(onlyActive = true) {
+  getAllGroups(onlyActive = true, schoolId = null) {
     const db = getDatabase();
+    let query = `SELECT * FROM groups`;
+    const clauses = [];
+    const params = [];
+
     if (onlyActive) {
-      return db.prepare(`SELECT * FROM groups WHERE is_active = 1 ORDER BY id ASC`).all();
+      clauses.push(`is_active = 1`);
     }
-    return db.prepare(`SELECT * FROM groups ORDER BY id ASC`).all();
+    if (schoolId) {
+      clauses.push(`school_id = ?`);
+      params.push(schoolId);
+    }
+
+    if (clauses.length > 0) {
+      query += ` WHERE ` + clauses.join(' AND ');
+    }
+    query += ` ORDER BY id ASC`;
+
+    return db.prepare(query).all(...params);
   },
 
-  getAllGroupsWithStats() {
+  getAllGroupsWithStats(schoolId = null) {
     const db = getDatabase();
-    return db.prepare(`
+    let query = `
       SELECT g.*, 
         (SELECT COUNT(*) FROM lessons WHERE group_id = g.id) as lessons_count,
         (SELECT COUNT(*) FROM users WHERE selected_group_id = g.id) as students_count
       FROM groups g
       WHERE g.is_active = 1
-      ORDER BY g.id ASC
-    `).all();
+    `;
+    const params = [];
+    if (schoolId) {
+      query += ` AND g.school_id = ?`;
+      params.push(schoolId);
+    }
+    query += ` ORDER BY g.id ASC`;
+
+    return db.prepare(query).all(...params);
   },
 
-  bindChatToClass(classIdOrName, chatId) {
+  bindChatToClass(classIdOrName, chatId, schoolId = null) {
     const db = getDatabase();
     const strChatId = String(chatId).trim();
 
@@ -106,7 +140,7 @@ export const groupsRepo = {
     }
     
     if (!targetClass && classIdOrName) {
-      targetClass = this.getGroupByName(String(classIdOrName));
+      targetClass = this.getGroupByName(String(classIdOrName), schoolId);
     }
 
     if (!targetClass) return null;
@@ -128,7 +162,7 @@ export const groupsRepo = {
     return this.getGroupById(targetClass.id);
   },
 
-  updateGroup(id, { name, send_time, is_active, telegram_chat_id }) {
+  updateGroup(id, { name, send_time, is_active, telegram_chat_id, school_id }) {
     const db = getDatabase();
     const current = this.getGroupById(id);
     if (!current) return null;
@@ -136,12 +170,13 @@ export const groupsRepo = {
     const newName = name !== undefined ? name.trim() : current.name;
     const newSendTime = send_time !== undefined ? send_time.trim() : current.send_time;
     const newActive = is_active !== undefined ? (is_active ? 1 : 0) : current.is_active;
+    const newSchoolId = school_id !== undefined ? school_id : current.school_id;
 
     db.prepare(`
       UPDATE groups
-      SET name = ?, send_time = ?, is_active = ?
+      SET name = ?, send_time = ?, is_active = ?, school_id = ?
       WHERE id = ?
-    `).run(newName, newSendTime, newActive, id);
+    `).run(newName, newSendTime, newActive, newSchoolId, id);
 
     return this.getGroupById(id);
   },
@@ -158,11 +193,17 @@ export const groupsRepo = {
 
   deleteGroup(id) {
     const db = getDatabase();
+    // Cascade delete lessons
+    db.prepare(`DELETE FROM lessons WHERE group_id = ?`).run(id);
     return db.prepare(`DELETE FROM groups WHERE id = ?`).run(id);
   },
 
-  getGroupsCount() {
+  getGroupsCount(schoolId = null) {
     const db = getDatabase();
+    if (schoolId) {
+      const res = db.prepare(`SELECT COUNT(*) as count FROM groups WHERE is_active = 1 AND school_id = ?`).get(schoolId);
+      return res ? res.count : 0;
+    }
     const res = db.prepare(`SELECT COUNT(*) as count FROM groups WHERE is_active = 1`).get();
     return res ? res.count : 0;
   }
