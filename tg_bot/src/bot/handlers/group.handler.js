@@ -1,8 +1,11 @@
 import { InlineKeyboard } from 'grammy';
 import { groupsRepo } from '../../database/groups.repo.js';
+import { usersRepo } from '../../database/users.repo.js';
 import { scheduleService } from '../../services/schedule.service.js';
 import { adminService } from '../../services/admin.service.js';
 import { isValidTimeFormat } from '../../utils/date.util.js';
+import { getClassesGridInlineKeyboard } from '../keyboards/user.keyboard.js';
+import { escapeHtml } from '../../utils/formatter.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../utils/logger.js';
 
@@ -34,11 +37,7 @@ export function registerGroupHandlers(bot) {
         logger.info(`[GROUP AUTO ADD] Bot yangi sinf guruhiga qo'shildi: ${group.name} (${chat.id})`);
 
         const classes = groupsRepo.getAllGroups(true);
-        const keyboard = new InlineKeyboard();
-        classes.forEach((c, index) => {
-          keyboard.text(c.name, `bind_class_${c.id}`);
-          if ((index + 1) % 4 === 0) keyboard.row();
-        });
+        const keyboard = getClassesGridInlineKeyboard(classes, 'bind_class_');
 
         await ctx.reply(
           `🎉 <b>MAKTAB dars jadvali boti guruhga muvaffaqiyatli qo‘shildi!</b>\n\n` +
@@ -52,26 +51,46 @@ export function registerGroupHandlers(bot) {
     }
   });
 
-  // /setclass yoki /bind buyrug'i (Guruhni aniq bir sinfga qotirib qo'yish)
-  bot.command(['setclass', 'bind'], async (ctx) => {
+  // /setclass, /bind, /addgroup buyruqlari
+  bot.command(['setclass', 'bind', 'addgroup'], async (ctx) => {
+    const input = ctx.match?.trim();
+
+    // 1. Agar shaxsiy chatda yozilgan bo'lsa -> foydalanuvchining o'z profiliga biriktiramiz
     if (ctx.chat.type === 'private') {
-      return ctx.reply('⚠️ Ushbu buyruqni sinfga biriktirmoqchi bo‘lgan Telegram guruh ichida yozing:\nMasalan: <code>/setclass 11-D</code>', { parse_mode: 'HTML' });
+      if (input) {
+        const matched = groupsRepo.getGroupByName(input);
+        if (matched) {
+          usersRepo.setSelectedGroup(ctx.from.id, matched.id);
+          return ctx.reply(
+            `✅ <b>Sinfingiz muvaffaqiyatli saqlandi: ${escapeHtml(matched.name)}!</b>\n\n` +
+            `📌 Endi menyu tugmalaridan foydalanganingizda to‘g‘ridan-to‘g‘ri ${escapeHtml(matched.name)} dars jadvali chiqadi.`,
+            { parse_mode: 'HTML' }
+          );
+        }
+      }
+
+      const groups = groupsRepo.getAllGroups(true);
+      const keyboard = getClassesGridInlineKeyboard(groups, 'user_bind_sinf_');
+      return ctx.reply(
+        `🏫 <b>O‘z sinfingizni tanlang:</b>\n\n` +
+        `Quyidagi ro‘yxatdan o‘z sinfingiz ustiga bosing:`,
+        { parse_mode: 'HTML', reply_markup: keyboard }
+      );
     }
 
+    // 2. Guruh ichida yozilgan bo'lsa
     const allowed = await canManageGroup(ctx);
     if (!allowed) {
       return ctx.reply('⛔ Faqat guruh adminlari ushbu guruhni sinfga biriktirishi mumkin.');
     }
 
-    const input = ctx.match?.trim();
-
-    // 1. Agar admin to'g'ridan-to'g'ri sinf nomini yozgan bo'lsa (masalan /setclass 11-D)
+    // Agar admin to'g'ridan-to'g'ri sinf nomini yozgan bo'lsa (masalan /setclass 11-D yoki /setclass 11D)
     if (input) {
       const boundClass = groupsRepo.bindChatToClass(input, ctx.chat.id);
       if (boundClass) {
         return ctx.reply(
           `✅ <b>GURUH MUVAFFAQIYATLI BIRIKTIRILDI!</b>\n\n` +
-          `🏫 <b>Mahkamlangan sinf:</b> <b>${boundClass.name}</b>\n` +
+          `🏫 <b>Mahkamlangan sinf:</b> <b>${escapeHtml(boundClass.name)}</b>\n` +
           `🆔 <b>Guruh Chat ID:</b> <code>${ctx.chat.id}</code>\n` +
           `⏰ <b>Avtomatik yuborish vaqti:</b> Har kuni soat <b>${boundClass.send_time}</b> da\n\n` +
           `📖 <i>Dars jadvalini olish uchun:</i> <code>/darsjadvali</code> yoki <code>/resend</code>`,
@@ -80,17 +99,13 @@ export function registerGroupHandlers(bot) {
       }
     }
 
-    // 2. Agar parametr yozilmagan bo'lsa yoki topilmasa -> Inline klaviatura orqali sinflarni chiqarish
+    // Inline klaviatura orqali sinflarni chiqarish
     const classes = groupsRepo.getAllGroups(true);
     if (classes.length === 0) {
       return ctx.reply('⚠️ Bazada sinflar topilmadi.');
     }
 
-    const keyboard = new InlineKeyboard();
-    classes.forEach((c, index) => {
-      keyboard.text(c.name, `bind_class_${c.id}`);
-      if ((index + 1) % 4 === 0) keyboard.row();
-    });
+    const keyboard = getClassesGridInlineKeyboard(classes, 'bind_class_');
 
     await ctx.reply(
       `🏫 <b>Ushbu Telegram guruh qaysi sinfga tegishli?</b>\n\n` +
@@ -99,8 +114,22 @@ export function registerGroupHandlers(bot) {
     );
   });
 
-  // Callback query: bind_class_<id>
+  // Callback query: bind_class_<id> (Guruh uchun)
   bot.callbackQuery(/^bind_class_(\d+)$/, async (ctx) => {
+    if (ctx.chat?.type === 'private') {
+      const classId = parseInt(ctx.match[1], 10);
+      const boundClass = groupsRepo.getGroupById(classId);
+      if (boundClass) {
+        usersRepo.setSelectedGroup(ctx.from.id, boundClass.id);
+        await ctx.answerCallbackQuery({ text: `✅ Sinf saqlandi: ${boundClass.name}` });
+        return ctx.editMessageText(
+          `✅ <b>Sizning sinfingiz muvaffaqiyatli saqlandi: ${escapeHtml(boundClass.name)}</b>\n\n` +
+          `🎉 Endi bot menyu tugmalari orqali to‘g‘ridan-to‘g‘ri darslaringizni ko‘rishingiz mumkin!`,
+          { parse_mode: 'HTML' }
+        );
+      }
+    }
+
     const allowed = await canManageGroup(ctx);
     if (!allowed) {
       return ctx.answerCallbackQuery({ text: '⛔ Faqat guruh adminlari bajara oladi', show_alert: true });
@@ -114,7 +143,7 @@ export function registerGroupHandlers(bot) {
     if (boundClass) {
       await ctx.editMessageText(
         `✅ <b>GURUH MUVAFFAQIYATLI BIRIKTIRILDI!</b>\n\n` +
-        `🏫 <b>Mahkamlangan sinf:</b> <b>${boundClass.name}</b>\n` +
+        `🏫 <b>Mahkamlangan sinf:</b> <b>${escapeHtml(boundClass.name)}</b>\n` +
         `🆔 <b>Guruh Chat ID:</b> <code>${ctx.chat.id}</code>\n` +
         `⏰ <b>Avtomatik yuborish vaqti:</b> Har kuni soat <b>${boundClass.send_time}</b> da\n\n` +
         `📖 <i>Dars jadvalini olish yoki qaytadan tashlash:</i> <code>/darsjadvali</code> yoki <code>/resend</code>`,
@@ -126,7 +155,7 @@ export function registerGroupHandlers(bot) {
   // /settime <HH:mm> buyrug'i
   bot.command('settime', async (ctx) => {
     if (ctx.chat.type === 'private') {
-      return ctx.reply('ℹ️ Ushbu buyruq orqali guruhning dars yuborish vaqtini o\'rnatish uchun guruh ichida yozing: <code>/settime 06:00</code>', { parse_mode: 'HTML' });
+      return ctx.reply('ℹ️ Guruhning dars yuborish vaqtini o\'rnatish uchun guruh ichida yozing: <code>/settime 06:00</code>', { parse_mode: 'HTML' });
     }
 
     const allowed = await canManageGroup(ctx);
@@ -157,10 +186,10 @@ export function registerGroupHandlers(bot) {
     );
   });
 
-  // /resend, /send, /sendjadval, /tashlash, /qaytadan buyruqlari (Guruhga dars jadvalini qaytadan yuborish)
+  // /resend, /send, /sendjadval, /tashlash, /qaytadan buyruqlari
   bot.command(['resend', 'send', 'sendjadval', 'tashlash', 'qaytadan', 'post'], async (ctx) => {
     if (ctx.chat.type === 'private') {
-      return ctx.reply('ℹ️ Ushbu buyruq orqali guruhga dars jadvalini qaytadan yuborish uchun guruh ichida yozing: <code>/resend</code>', { parse_mode: 'HTML' });
+      return ctx.reply('ℹ️ Guruhga dars jadvalini qaytadan yuborish uchun guruh ichida yozing: <code>/resend</code>', { parse_mode: 'HTML' });
     }
 
     const allowed = await canManageGroup(ctx);
@@ -173,11 +202,7 @@ export function registerGroupHandlers(bot) {
     // Agar guruh hali biror sinfga biriktirilmagan bo'lsa
     if (!group) {
       const classes = groupsRepo.getAllGroups(true);
-      const keyboard = new InlineKeyboard();
-      classes.forEach((c, index) => {
-        keyboard.text(c.name, `bind_class_${c.id}`);
-        if ((index + 1) % 4 === 0) keyboard.row();
-      });
+      const keyboard = getClassesGridInlineKeyboard(classes, 'bind_class_');
 
       return ctx.reply(
         `⚠️ <b>Ushbu guruh hali biror sinfga biriktirilmagan!</b>\n\n` +
@@ -196,16 +221,13 @@ export function registerGroupHandlers(bot) {
 
   // /darsjadvali, /jadval, /schedule, /today buyruqlari guruh ichida
   bot.command(['darsjadvali', 'jadval', 'schedule', 'today'], async (ctx) => {
+    if (ctx.chat.type === 'private') return; // Managed by schedule handler
+
     const group = groupsRepo.getGroupByChatId(ctx.chat.id);
 
-    // Agar guruh hali biror sinfga biriktirilmagan bo'lsa
     if (!group) {
       const classes = groupsRepo.getAllGroups(true);
-      const keyboard = new InlineKeyboard();
-      classes.forEach((c, index) => {
-        keyboard.text(c.name, `bind_class_${c.id}`);
-        if ((index + 1) % 4 === 0) keyboard.row();
-      });
+      const keyboard = getClassesGridInlineKeyboard(classes, 'bind_class_');
 
       return ctx.reply(
         `⚠️ <b>Ushbu guruh hali biror sinfga biriktirilmagan!</b>\n\n` +
@@ -220,16 +242,13 @@ export function registerGroupHandlers(bot) {
 
   // /hozir, /now, /current, /hozirgidars buyruqlari guruh ichida
   bot.command(['hozir', 'now', 'current', 'hozirgidars'], async (ctx) => {
+    if (ctx.chat.type === 'private') return; // Managed by schedule handler
+
     const group = groupsRepo.getGroupByChatId(ctx.chat.id);
 
-    // Agar guruh hali biror sinfga biriktirilmagan bo'lsa
     if (!group) {
       const classes = groupsRepo.getAllGroups(true);
-      const keyboard = new InlineKeyboard();
-      classes.forEach((c, index) => {
-        keyboard.text(c.name, `bind_class_${c.id}`);
-        if ((index + 1) % 4 === 0) keyboard.row();
-      });
+      const keyboard = getClassesGridInlineKeyboard(classes, 'bind_class_');
 
       return ctx.reply(
         `⚠️ <b>Ushbu guruh hali biror sinfga biriktirilmagan!</b>\n\n` +
@@ -242,4 +261,3 @@ export function registerGroupHandlers(bot) {
     await ctx.reply(formattedText, { parse_mode: 'HTML' });
   });
 }
-

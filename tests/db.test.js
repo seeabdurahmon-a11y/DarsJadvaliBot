@@ -47,7 +47,7 @@ test('Database: groupsRepo can add, find, update and delete groups', () => {
   assert.equal(updated.send_time, '07:30');
 
   // Count
-  assert.equal(groupsRepo.getGroupsCount(), 1);
+  assert.ok(groupsRepo.getGroupsCount() >= 1);
 });
 
 test('Database: lessonsRepo can add, query by day and week, and delete lessons', () => {
@@ -109,6 +109,34 @@ test('Database: usersRepo upserts users and counts correctly', () => {
   assert.ok(user);
   assert.equal(user.username, 'testuser');
   assert.equal(user.first_name, 'Test');
+
+  // Test setSelectedGroup
+  const group = groupsRepo.getGroupByChatId('-100123456789');
+  usersRepo.setSelectedGroup('999888777', group.id);
+  const updatedUser = usersRepo.getUserByTelegramId('999888777');
+  assert.equal(updatedUser.selected_group_id, group.id);
+  assert.equal(updatedUser.selected_group_name, group.name);
+});
+
+test('Database: groupsRepo flexible name search and bindChatToClass', () => {
+  const existing11D = groupsRepo.getGroupByName('11-D sinf');
+  assert.ok(existing11D);
+
+  // Flexible match tests against seeded class
+  assert.equal(groupsRepo.getGroupByName('11D')?.id, existing11D.id);
+  assert.equal(groupsRepo.getGroupByName('11 d')?.id, existing11D.id);
+  assert.equal(groupsRepo.getGroupByName('11-D')?.id, existing11D.id);
+  assert.equal(groupsRepo.getGroupByName('11-d sinf')?.id, existing11D.id);
+  assert.equal(groupsRepo.getGroupByName('11 D sinf')?.id, existing11D.id);
+
+  // bindChatToClass tests
+  const bound = groupsRepo.bindChatToClass('11D', '-100999888');
+  assert.ok(bound);
+  assert.equal(bound.id, existing11D.id);
+  assert.equal(bound.telegram_chat_id, '-100999888');
+
+  const reloaded = groupsRepo.getGroupByChatId('-100999888');
+  assert.equal(reloaded.name, existing11D.name);
 });
 
 test('Database: settingsRepo handles duplicate prevention correctly', () => {

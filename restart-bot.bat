@@ -1,24 +1,22 @@
 @echo off
-title @JadvaliBot 24/7 Supervisor
+title @JadvaliBot Qayta Ishga Tushirish
 cd /d "%~dp0"
 echo ===================================================
-echo     @JadvaliBot 24/7 Avtomatik Ishga Tushirish
+echo     @JadvaliBot Qayta Ishga Tushirilmoqda...
 echo ===================================================
 
 if exist "node_modules\.bin\pm2.cmd" (
-    call "node_modules\.bin\pm2.cmd" start ecosystem.config.cjs
+    call "node_modules\.bin\pm2.cmd" restart ecosystem.config.cjs
     call "node_modules\.bin\pm2.cmd" save
     call "node_modules\.bin\pm2.cmd" status
 ) else (
-    call npx pm2 start ecosystem.config.cjs
+    call npx pm2 restart ecosystem.config.cjs
     call npx pm2 save
     call npx pm2 status
 )
 
 echo.
 echo ===================================================
-echo  Bot va Server muvaffaqiyatli ishga tushirildi!
-echo  Web Server: http://localhost:3000
-echo  Loglar: npx pm2 logs jadvalibot
+echo  Bot va Server muvaffaqiyatli qayta ishga tushirildi!
 echo ===================================================
 pause

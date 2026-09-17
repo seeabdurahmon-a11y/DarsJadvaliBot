@@ -46,6 +46,8 @@ export function registerStartHandlers(bot) {
     let helpText = `⚡️ <b>MAKTAB BOT BARCHA BUYRUQLARI:</b>\n\n` +
       `👤 <b>Asosiy buyruqlar:</b>\n` +
       `🔹 <code>/start</code> — Botni ishga tushirish va asosiy menyu\n` +
+      `🔹 <code>/sinf 11-D</code> — O‘z sinfingizni biriktirish\n` +
+      `🔹 <code>/sinf</code> — Sinflar ro‘yxatini ochish va tanlash\n` +
       `🔹 <code>/hozir</code> — Hozir qaysi dars ketayotganini ko‘rish\n` +
       `🔹 <code>/darsjadvali</code> — Bugungi dars jadvalini olish\n` +
       `🔹 <code>/schedule</code> — Dars jadvalini ko‘rish\n` +

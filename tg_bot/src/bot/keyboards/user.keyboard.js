@@ -20,7 +20,7 @@ export function getUserMainMenuKeyboard() {
     .row()
     .text('📆 Ertangi jadval').text('📚 Haftalik jadval')
     .row()
-    .text('ℹ️ Bot haqida')
+    .text('🏫 Mening sinfim').text('ℹ️ Bot haqida')
     .resized();
 
   return keyboard;
@@ -39,26 +39,36 @@ export function getWebAppInlineKeyboard() {
 }
 
 /**
- * Guruhlarni tanlash uchun Inline klaviatura
+ * Sinflarni tanlash/biriktirish uchun 4 ta ustunli qulay Inline klaviatura
  */
-export function getGroupSelectionInlineKeyboard(groups, actionPrefix = 'user_group_') {
+export function getClassesGridInlineKeyboard(groups, actionPrefix = 'user_bind_sinf_', showAllOption = false) {
   const keyboard = new InlineKeyboard();
 
   if (!groups || groups.length === 0) {
     return keyboard.text("ℹ️ Hozircha sinflar yo'q", 'noop');
   }
 
+  // Sinf tugmalarini qisqa ko'rinishda (masalan "11-D") 4 tadan joylashtirish
   groups.forEach((group, index) => {
-    keyboard.text(`👥 ${group.name}`, `${actionPrefix}${group.id}`);
-    if ((index + 1) % 2 === 0) {
+    const displayName = group.name.replace(/\s*sinf\s*/gi, '').trim() || group.name;
+    keyboard.text(displayName, `${actionPrefix}${group.id}`);
+    if ((index + 1) % 4 === 0) {
       keyboard.row();
     }
   });
 
-  // Barcha sinflar jadvalini ko'rish varianti
-  keyboard.row().text('🌐 Barcha sinflar', `${actionPrefix}all`);
+  if (showAllOption) {
+    keyboard.row().text('🌐 Barcha sinflar', `${actionPrefix}all`);
+  }
 
   return keyboard;
+}
+
+/**
+ * Guruhlarni tanlash uchun Inline klaviatura
+ */
+export function getGroupSelectionInlineKeyboard(groups, actionPrefix = 'user_group_') {
+  return getClassesGridInlineKeyboard(groups, actionPrefix, true);
 }
 
 /**

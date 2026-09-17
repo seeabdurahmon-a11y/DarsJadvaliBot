@@ -32,17 +32,56 @@ export const groupsRepo = {
     return db.prepare(`SELECT * FROM groups WHERE telegram_chat_id = ?`).get(String(chatId));
   },
 
+  normalizeClassName(name) {
+    if (!name) return '';
+    return String(name)
+      .toLowerCase()
+      .replace(/\s*sinf\s*/gi, '')
+      .replace(/[^a-z0-9а-яёўқғҳ]/gi, '')
+      .trim();
+  },
+
   getGroupByName(name) {
+    if (!name) return null;
     const db = getDatabase();
-    return db.prepare(`SELECT * FROM groups WHERE LOWER(name) = LOWER(?) AND is_active = 1`).get(name.trim());
+    const clean = String(name).trim();
+    const norm = this.normalizeClassName(clean);
+
+    // 1. Direct case-insensitive match
+    let group = db.prepare(`SELECT * FROM groups WHERE LOWER(name) = LOWER(?) AND is_active = 1`).get(clean);
+    if (group) return group;
+
+    // 2. Direct with 'sinf' appended
+    group = db.prepare(`SELECT * FROM groups WHERE LOWER(name) = LOWER(?) AND is_active = 1`).get(`${clean} sinf`);
+    if (group) return group;
+
+    // 3. Normalized comparison against all active groups (e.g. '11d' -> '11-D sinf')
+    const all = this.getAllGroups(true);
+    for (const g of all) {
+      if (this.normalizeClassName(g.name) === norm) {
+        return g;
+      }
+    }
+
+    // 4. Substring comparison
+    if (norm.length >= 2) {
+      for (const g of all) {
+        const gNorm = this.normalizeClassName(g.name);
+        if (gNorm.includes(norm) || norm.includes(gNorm)) {
+          return g;
+        }
+      }
+    }
+
+    return null;
   },
 
   getAllGroups(onlyActive = true) {
     const db = getDatabase();
     if (onlyActive) {
-      return db.prepare(`SELECT * FROM groups WHERE is_active = 1 ORDER BY name ASC`).all();
+      return db.prepare(`SELECT * FROM groups WHERE is_active = 1 ORDER BY id ASC`).all();
     }
-    return db.prepare(`SELECT * FROM groups ORDER BY name ASC`).all();
+    return db.prepare(`SELECT * FROM groups ORDER BY id ASC`).all();
   },
 
   getAllGroupsWithStats() {
@@ -53,7 +92,7 @@ export const groupsRepo = {
         (SELECT COUNT(*) FROM users WHERE selected_group_id = g.id) as students_count
       FROM groups g
       WHERE g.is_active = 1
-      ORDER BY g.name ASC
+      ORDER BY g.id ASC
     `).all();
   },
 
@@ -62,16 +101,12 @@ export const groupsRepo = {
     const strChatId = String(chatId).trim();
 
     let targetClass = null;
-    if (typeof classIdOrName === 'number' || (!isNaN(Number(classIdOrName)) && String(classIdOrName).indexOf('-') === -1)) {
+    if (typeof classIdOrName === 'number' || (!isNaN(Number(classIdOrName)) && String(classIdOrName).indexOf('-') === -1 && !/[a-zA-Zа-яА-Я]/.test(String(classIdOrName)))) {
       targetClass = this.getGroupById(Number(classIdOrName));
     }
-    if (!targetClass && typeof classIdOrName === 'string') {
-      const clean = classIdOrName.trim().toLowerCase();
-      targetClass = db.prepare(`
-        SELECT * FROM groups 
-        WHERE LOWER(name) = ? OR LOWER(name) = ? OR LOWER(name) = ? OR LOWER(name) LIKE ?
-        LIMIT 1
-      `).get(clean, `${clean} sinf`, clean.replace('-', ' '), `%${clean}%`);
+    
+    if (!targetClass && classIdOrName) {
+      targetClass = this.getGroupByName(String(classIdOrName));
     }
 
     if (!targetClass) return null;
