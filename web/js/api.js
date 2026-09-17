@@ -70,10 +70,15 @@ export const Api = {
   getSchoolByCode(code) {
     return this.request(`/schools/${code}`);
   },
-  loginSchool(code, password) {
+  loginSchool(identifier, password) {
     return this.request('/schools/login', {
       method: 'POST',
-      body: JSON.stringify({ code, password })
+      body: JSON.stringify({
+        identifier,
+        email: identifier,
+        code: identifier,
+        password
+      })
     });
   },
   registerSchool(payload) {

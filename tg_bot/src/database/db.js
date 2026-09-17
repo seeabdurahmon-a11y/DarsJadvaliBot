@@ -60,8 +60,10 @@ function initSchema(db) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       code TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
+      admin_name TEXT DEFAULT 'Zavuch / Admin',
+      admin_email TEXT DEFAULT '',
       region TEXT DEFAULT '',
-      admin_password TEXT DEFAULT 'admin123',
+      admin_password TEXT DEFAULT 'darsjadvoli0751',
       default_send_time TEXT DEFAULT '06:00',
       is_active INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -145,6 +147,8 @@ function initSchema(db) {
 
   // Multi-school migration for existing tables
   const columnMigrations = [
+    `ALTER TABLE schools ADD COLUMN admin_name TEXT DEFAULT 'Zavuch / Admin';`,
+    `ALTER TABLE schools ADD COLUMN admin_email TEXT DEFAULT '';`,
     `ALTER TABLE users ADD COLUMN selected_school_id INTEGER;`,
     `ALTER TABLE users ADD COLUMN selected_group_id INTEGER;`,
     `ALTER TABLE groups ADD COLUMN school_id INTEGER DEFAULT 1;`,
@@ -168,11 +172,21 @@ function initSchema(db) {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_groups_school ON groups(school_id);`);
   } catch (e) {}
 
-  // Ensure default school #1 exists
+  // Ensure default school #1 exists with test email & password
   db.prepare(`
-    INSERT OR IGNORE INTO schools (id, code, name, region, admin_password, default_send_time, is_active)
-    VALUES (1, 'M-01', '1-umumiy o‘rta ta’lim maktabi', 'Toshkent shahar', 'admin123', '06:00', 1)
+    INSERT OR IGNORE INTO schools (id, code, name, admin_name, admin_email, region, admin_password, default_send_time, is_active)
+    VALUES (1, 'M-01', '1-umumiy o‘rta ta’lim maktabi', 'Bosh Zavuch / Admin', 'test@darsjadvali.uz', 'Toshkent shahar', 'darsjadvoli0751', '06:00', 1)
   `).run();
+
+  // Update existing school #1 with email & password if already inserted
+  try {
+    db.prepare(`
+      UPDATE schools 
+      SET admin_email = CASE WHEN admin_email IS NULL OR admin_email = '' THEN 'test@darsjadvali.uz' ELSE admin_email END,
+          admin_password = CASE WHEN admin_password = 'admin' OR admin_password = 'admin123' THEN 'darsjadvoli0751' ELSE admin_password END
+      WHERE id = 1
+    `).run();
+  } catch (e) {}
 
   // Standart sozlamalarni kiritish
   const insertSetting = db.prepare(`

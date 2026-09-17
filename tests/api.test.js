@@ -258,3 +258,21 @@ test('API 11: Maktab admini jadvalni ommaviy import qilishi (POST /api/admin/imp
   assert.strictEqual(importData.insertedLessons, 1);
 });
 
+test('API 12: Zavuch / Admin email (test@darsjadvali.uz) va paroli (darsjadvoli0751) orqali login qilishi', async () => {
+  const loginRes = await fetch(`${baseUrl}/schools/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: 'test@darsjadvali.uz',
+      password: 'darsjadvoli0751'
+    })
+  });
+
+  assert.strictEqual(loginRes.status, 200);
+  const loginData = await loginRes.json();
+  assert.strictEqual(loginData.success, true);
+  assert.strictEqual(loginData.school.code, 'M-01');
+  assert.ok(loginData.school.admin_email);
+});
+
+

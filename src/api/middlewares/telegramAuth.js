@@ -89,11 +89,13 @@ export function telegramAuthMiddleware(req, res, next) {
     }
   }
 
-  // 3. School Token Header check: "X-School-Token: <schoolCode>:<password>" or Bearer
+  // 3. School Token Header check: "X-School-Token: <identifier>:<password>"
   const schoolToken = req.headers['x-school-token'];
   if (schoolToken && schoolToken.includes(':')) {
-    const [code, pwd] = schoolToken.split(':');
-    const school = schoolsRepo.getSchoolByCode(code);
+    const colonIdx = schoolToken.indexOf(':');
+    const idf = schoolToken.substring(0, colonIdx);
+    const pwd = schoolToken.substring(colonIdx + 1);
+    const school = schoolsRepo.findSchoolForLogin(idf);
     if (school && schoolsRepo.verifyPassword(school.id, pwd)) {
       req.school = school;
       req.schoolId = school.id;
@@ -103,12 +105,14 @@ export function telegramAuthMiddleware(req, res, next) {
     }
   }
 
-  // 4. Simple Bearer token check: "Bearer <schoolCode>:<password>"
+  // 4. Simple Bearer token check: "Bearer <identifier>:<password>"
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.replace('Bearer ', '').trim();
     if (token.includes(':')) {
-      const [code, pwd] = token.split(':');
-      const school = schoolsRepo.getSchoolByCode(code);
+      const colonIdx = token.indexOf(':');
+      const idf = token.substring(0, colonIdx);
+      const pwd = token.substring(colonIdx + 1);
+      const school = schoolsRepo.findSchoolForLogin(idf);
       if (school && schoolsRepo.verifyPassword(school.id, pwd)) {
         req.school = school;
         req.schoolId = school.id;

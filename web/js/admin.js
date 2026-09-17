@@ -3,24 +3,48 @@ import { TelegramApp } from './telegram.js';
 
 export const AdminView = {
   currentTab: 'stats', // 'stats' | 'classes' | 'teachers' | 'subjects' | 'lessons' | 'import' | 'broadcast'
+  authMode: 'login', // 'login' | 'register'
 
   async render(container) {
     // Check if user is logged in as Admin (via Telegram or School Token)
     const token = localStorage.getItem('maktab_school_token');
     if (!window.App.isAdmin && !token) {
+      if (this.authMode === 'register') {
+        return this.renderRegisterView(container);
+      }
       return this.renderLoginView(container);
     }
 
+    const adminName = localStorage.getItem('maktab_admin_name') || 'Zavuch / Admin';
+    const adminEmail = localStorage.getItem('maktab_admin_email') || '';
+
     container.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;">
-        <div>
-          <div style="font-size:11px;color:var(--text-muted);font-weight:700;">MAKTAB BOSHQARUV PANELI</div>
-          <div style="font-size:15px;font-weight:800;color:var(--primary);">${window.App.currentSchoolName || 'Maktab'} <span style="background:var(--primary);color:#fff;font-size:11px;padding:2px 6px;border-radius:4px;margin-left:4px;">${window.App.currentSchoolCode}</span></div>
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,0.03);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);font-weight:800;letter-spacing:0.5px;">🏫 MAKTAB BOSHQARUV PANELI</div>
+            <div style="font-size:16px;font-weight:800;color:var(--text-primary);margin-top:2px;">
+              ${window.App.currentSchoolName || 'Maktab'}
+              <span style="background:var(--primary);color:#fff;font-size:11px;padding:2px 8px;border-radius:6px;margin-left:6px;font-weight:800;">${window.App.currentSchoolCode}</span>
+            </div>
+            <div style="font-size:12px;color:var(--primary);font-weight:600;margin-top:2px;">
+              👤 ${adminName} ${adminEmail ? `<span style="color:var(--text-muted);font-weight:400;">(${adminEmail})</span>` : ''}
+            </div>
+          </div>
+          <button class="btn-sm" style="background:#fee2e2;color:#ef4444;border:1px solid #fecaca;border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:700;" onclick="window.AdminView.logout()">🚪 Chiqish</button>
         </div>
-        <button class="btn-sm" style="background:var(--danger);color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;" onclick="window.AdminView.logout()">🚪 Chiqish</button>
+
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+          <button class="btn-sm" style="background:var(--bg-body);border:1px solid var(--border);padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600;" onclick="navigator.clipboard?.writeText('${window.App.currentSchoolCode}'); window.App.showToast('Maktab kodi nusxalandi: ${window.App.currentSchoolCode}', 'success');">
+            📋 Kod: <b>${window.App.currentSchoolCode}</b>
+          </button>
+          <a href="https://t.me/JadvaliBot?start=code_${window.App.currentSchoolCode?.replace('-', '')}" target="_blank" class="btn-sm" style="background:#e0e7ff;color:#4338ca;border:1px solid #c7d2fe;padding:5px 10px;border-radius:6px;font-size:11px;text-decoration:none;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
+            🤖 Telegram Botga havola
+          </a>
+        </div>
       </div>
 
-      <div class="tab-pills" id="admin-pills" style="overflow-x:auto;white-space:nowrap;">
+      <div class="tab-pills" id="admin-pills" style="overflow-x:auto;white-space:nowrap;margin-bottom:14px;">
         <button class="tab-pill active" onclick="window.AdminView.switchTab('stats')">📊 Statistika</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('classes')">🏫 Sinflar</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('teachers')">👨‍🏫 Ustozlar</button>
@@ -41,48 +65,129 @@ export const AdminView = {
   renderLoginView(container) {
     container.innerHTML = `
       <div class="welcome-card" style="margin-bottom:16px;">
-        <div class="welcome-title">🔐 Maktab Boshqaruv Paneli</div>
-        <div class="welcome-subtitle">Dars jadvalini tahrirlash, sinflar va o‘qituvchilarni kiritish uchun maktab parolini kiriting.</div>
+        <div class="welcome-title">🔐 Zavuch va Admin Paneli</div>
+        <div class="welcome-subtitle">Maktab dars jadvalini kiritish, tahrirlash va guruhlarga yuborish uchun tizimga kiring.</div>
       </div>
 
-      <div class="profile-card" style="text-align:left;">
+      <div class="profile-card" style="text-align:left;box-shadow:0 4px 16px rgba(0,0,0,0.05);">
+        <div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:12px;">🔑 Tizimga kirish</div>
+
         <div class="form-group">
-          <label class="form-label">Maktab Kodi:</label>
-          <input type="text" id="admin-login-code" class="form-control" value="${window.App.currentSchoolCode || 'M-01'}" placeholder="Masalan: M-01" style="text-transform:uppercase;font-weight:700;">
+          <label class="form-label">Email yoki Maktab Kodi:</label>
+          <input type="text" id="admin-login-id" class="form-control" value="test@darsjadvali.uz" placeholder="Masalan: test@darsjadvali.uz yoki M-01" style="font-weight:600;">
         </div>
 
         <div class="form-group">
-          <label class="form-label">Admin Paroli:</label>
-          <input type="password" id="admin-login-pwd" class="form-control" placeholder="Parolni kiriting">
+          <label class="form-label">Parol:</label>
+          <input type="password" id="admin-login-pwd" class="form-control" value="darsjadvoli0751" placeholder="Parolni kiriting">
         </div>
 
-        <button class="admin-action-btn" style="margin-top:10px;" onclick="window.AdminView.submitLogin()">🔑 Tizimga kirish</button>
+        <button class="admin-action-btn" style="margin-top:6px;" onclick="window.AdminView.submitLogin()">🚀 Tizimga kirish</button>
+
+        <div style="margin-top:12px;background:rgba(99,102,241,0.08);border:1px dashed var(--primary);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:11px;color:var(--text-muted);font-weight:700;">TEST AKKAUNTI MA'LUMOTLARI:</div>
+          <div style="font-size:12px;font-weight:700;color:var(--primary);margin-top:2px;">Email: <code>test@darsjadvali.uz</code> | Parol: <code>darsjadvoli0751</code></div>
+          <button class="btn-sm" style="margin-top:6px;background:var(--primary);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;" onclick="window.AdminView.fillTestCredentials()">✨ Test hisob bilan 1-bosishda kirish</button>
+        </div>
 
         <hr style="margin:20px 0;border:none;border-top:1px solid var(--border);">
 
         <div style="text-align:center;">
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Yangi maktabni tizimga ulamoqchimisiz?</div>
-          <button class="btn-icon-action" style="width:100%;padding:10px;" onclick="window.AdminView.openRegisterSchoolModal()">➕ Yangi maktab ro‘yxatdan o‘tkazish</button>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Yangi maktab yoki zavuch akkaunti ochmoqchimisiz?</div>
+          <button class="btn-icon-action" style="width:100%;padding:10px;font-weight:700;" onclick="window.AdminView.setAuthMode('register')">➕ Yangi Zavuch / Maktab Akkaunti Ochish</button>
         </div>
       </div>
     `;
   },
 
+  renderRegisterView(container) {
+    container.innerHTML = `
+      <div class="welcome-card" style="margin-bottom:16px;">
+        <div class="welcome-title">📝 Yangi Maktab / Zavuch Akkaunti</div>
+        <div class="welcome-subtitle">O‘z maktabingiz uchun yangi jadval tizimini oching va unga maxsus kod oling.</div>
+      </div>
+
+      <div class="profile-card" style="text-align:left;box-shadow:0 4px 16px rgba(0,0,0,0.05);">
+        <div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:12px;">👤 Zavuch va Maktab Ma'lumotlari</div>
+
+        <div class="form-group">
+          <label class="form-label">Zavuch / Mas'ul Ismi:</label>
+          <input type="text" id="reg-admin-name" class="form-control" placeholder="Masalan: Aliyev Botir" style="font-weight:600;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email Manzili (Login uchun):</label>
+          <input type="email" id="reg-admin-email" class="form-control" placeholder="Masalan: zavuch@maktab.uz" style="font-weight:600;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Parol:</label>
+          <input type="password" id="reg-admin-pwd" class="form-control" value="darsjadvoli0751" placeholder="Parol kiriting">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Maktab Nomi:</label>
+          <input type="text" id="reg-school-name" class="form-control" placeholder="Masalan: 12-IDUM yoki 45-umumiy o‘rta maktab" style="font-weight:700;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Maktab Kodi (Ixtiyoriy):</label>
+          <input type="text" id="reg-school-code" class="form-control" placeholder="Bo‘sh qoldirilsa M-02 kabi avtomatik beriladi" style="text-transform:uppercase;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Viloyat / Tuman:</label>
+          <input type="text" id="reg-school-region" class="form-control" placeholder="Masalan: Toshkent shahar, Chilonzor">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ertalabki dars jadvalini yuborish vaqti:</label>
+          <input type="time" id="reg-school-time" class="form-control" value="06:00">
+        </div>
+
+        <button class="admin-action-btn" style="margin-top:10px;" onclick="window.AdminView.submitRegisterSchool()">🚀 Yangi Akkaunt Ochish va Boshqaruvga Kirish</button>
+
+        <hr style="margin:20px 0;border:none;border-top:1px solid var(--border);">
+
+        <div style="text-align:center;">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Akkauntingiz bormi?</div>
+          <button class="btn-icon-action" style="width:100%;padding:10px;font-weight:700;" onclick="window.AdminView.setAuthMode('login')">🔑 Tizimga Kirish</button>
+        </div>
+      </div>
+    `;
+  },
+
+  setAuthMode(mode) {
+    this.authMode = mode;
+    const container = document.getElementById('admin-view-container');
+    if (container) this.render(container);
+  },
+
+  fillTestCredentials() {
+    const idInput = document.getElementById('admin-login-id');
+    const pwdInput = document.getElementById('admin-login-pwd');
+    if (idInput) idInput.value = 'test@darsjadvali.uz';
+    if (pwdInput) pwdInput.value = 'darsjadvoli0751';
+    this.submitLogin();
+  },
+
   async submitLogin() {
-    const code = document.getElementById('admin-login-code')?.value?.trim();
+    const identifier = document.getElementById('admin-login-id')?.value?.trim();
     const password = document.getElementById('admin-login-pwd')?.value?.trim();
 
-    if (!code || !password) {
-      return window.App.showToast('Maktab kodi va parolini kiriting', 'error');
+    if (!identifier || !password) {
+      return window.App.showToast('Email (yoki maktab kodi) va parolni kiriting', 'error');
     }
 
     try {
-      window.App.showToast('Kirilmoqda...', 'info');
-      const res = await Api.loginSchool(code, password);
+      window.App.showToast('Tekshirilmoqda...', 'info');
+      const res = await Api.loginSchool(identifier, password);
       localStorage.setItem('maktab_school_token', res.token);
       localStorage.setItem('maktab_selected_school_code', res.school.code);
       localStorage.setItem('maktab_selected_school_name', res.school.name);
       localStorage.setItem('maktab_selected_school_id', String(res.school.id));
+      localStorage.setItem('maktab_admin_name', res.school.admin_name || 'Zavuch');
+      localStorage.setItem('maktab_admin_email', res.school.admin_email || '');
 
       window.App.isAdmin = true;
       window.App.currentSchoolCode = res.school.code;
@@ -90,7 +195,7 @@ export const AdminView = {
       window.App.currentSchoolId = res.school.id;
       window.App.updateHeaderClassPill();
 
-      window.App.showToast(`Xush kelibsiz, ${res.school.name}!`, 'success');
+      window.App.showToast(`Xush kelibsiz, ${res.school.admin_name || res.school.name}!`, 'success');
       const container = document.getElementById('admin-view-container');
       if (container) this.render(container);
     } catch (err) {
@@ -100,53 +205,47 @@ export const AdminView = {
 
   logout() {
     localStorage.removeItem('maktab_school_token');
+    localStorage.removeItem('maktab_admin_name');
+    localStorage.removeItem('maktab_admin_email');
     window.App.isAdmin = false;
-    window.App.showToast('Admin paneldan chiqildi', 'info');
+    this.authMode = 'login';
+    window.App.showToast('Tizimdan chiqildi', 'info');
     const container = document.getElementById('admin-view-container');
     if (container) this.render(container);
   },
 
-  openRegisterSchoolModal() {
-    const bodyHtml = `
-      <div class="form-group">
-        <label class="form-label">Maktab nomi:</label>
-        <input type="text" id="reg-school-name" class="form-control" placeholder="Masalan: 12-IDUM yoki 45-maktab">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Maktab kodi (Ixtiyoriy):</label>
-        <input type="text" id="reg-school-code" class="form-control" placeholder="Bo‘sh qoldirilsa M-02 kabi avtomatik beriladi" style="text-transform:uppercase;">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Viloyat / Tuman:</label>
-        <input type="text" id="reg-school-region" class="form-control" placeholder="Masalan: Toshkent shahar, Yunusobod">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Admin Paroli:</label>
-        <input type="text" id="reg-school-pwd" class="form-control" value="admin123">
-      </div>
-      <button class="admin-action-btn" onclick="window.AdminView.submitRegisterSchool()">🚀 Maktabni Yaratish</button>
-    `;
-    window.App.showCustomModal('➕ Yangi Maktab Ro‘yxatdan O‘tkazish', bodyHtml);
-  },
-
   async submitRegisterSchool() {
+    const admin_name = document.getElementById('reg-admin-name')?.value?.trim();
+    const admin_email = document.getElementById('reg-admin-email')?.value?.trim();
+    const admin_password = document.getElementById('reg-admin-pwd')?.value?.trim();
     const name = document.getElementById('reg-school-name')?.value?.trim();
     const code = document.getElementById('reg-school-code')?.value?.trim();
     const region = document.getElementById('reg-school-region')?.value?.trim();
-    const admin_password = document.getElementById('reg-school-pwd')?.value?.trim();
+    const default_send_time = document.getElementById('reg-school-time')?.value?.trim();
 
     if (!name) {
       return window.App.showToast('Maktab nomini kiriting', 'error');
     }
 
     try {
-      const res = await Api.registerSchool({ name, code, region, admin_password });
-      window.App.closeModal();
+      window.App.showToast('Akkaunt yaratilmoqda...', 'info');
+      const res = await Api.registerSchool({
+        admin_name,
+        admin_email,
+        admin_password,
+        name,
+        code,
+        region,
+        default_send_time
+      });
+
       window.App.showToast(res.message, 'success');
       localStorage.setItem('maktab_school_token', res.token);
       localStorage.setItem('maktab_selected_school_code', res.school.code);
       localStorage.setItem('maktab_selected_school_name', res.school.name);
       localStorage.setItem('maktab_selected_school_id', String(res.school.id));
+      localStorage.setItem('maktab_admin_name', res.school.admin_name || 'Zavuch');
+      localStorage.setItem('maktab_admin_email', res.school.admin_email || '');
 
       window.App.isAdmin = true;
       window.App.currentSchoolCode = res.school.code;

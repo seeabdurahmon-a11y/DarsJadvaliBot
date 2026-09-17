@@ -84,35 +84,40 @@ publicRouter.get('/schools/:code', (req, res) => {
 
 /**
  * POST /api/schools/login
- * Web site school admin login with code & password
+ * Web site school admin / zavuch login with email or code & password
  */
 publicRouter.post('/schools/login', (req, res) => {
   try {
-    const { code, password } = req.body;
-    if (!code || !password) {
-      return res.status(400).json({ success: false, error: 'Maktab kodi va paroli kiritilishi shart' });
+    const { email, code, identifier, password } = req.body;
+    const loginId = (email || code || identifier || '').trim();
+    const pwd = (password || '').trim();
+
+    if (!loginId || !pwd) {
+      return res.status(400).json({ success: false, error: 'Email (yoki maktab kodi) va parol kiritilishi shart' });
     }
 
-    const school = schoolsRepo.getSchoolByCode(code);
+    const school = schoolsRepo.findSchoolForLogin(loginId);
     if (!school) {
-      return res.status(404).json({ success: false, error: `"${code}" kodli maktab topilmadi` });
+      return res.status(404).json({ success: false, error: `"${loginId}" bo‘yicha maktab yoki akkaunt topilmadi` });
     }
 
-    const isValid = schoolsRepo.verifyPassword(school.id, password);
+    const isValid = schoolsRepo.verifyPassword(school.id, pwd);
     if (!isValid) {
-      return res.status(401).json({ success: false, error: 'Parol noto‘g‘ri' });
+      return res.status(401).json({ success: false, error: 'Kiritilgan parol noto‘g‘ri' });
     }
 
     res.json({
       success: true,
-      message: 'Muvaffaqiyatli tizimga kirildi',
-      token: `${school.code}:${password}`,
+      message: `Xush kelibsiz, ${school.name}!`,
+      token: `${school.code}:${school.admin_password}`,
       school: {
         id: school.id,
         code: school.code,
         name: school.name,
-        region: school.region,
-        defaultSendTime: school.default_send_time
+        admin_name: school.admin_name || 'Zavuch / Admin',
+        admin_email: school.admin_email || '',
+        region: school.region || '',
+        defaultSendTime: school.default_send_time || '06:00'
       }
     });
   } catch (err) {
@@ -122,27 +127,45 @@ publicRouter.post('/schools/login', (req, res) => {
 
 /**
  * POST /api/schools/register
- * Register a new school via Web site
+ * Register a new school & zavuch account via Web site
  */
 publicRouter.post('/schools/register', (req, res) => {
   try {
-    const { code, name, region, admin_password, default_send_time } = req.body;
+    const { code, name, admin_name, admin_email, admin_password, region, default_send_time } = req.body;
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, error: 'Maktab nomi kiritilishi shart' });
+    }
+
+    // Check if email already registered (if email provided)
+    if (admin_email && admin_email.trim()) {
+      const existing = schoolsRepo.getSchoolByEmail(admin_email.trim());
+      if (existing) {
+        return res.status(400).json({ success: false, error: `"${admin_email}" emaili bilan maktab akkaunti allaqachon mavjud. Iltimos, tizimga kiring.` });
+      }
     }
 
     const newSchool = schoolsRepo.addSchool({
       code: code ? code.trim() : null,
       name: name.trim(),
+      admin_name: admin_name ? admin_name.trim() : 'Zavuch / Admin',
+      admin_email: admin_email ? admin_email.trim() : '',
+      admin_password: admin_password ? admin_password.trim() : 'darsjadvoli0751',
       region: region || '',
-      admin_password: admin_password || 'admin123',
       default_send_time: default_send_time || '06:00'
     });
 
     res.json({
       success: true,
       message: `Yangi maktab muvaffaqiyatli yaratildi! Maktab kodi: ${newSchool.code}`,
-      school: newSchool,
+      school: {
+        id: newSchool.id,
+        code: newSchool.code,
+        name: newSchool.name,
+        admin_name: newSchool.admin_name,
+        admin_email: newSchool.admin_email,
+        region: newSchool.region,
+        defaultSendTime: newSchool.default_send_time
+      },
       token: `${newSchool.code}:${newSchool.admin_password}`
     });
   } catch (err) {
