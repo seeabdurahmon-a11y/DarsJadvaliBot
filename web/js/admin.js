@@ -64,37 +64,51 @@ export const AdminView = {
 
   renderLoginView(container) {
     container.innerHTML = `
-      <div class="welcome-card" style="margin-bottom:16px;">
-        <div class="welcome-title">🔐 Zavuch va Admin Paneli</div>
-        <div class="welcome-subtitle">Maktab dars jadvalini kiritish, tahrirlash va guruhlarga yuborish uchun tizimga kiring.</div>
-      </div>
-
-      <div class="profile-card" style="text-align:left;box-shadow:0 4px 16px rgba(0,0,0,0.05);">
-        <div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:12px;">🔑 Tizimga kirish</div>
-
-        <div class="form-group">
-          <label class="form-label">Email yoki Maktab Kodi:</label>
-          <input type="text" id="admin-login-id" class="form-control" value="test@darsjadvali.uz" placeholder="Masalan: test@darsjadvali.uz yoki M-01" style="font-weight:600;">
+      <div class="auth-page-wrapper">
+        <div class="auth-header-center">
+          <div class="auth-brand-logo-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 3L1 9L12 15L21 10.09V17H23V9M5 13.18V17.18L12 21L19 17.18V13.18L12 17L5 13.18Z" />
+            </svg>
+          </div>
+          <div class="auth-brand-title">Maktab Jadvali</div>
+          <div class="auth-brand-subtitle">Tizimga kirish</div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Parol:</label>
-          <input type="password" id="admin-login-pwd" class="form-control" value="darsjadvoli0751" placeholder="Parolni kiriting">
-        </div>
+        <div class="auth-white-card">
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="auth-field-label">Foydalanuvchi nomi</label>
+            <div class="auth-input-container">
+              <span class="auth-input-left-icon">👤</span>
+              <input type="text" id="admin-login-id" class="auth-input-control" value="test@darsjadvali.uz" placeholder="Email yoki maktab kodi" autocomplete="username">
+            </div>
+          </div>
 
-        <button class="admin-action-btn" style="margin-top:6px;" onclick="window.AdminView.submitLogin()">🚀 Tizimga kirish</button>
+          <div class="form-group" style="margin-bottom:18px;">
+            <label class="auth-field-label">Parol</label>
+            <div class="auth-input-container">
+              <span class="auth-input-left-icon">🔒</span>
+              <input type="password" id="admin-login-pwd" class="auth-input-control" value="darsjadvoli0751" placeholder="Parolni kiriting" autocomplete="current-password">
+              <button type="button" class="auth-password-toggle-btn" onclick="window.AdminView.togglePasswordVisibility('admin-login-pwd', this)" title="Parolni ko‘rsatish">
+                👁️
+              </button>
+            </div>
+          </div>
 
-        <div style="margin-top:12px;background:rgba(99,102,241,0.08);border:1px dashed var(--primary);border-radius:10px;padding:10px;text-align:center;">
-          <div style="font-size:11px;color:var(--text-muted);font-weight:700;">TEST AKKAUNTI MA'LUMOTLARI:</div>
-          <div style="font-size:12px;font-weight:700;color:var(--primary);margin-top:2px;">Email: <code>test@darsjadvali.uz</code> | Parol: <code>darsjadvoli0751</code></div>
-          <button class="btn-sm" style="margin-top:6px;background:var(--primary);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;" onclick="window.AdminView.fillTestCredentials()">✨ Test hisob bilan 1-bosishda kirish</button>
-        </div>
+          <button class="auth-submit-btn-emerald" onclick="window.AdminView.submitLogin()">Kirish</button>
 
-        <hr style="margin:20px 0;border:none;border-top:1px solid var(--border);">
+          <div class="auth-test-box">
+            <div style="font-size:11px;color:#047857;font-weight:700;">TEST AKKAUNTI:</div>
+            <div style="font-size:12px;color:#065f46;font-weight:600;margin-top:2px;">Email: <b>test@darsjadvali.uz</b> | Parol: <b>darsjadvoli0751</b></div>
+            <button class="auth-test-fill-btn" onclick="window.AdminView.fillTestCredentials()">✨ 1-bosishda test bilan kirish</button>
+          </div>
 
-        <div style="text-align:center;">
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Yangi maktab yoki zavuch akkaunti ochmoqchimisiz?</div>
-          <button class="btn-icon-action" style="width:100%;padding:10px;font-weight:700;" onclick="window.AdminView.setAuthMode('register')">➕ Yangi Zavuch / Maktab Akkaunti Ochish</button>
+          <hr style="margin:20px 0;border:none;border-top:1px solid #f1f5f9;">
+
+          <div style="text-align:center;">
+            <div style="font-size:12.5px;color:#64748b;margin-bottom:8px;">Yangi maktab yoki zavuch akkaunti ochmoqchimisiz?</div>
+            <button class="auth-toggle-auth-btn" onclick="window.AdminView.setAuthMode('register')">➕ Yangi Akkaunt Ochish</button>
+          </div>
         </div>
       </div>
     `;
@@ -102,59 +116,100 @@ export const AdminView = {
 
   renderRegisterView(container) {
     container.innerHTML = `
-      <div class="welcome-card" style="margin-bottom:16px;">
-        <div class="welcome-title">📝 Yangi Maktab / Zavuch Akkaunti</div>
-        <div class="welcome-subtitle">O‘z maktabingiz uchun yangi jadval tizimini oching va unga maxsus kod oling.</div>
-      </div>
-
-      <div class="profile-card" style="text-align:left;box-shadow:0 4px 16px rgba(0,0,0,0.05);">
-        <div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:12px;">👤 Zavuch va Maktab Ma'lumotlari</div>
-
-        <div class="form-group">
-          <label class="form-label">Zavuch / Mas'ul Ismi:</label>
-          <input type="text" id="reg-admin-name" class="form-control" placeholder="Masalan: Aliyev Botir" style="font-weight:600;">
+      <div class="auth-page-wrapper">
+        <div class="auth-header-center">
+          <div class="auth-brand-logo-icon">
+            <svg viewBox="0 0 24 24">
+              <path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+            </svg>
+          </div>
+          <div class="auth-brand-title">Maktab Jadvali</div>
+          <div class="auth-brand-subtitle">Yangi Zavuch / Maktab Ro‘yxatdan O‘tkazish</div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Email Manzili (Login uchun):</label>
-          <input type="email" id="reg-admin-email" class="form-control" placeholder="Masalan: zavuch@maktab.uz" style="font-weight:600;">
-        </div>
+        <div class="auth-white-card">
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="auth-field-label">Zavuch / Mas'ul Ismi</label>
+            <div class="auth-input-container">
+              <span class="auth-input-left-icon">👤</span>
+              <input type="text" id="reg-admin-name" class="auth-input-control" placeholder="Masalan: Aliyev Botir">
+            </div>
+          </div>
 
-        <div class="form-group">
-          <label class="form-label">Parol:</label>
-          <input type="password" id="reg-admin-pwd" class="form-control" value="darsjadvoli0751" placeholder="Parol kiriting">
-        </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="auth-field-label">Email Manzili (Login uchun)</label>
+            <div class="auth-input-container">
+              <span class="auth-input-left-icon">✉️</span>
+              <input type="email" id="reg-admin-email" class="auth-input-control" placeholder="Masalan: zavuch@maktab.uz">
+            </div>
+          </div>
 
-        <div class="form-group">
-          <label class="form-label">Maktab Nomi:</label>
-          <input type="text" id="reg-school-name" class="form-control" placeholder="Masalan: 12-IDUM yoki 45-umumiy o‘rta maktab" style="font-weight:700;">
-        </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="auth-field-label">Parol</label>
+            <div class="auth-input-container">
+              <span class="auth-input-left-icon">🔒</span>
+              <input type="password" id="reg-admin-pwd" class="auth-input-control" value="darsjadvoli0751" placeholder="Parol kiriting">
+              <button type="button" class="auth-password-toggle-btn" onclick="window.AdminView.togglePasswordVisibility('reg-admin-pwd', this)">
+                👁️
+              </button>
+            </div>
+          </div>
 
-        <div class="form-group">
-          <label class="form-label">Maktab Kodi (Ixtiyoriy):</label>
-          <input type="text" id="reg-school-code" class="form-control" placeholder="Bo‘sh qoldirilsa M-02 kabi avtomatik beriladi" style="text-transform:uppercase;">
-        </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="auth-field-label">Maktab Nomi</label>
+            <div class="auth-input-container">
+              <span class="auth-input-left-icon">🏫</span>
+              <input type="text" id="reg-school-name" class="auth-input-control" placeholder="Masalan: 12-IDUM yoki 45-maktab">
+            </div>
+          </div>
 
-        <div class="form-group">
-          <label class="form-label">Viloyat / Tuman:</label>
-          <input type="text" id="reg-school-region" class="form-control" placeholder="Masalan: Toshkent shahar, Chilonzor">
-        </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="auth-field-label">Maktab Kodi (Ixtiyoriy)</label>
+            <div class="auth-input-container">
+              <span class="auth-input-left-icon">🔑</span>
+              <input type="text" id="reg-school-code" class="auth-input-control" placeholder="Bo‘sh qoldirilsa M-02 kabi beriladi" style="text-transform:uppercase;">
+            </div>
+          </div>
 
-        <div class="form-group">
-          <label class="form-label">Ertalabki dars jadvalini yuborish vaqti:</label>
-          <input type="time" id="reg-school-time" class="form-control" value="06:00">
-        </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="auth-field-label">Viloyat / Tuman</label>
+            <div class="auth-input-container">
+              <span class="auth-input-left-icon">📍</span>
+              <input type="text" id="reg-school-region" class="auth-input-control" placeholder="Masalan: Toshkent shahar">
+            </div>
+          </div>
 
-        <button class="admin-action-btn" style="margin-top:10px;" onclick="window.AdminView.submitRegisterSchool()">🚀 Yangi Akkaunt Ochish va Boshqaruvga Kirish</button>
+          <div class="form-group" style="margin-bottom:16px;">
+            <label class="auth-field-label">Ertalabki dars jadvalini yuborish vaqti</label>
+            <div class="auth-input-container">
+              <span class="auth-input-left-icon">⏰</span>
+              <input type="time" id="reg-school-time" class="auth-input-control" value="06:00">
+            </div>
+          </div>
 
-        <hr style="margin:20px 0;border:none;border-top:1px solid var(--border);">
+          <button class="auth-submit-btn-emerald" onclick="window.AdminView.submitRegisterSchool()">🚀 Akkaunt Ochish va Kirish</button>
 
-        <div style="text-align:center;">
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Akkauntingiz bormi?</div>
-          <button class="btn-icon-action" style="width:100%;padding:10px;font-weight:700;" onclick="window.AdminView.setAuthMode('login')">🔑 Tizimga Kirish</button>
+          <hr style="margin:20px 0;border:none;border-top:1px solid #f1f5f9;">
+
+          <div style="text-align:center;">
+            <div style="font-size:12.5px;color:#64748b;margin-bottom:8px;">Akkauntingiz bormi?</div>
+            <button class="auth-toggle-auth-btn" onclick="window.AdminView.setAuthMode('login')">🔑 Tizimga Kirish</button>
+          </div>
         </div>
       </div>
     `;
+  },
+
+  togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      btn.textContent = '🙈';
+    } else {
+      input.type = 'password';
+      btn.textContent = '👁️';
+    }
   },
 
   setAuthMode(mode) {
