@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Maktab Dars Jadvali — Telegram Mini App</title>
+  <title>Maktab Dars Jadvali</title>
 
   <!-- Google Fonts: Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,204 +18,220 @@
 </head>
 <body>
 
-  <!-- Sticky Top Header -->
-  <header class="app-header">
-    <div class="brand-section" onclick="window.App.openSchoolModal()" style="cursor:pointer;">
-      <div class="school-badge">🏫</div>
-      <div class="brand-info">
-        <h1 id="app-brand-title">MAKTAB</h1>
-        <p id="app-brand-subtitle">Dars Jadvali</p>
-      </div>
-    </div>
-
-    <div class="header-actions">
-      <button class="class-selector-btn" id="header-class-pill" onclick="window.App.openClassModal()">
-        🏫 Sinf tanlang ▾
-      </button>
-      <button class="theme-toggle-btn" onclick="window.App.toggleTheme()" title="Rejimni almashtirish">
-        🌓
-      </button>
-    </div>
-  </header>
-
-  <!-- Toast Container -->
+  <!-- Toast Notifications Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <!-- Main Views Container -->
-  <main class="app-container">
+  <!-- 1. AUTHENTICATION GATE SCREEN (Kirishdan oldingi oyna — Topsavdo Style) -->
+  <div id="auth-gate-screen" style="display: block;">
+    <div id="auth-gate-mount"></div>
+  </div>
 
-    <!-- VIEW 1: HOME (Bosh Sahifa) -->
-    <section class="view-section active" id="view-home">
-      <div class="welcome-card">
-        <div class="welcome-title" id="home-greeting">Assalomu alaykum!</div>
-        <div class="welcome-subtitle">Bugungi dars jadvalingizni va haftalik darslarni qulay ko‘ring.</div>
-        <div class="welcome-class-badge" id="home-current-class-badge" onclick="window.App.openClassModal()" style="cursor:pointer;">
-          🏫 Sinf tanlanmagan
+  <!-- 2. AUTHENTICATED APPLICATION LAYOUT (Parol kiritilgandan so‘ng ochiladi) -->
+  <div id="app-main-layout" style="display: none;">
+    <!-- Sticky Top Header -->
+    <header class="app-header">
+      <div class="brand-section" onclick="window.App.openSchoolModal()" style="cursor:pointer;">
+        <div class="school-badge-icon" id="header-logo-icon"></div>
+        <div class="brand-info">
+          <h1 id="app-brand-title">MAKTAB</h1>
+          <p id="app-brand-subtitle">Dars Jadvali</p>
         </div>
       </div>
 
-      <!-- School Code Banner -->
-      <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:12px;">
-        <div style="font-weight:800;font-size:13px;color:var(--primary);" id="home-school-code-pill">
-          🔑 Maktab Kodi: M-01
-        </div>
-        <button class="btn-sm" style="font-size:11px;padding:4px 8px;border-radius:6px;background:var(--primary);color:#fff;border:none;cursor:pointer;" onclick="window.App.openSchoolModal()">
-          O‘zgartirish / Kod
+      <div class="header-actions">
+        <button class="class-selector-btn" id="header-class-pill" onclick="window.App.openClassModal()">
+          <span id="header-class-pill-text">Sinf tanlang</span>
+          <span class="icon-svg-sm" id="header-class-pill-icon"></span>
+        </button>
+        <button class="theme-toggle-btn" onclick="window.App.toggleTheme()" title="Rejimni almashtirish" id="theme-toggle-btn-icon">
         </button>
       </div>
+    </header>
 
-      <div class="quick-nav-grid">
-        <div class="quick-card" onclick="window.App.navigate('schedule'); window.ScheduleView.renderDaily(document.getElementById('daily-schedule-container'), window.App.currentClassId, 'today');">
-          <div class="quick-card-icon icon-blue">📅</div>
-          <div class="quick-card-title">Bugungi jadval</div>
-          <div class="quick-card-desc">Bugungi kun darslari</div>
-        </div>
+    <!-- Main Views Container -->
+    <main class="app-container">
 
-        <div class="quick-card" onclick="window.App.navigate('schedule'); window.ScheduleView.renderDaily(document.getElementById('daily-schedule-container'), window.App.currentClassId, 'tomorrow');">
-          <div class="quick-card-icon icon-indigo">📆</div>
-          <div class="quick-card-title">Ertangi jadval</div>
-          <div class="quick-card-desc">Ertaga bo‘ladigan darslar</div>
-        </div>
-
-        <div class="quick-card" onclick="window.App.navigate('week')">
-          <div class="quick-card-icon icon-teal">📚</div>
-          <div class="quick-card-title">Haftalik jadval</div>
-          <div class="quick-card-desc">Dush — Shanba jadvali</div>
-        </div>
-
-        <div class="quick-card" onclick="window.App.openClassModal()">
-          <div class="quick-card-icon icon-amber">🏫</div>
-          <div class="quick-card-title">Sinfni tanlash</div>
-          <div class="quick-card-desc">O‘z sinfingizni belgilang</div>
-        </div>
-      </div>
-
-      <div class="section-header">
-        <div class="section-title">🔍 Qo‘shimcha imkoniyatlar</div>
-      </div>
-
-      <div class="quick-card" style="width:100%;margin-bottom:12px;" onclick="window.App.navigate('teacher')">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div class="quick-card-icon icon-indigo">👨‍🏫</div>
-          <div>
-            <div class="quick-card-title">O‘qituvchi jadvali</div>
-            <div class="quick-card-desc">Ustozlarning kunlik va haftalik darslari</div>
+      <!-- VIEW 1: HOME (Bosh Sahifa) -->
+      <section class="view-section active" id="view-home">
+        <div class="welcome-card">
+          <div class="welcome-title" id="home-greeting">Assalomu alaykum!</div>
+          <div class="welcome-subtitle">Bugungi va haftalik dars jadvalini qulay ko‘ring.</div>
+          <div class="welcome-class-badge" id="home-current-class-badge" onclick="window.App.openClassModal()" style="cursor:pointer;">
+            Sinf tanlanmagan
           </div>
         </div>
-      </div>
 
-      <div class="quick-card" style="width:100%;margin-bottom:12px;" onclick="window.App.openSchoolModal()">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <div class="quick-card-icon icon-blue">🔑</div>
-          <div>
-            <div class="quick-card-title">Boshqa maktabga ulanish</div>
-            <div class="quick-card-desc">Maktab kodini kiritish yoki ro‘yxatdan tanlash</div>
+        <!-- School Code Banner -->
+        <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:12px;">
+          <div style="font-weight:800;font-size:13px;color:var(--primary);display:flex;align-items:center;gap:6px;" id="home-school-code-pill">
+            Maktab Kodi: M-01
           </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- VIEW 2: DAILY SCHEDULE (Bugun & Ertaga) -->
-    <section class="view-section" id="view-schedule">
-      <div class="tab-pills">
-        <button class="tab-pill active" id="pill-tab-today" onclick="document.querySelectorAll('#view-schedule .tab-pill').forEach(p=>p.classList.remove('active')); this.classList.add('active'); window.ScheduleView.renderDaily(document.getElementById('daily-schedule-container'), window.App.currentClassId, 'today');">
-          📅 Bugun
-        </button>
-        <button class="tab-pill" id="pill-tab-tomorrow" onclick="document.querySelectorAll('#view-schedule .tab-pill').forEach(p=>p.classList.remove('active')); this.classList.add('active'); window.ScheduleView.renderDaily(document.getElementById('daily-schedule-container'), window.App.currentClassId, 'tomorrow');">
-          📆 Ertaga
-        </button>
-      </div>
-
-      <div id="daily-schedule-container"></div>
-    </section>
-
-    <!-- VIEW 3: WEEKLY SCHEDULE (Haftalik) -->
-    <section class="view-section" id="view-week">
-      <div id="week-view-container"></div>
-    </section>
-
-    <!-- VIEW 4: TEACHER SCHEDULE -->
-    <section class="view-section" id="view-teacher">
-      <div id="teacher-view-container"></div>
-    </section>
-
-    <!-- VIEW 5: PROFILE & SETTINGS -->
-    <section class="view-section" id="view-profile">
-      <div class="profile-card">
-        <div class="profile-avatar-wrap">👤</div>
-        <div class="profile-name" id="profile-name">Foydalanuvchi</div>
-        <div class="profile-username" id="profile-username">@username</div>
-
-        <div class="profile-class-setting">
-          <div style="text-align:left;">
-            <div style="font-size:11px;color:var(--text-muted);font-weight:700;">MENING MAKTABIM:</div>
-            <div style="font-size:14px;font-weight:800;color:var(--primary);" id="profile-school-text">1-maktab (M-01)</div>
-          </div>
-          <button class="class-selector-btn" onclick="window.App.openSchoolModal()">Maktabni o‘zgartirish</button>
+          <button class="btn-sm" style="font-size:11px;padding:5px 10px;border-radius:6px;background:var(--primary);color:#fff;border:none;cursor:pointer;font-weight:700;" onclick="window.App.openSchoolModal()">
+            O‘zgartirish / Kod
+          </button>
         </div>
 
-        <div class="profile-class-setting">
-          <div style="text-align:left;">
-            <div style="font-size:11px;color:var(--text-muted);font-weight:700;">MENING SINFIM:</div>
-            <div style="font-size:14px;font-weight:800;color:var(--primary);" id="profile-class-text">Tanlanmagan</div>
+        <div class="quick-nav-grid">
+          <div class="quick-card" onclick="window.App.navigate('schedule'); window.ScheduleView.renderDaily(document.getElementById('daily-schedule-container'), window.App.currentClassId, 'today');">
+            <div class="quick-card-icon icon-blue" id="icon-quick-today"></div>
+            <div class="quick-card-title">Bugungi jadval</div>
+            <div class="quick-card-desc">Bugungi kun darslari</div>
           </div>
-          <button class="class-selector-btn" onclick="window.App.openClassModal()">Sinfni o‘zgartirish</button>
+
+          <div class="quick-card" onclick="window.App.navigate('schedule'); window.ScheduleView.renderDaily(document.getElementById('daily-schedule-container'), window.App.currentClassId, 'tomorrow');">
+            <div class="quick-card-icon icon-indigo" id="icon-quick-tomorrow"></div>
+            <div class="quick-card-title">Ertangi jadval</div>
+            <div class="quick-card-desc">Ertaga bo‘ladigan darslar</div>
+          </div>
+
+          <div class="quick-card" onclick="window.App.navigate('week')">
+            <div class="quick-card-icon icon-teal" id="icon-quick-week"></div>
+            <div class="quick-card-title">Haftalik jadval</div>
+            <div class="quick-card-desc">Dushanba — Shanba</div>
+          </div>
+
+          <div class="quick-card" onclick="window.App.openClassModal()">
+            <div class="quick-card-icon icon-amber" id="icon-quick-class"></div>
+            <div class="quick-card-title">Sinfni tanlash</div>
+            <div class="quick-card-desc">O‘z sinfingizni belgilang</div>
+          </div>
         </div>
 
-        <div class="profile-class-setting">
-          <div style="text-align:left;">
-            <div style="font-size:11px;color:var(--text-muted);font-weight:700;">ILOVA MAVZUSI:</div>
-            <div style="font-size:13px;font-weight:600;">Dark / Light rejim</div>
-          </div>
-          <button class="btn-icon-action" onclick="window.App.toggleTheme()">🌓 Almashtirish</button>
+        <div class="section-header">
+          <div class="section-title">Qo‘shimcha imkoniyatlar</div>
         </div>
-      </div>
-    </section>
 
-    <!-- VIEW 6: ADMIN PANEL (Conditional / School Login) -->
-    <section class="view-section" id="view-admin">
-      <div id="admin-view-container"></div>
-    </section>
+        <div class="quick-card" style="width:100%;margin-bottom:12px;" onclick="window.App.navigate('teacher')">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="quick-card-icon icon-indigo" id="icon-quick-teacher"></div>
+            <div>
+              <div class="quick-card-title">O‘qituvchi jadvali</div>
+              <div class="quick-card-desc">Ustozlarning dars soatlari</div>
+            </div>
+          </div>
+        </div>
 
-  </main>
+        <div class="quick-card" style="width:100%;margin-bottom:12px;" onclick="window.App.openSchoolModal()">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="quick-card-icon icon-blue" id="icon-quick-key"></div>
+            <div>
+              <div class="quick-card-title">Boshqa maktabga ulanish</div>
+              <div class="quick-card-desc">Maktab kodi bo‘yicha jadvalni ochish</div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-  <!-- Bottom Mobile Navigation Bar -->
-  <nav class="bottom-nav">
-    <button class="nav-item active" data-view="home" onclick="window.App.navigate('home')">
-      <span class="nav-icon">🏠</span>
-      <span>Asosiy</span>
-    </button>
-    <button class="nav-item" data-view="schedule" onclick="window.App.navigate('schedule')">
-      <span class="nav-icon">📅</span>
-      <span>Jadval</span>
-    </button>
-    <button class="nav-item" data-view="week" onclick="window.App.navigate('week')">
-      <span class="nav-icon">📚</span>
-      <span>Hafta</span>
-    </button>
-    <button class="nav-item" data-view="teacher" onclick="window.App.navigate('teacher')">
-      <span class="nav-icon">👨‍🏫</span>
-      <span>Ustoz</span>
-    </button>
-    <button class="nav-item" data-view="profile" onclick="window.App.navigate('profile')">
-      <span class="nav-icon">⚙️</span>
-      <span>Profil</span>
-    </button>
-    <button class="nav-item" id="nav-admin-btn" data-view="admin" onclick="window.App.navigate('admin')">
-      <span class="nav-icon">👑</span>
-      <span>Admin / Zavuch</span>
-    </button>
-  </nav>
+      <!-- VIEW 2: DAILY SCHEDULE (Bugun & Ertaga) -->
+      <section class="view-section" id="view-schedule">
+        <div class="tab-pills">
+          <button class="tab-pill active" id="pill-tab-today" onclick="document.querySelectorAll('#view-schedule .tab-pill').forEach(p=>p.classList.remove('active')); this.classList.add('active'); window.ScheduleView.renderDaily(document.getElementById('daily-schedule-container'), window.App.currentClassId, 'today');">
+            Bugun
+          </button>
+          <button class="tab-pill" id="pill-tab-tomorrow" onclick="document.querySelectorAll('#view-schedule .tab-pill').forEach(p=>p.classList.remove('active')); this.classList.add('active'); window.ScheduleView.renderDaily(document.getElementById('daily-schedule-container'), window.App.currentClassId, 'tomorrow');">
+            Ertaga
+          </button>
+        </div>
+
+        <div id="daily-schedule-container"></div>
+      </section>
+
+      <!-- VIEW 3: WEEKLY SCHEDULE (Haftalik) -->
+      <section class="view-section" id="view-week">
+        <div id="week-view-container"></div>
+      </section>
+
+      <!-- VIEW 4: TEACHER SCHEDULE -->
+      <section class="view-section" id="view-teacher">
+        <div id="teacher-view-container"></div>
+      </section>
+
+      <!-- VIEW 5: PROFILE & SETTINGS -->
+      <section class="view-section" id="view-profile">
+        <div class="profile-card">
+          <div class="profile-avatar-wrap" id="profile-avatar-icon"></div>
+          <div class="profile-name" id="profile-name">Foydalanuvchi</div>
+          <div class="profile-username" id="profile-username">@username</div>
+
+          <div class="profile-class-setting">
+            <div style="text-align:left;">
+              <div style="font-size:11px;color:var(--text-muted);font-weight:700;">MENING MAKTABIM:</div>
+              <div style="font-size:14px;font-weight:800;color:var(--primary);" id="profile-school-text">1-maktab (M-01)</div>
+            </div>
+            <button class="class-selector-btn" onclick="window.App.openSchoolModal()">Maktabni o‘zgartirish</button>
+          </div>
+
+          <div class="profile-class-setting">
+            <div style="text-align:left;">
+              <div style="font-size:11px;color:var(--text-muted);font-weight:700;">MENING SINFIM:</div>
+              <div style="font-size:14px;font-weight:800;color:var(--primary);" id="profile-class-text">Tanlanmagan</div>
+            </div>
+            <button class="class-selector-btn" onclick="window.App.openClassModal()">Sinfni o‘zgartirish</button>
+          </div>
+
+          <div class="profile-class-setting">
+            <div style="text-align:left;">
+              <div style="font-size:11px;color:var(--text-muted);font-weight:700;">ILOVA MAVZUSI:</div>
+              <div style="font-size:13px;font-weight:600;">Dark / Light rejim</div>
+            </div>
+            <button class="btn-icon-action" onclick="window.App.toggleTheme()">Almashtirish</button>
+          </div>
+
+          <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px;text-align:center;">
+            <button class="btn-sm" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;width:100%;" onclick="window.App.logout()">
+              Tizimdan Chiqish (Qulflash)
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 6: ADMIN PANEL -->
+      <section class="view-section" id="view-admin">
+        <div id="admin-view-container"></div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Mobile Navigation Bar -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-view="home" onclick="window.App.navigate('home')">
+        <span class="nav-icon" id="nav-icon-home"></span>
+        <span>Asosiy</span>
+      </button>
+      <button class="nav-item" data-view="schedule" onclick="window.App.navigate('schedule')">
+        <span class="nav-icon" id="nav-icon-schedule"></span>
+        <span>Jadval</span>
+      </button>
+      <button class="nav-item" data-view="week" onclick="window.App.navigate('week')">
+        <span class="nav-icon" id="nav-icon-week"></span>
+        <span>Hafta</span>
+      </button>
+      <button class="nav-item" data-view="teacher" onclick="window.App.navigate('teacher')">
+        <span class="nav-icon" id="nav-icon-teacher"></span>
+        <span>Ustoz</span>
+      </button>
+      <button class="nav-item" data-view="profile" onclick="window.App.navigate('profile')">
+        <span class="nav-icon" id="nav-icon-profile"></span>
+        <span>Profil</span>
+      </button>
+      <button class="nav-item" id="nav-admin-btn" data-view="admin" onclick="window.App.navigate('admin')">
+        <span class="nav-icon" id="nav-icon-admin"></span>
+        <span>Admin / Zavuch</span>
+      </button>
+    </nav>
+  </div>
 
   <!-- Modal: Class Selector Bottom Sheet -->
   <div class="modal-overlay" id="class-select-modal" onclick="if(event.target===this) window.App.closeModal();">
     <div class="bottom-sheet">
       <div class="sheet-header">
-        <div class="sheet-title">🏫 Sinfingizni tanlang</div>
-        <button class="sheet-close-btn" onclick="window.App.closeModal()">✕</button>
+        <div class="sheet-title">Sinfingizni tanlang</div>
+        <button class="sheet-close-btn" onclick="window.App.closeModal()" id="modal-close-icon">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="18" y2="6"/></svg>
+        </button>
       </div>
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
-        Sinfingizni tanlang. Ushbu tanlov eslab qolinadi va keyingi safar darslar avtomatik ko‘rinadi.
+        Sinfingizni tanlang. Darslar avtomatik ko‘rinadi.
       </p>
       <div class="class-grid" id="modal-class-grid"></div>
     </div>
@@ -226,7 +242,9 @@
     <div class="bottom-sheet">
       <div class="sheet-header">
         <div class="sheet-title" id="custom-modal-title">Sarlavha</div>
-        <button class="sheet-close-btn" onclick="window.App.closeModal()">✕</button>
+        <button class="sheet-close-btn" onclick="window.App.closeModal()">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="18" y2="6"/></svg>
+        </button>
       </div>
       <div id="custom-modal-body"></div>
     </div>

@@ -2,6 +2,7 @@ import { TelegramApp } from './telegram.js';
 import { Api } from './api.js';
 import { ScheduleView } from './schedule.js';
 import { AdminView } from './admin.js';
+import { Icons } from './icons.js';
 
 export const App = {
   currentView: 'home', // 'home' | 'schedule' | 'week' | 'teacher' | 'profile' | 'admin'
@@ -20,12 +21,113 @@ export const App = {
     window.App = this;
     window.ScheduleView = ScheduleView;
     window.AdminView = AdminView;
+    window.Icons = Icons;
 
-    // Load user auth info
+    // Mount SVG vector icons to static HTML slots
+    this.mountIcons();
+
+    // Check strict authentication gatekeeper
+    const token = localStorage.getItem('maktab_school_token');
+    if (!token) {
+      this.showAuthGate();
+      return;
+    }
+
+    await this.showMainApp();
+  },
+
+  mountIcons() {
+    // Header icons
+    const headerLogo = document.getElementById('header-logo-icon');
+    if (headerLogo) headerLogo.innerHTML = Icons.logo;
+
+    const classPillIcon = document.getElementById('header-class-pill-icon');
+    if (classPillIcon) classPillIcon.innerHTML = Icons.chevronDown;
+
+    const themeToggleBtn = document.getElementById('theme-toggle-btn-icon');
+    if (themeToggleBtn) {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      themeToggleBtn.innerHTML = isDark ? Icons.sun : Icons.moon;
+    }
+
+    // Quick Action Card icons (Home view)
+    const iconToday = document.getElementById('icon-quick-today');
+    if (iconToday) iconToday.innerHTML = Icons.calendar;
+
+    const iconTomorrow = document.getElementById('icon-quick-tomorrow');
+    if (iconTomorrow) iconTomorrow.innerHTML = Icons.clock;
+
+    const iconWeek = document.getElementById('icon-quick-week');
+    if (iconWeek) iconWeek.innerHTML = Icons.book;
+
+    const iconClass = document.getElementById('icon-quick-class');
+    if (iconClass) iconClass.innerHTML = Icons.school;
+
+    const iconTeacher = document.getElementById('icon-quick-teacher');
+    if (iconTeacher) iconTeacher.innerHTML = Icons.teacher;
+
+    const iconKey = document.getElementById('icon-quick-key');
+    if (iconKey) iconKey.innerHTML = Icons.key;
+
+    // Profile Avatar icon
+    const profileAvatar = document.getElementById('profile-avatar-icon');
+    if (profileAvatar) profileAvatar.innerHTML = Icons.user;
+
+    // Bottom Navigation Bar icons
+    const navHome = document.getElementById('nav-icon-home');
+    if (navHome) navHome.innerHTML = Icons.home;
+
+    const navSchedule = document.getElementById('nav-icon-schedule');
+    if (navSchedule) navSchedule.innerHTML = Icons.calendar;
+
+    const navWeek = document.getElementById('nav-icon-week');
+    if (navWeek) navWeek.innerHTML = Icons.book;
+
+    const navTeacher = document.getElementById('nav-icon-teacher');
+    if (navTeacher) navTeacher.innerHTML = Icons.teacher;
+
+    const navProfile = document.getElementById('nav-icon-profile');
+    if (navProfile) navProfile.innerHTML = Icons.profile;
+
+    const navAdmin = document.getElementById('nav-icon-admin');
+    if (navAdmin) navAdmin.innerHTML = Icons.admin;
+
+    // Modal Close icons
+    const modalCloseIcon = document.getElementById('modal-close-icon');
+    if (modalCloseIcon) modalCloseIcon.innerHTML = Icons.close;
+  },
+
+  showAuthGate() {
+    const authGateScreen = document.getElementById('auth-gate-screen');
+    const appMainLayout = document.getElementById('app-main-layout');
+    const authGateMount = document.getElementById('auth-gate-mount');
+
+    if (authGateScreen) authGateScreen.style.display = 'block';
+    if (appMainLayout) appMainLayout.style.display = 'none';
+
+    if (authGateMount) {
+      AdminView.authMode = 'login';
+      AdminView.render(authGateMount);
+    }
+  },
+
+  async showMainApp() {
+    const authGateScreen = document.getElementById('auth-gate-screen');
+    const appMainLayout = document.getElementById('app-main-layout');
+
+    if (authGateScreen) authGateScreen.style.display = 'none';
+    if (appMainLayout) appMainLayout.style.display = 'block';
+
+    await this.loadAppData();
+    this.navigate('home');
+  },
+
+  async loadAppData() {
+    // Load user auth and school info
     try {
       const authData = await Api.getAuthMe();
       this.currentUser = authData.user || TelegramApp.getUser();
-      this.isAdmin = authData.isAdmin || false;
+      this.isAdmin = authData.isAdmin || !!localStorage.getItem('maktab_school_token');
 
       // School preference
       if (authData.selectedSchoolCode) {
@@ -73,32 +175,37 @@ export const App = {
         }
       } catch (e) {}
     }
+  },
 
-    // Render initial view
-    this.navigate('home');
+  logout() {
+    localStorage.removeItem('maktab_school_token');
+    localStorage.removeItem('maktab_admin_name');
+    localStorage.removeItem('maktab_admin_email');
+    this.isAdmin = false;
+    this.showAuthGate();
+    this.showToast('Tizimdan chiqildi (Qulflangan)', 'info');
   },
 
   updateHeaderClassPill() {
     const pill = document.getElementById('header-class-pill');
     if (pill) {
-      pill.innerHTML = `🏫 <b>${this.currentSchoolCode}</b> · ${this.currentClassName || 'Sinf'} ▾`;
+      pill.innerHTML = `<span><b>${this.currentSchoolCode}</b> · ${this.currentClassName || 'Sinf'}</span> <span class="icon-svg-sm" style="display:inline-flex;align-items:center;">${Icons.chevronDown}</span>`;
     }
 
     const homeBadge = document.getElementById('home-current-class-badge');
     if (homeBadge) {
-      homeBadge.innerHTML = `🏫 <b>${this.currentSchoolName}</b> (${this.currentSchoolCode}) — ${this.currentClassName || 'Sinf tanlanmagan'}`;
+      homeBadge.innerHTML = `<b>${this.currentSchoolName}</b> (${this.currentSchoolCode}) — ${this.currentClassName || 'Sinf tanlanmagan'}`;
     }
 
     const schoolCodeCard = document.getElementById('home-school-code-pill');
     if (schoolCodeCard) {
-      schoolCodeCard.innerText = `🔑 Maktab Kodi: ${this.currentSchoolCode}`;
+      schoolCodeCard.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;">${Icons.key} Maktab Kodi: <b>${this.currentSchoolCode}</b></span>`;
     }
   },
 
   updateAdminNavVisibility() {
     const adminNavBtn = document.getElementById('nav-admin-btn');
     if (adminNavBtn) {
-      // Always show Admin tab so school admins / zavuchs can login with their code
       adminNavBtn.style.display = 'flex';
     }
   },
@@ -161,7 +268,7 @@ export const App = {
   async renderHome() {
     const greetingEl = document.getElementById('home-greeting');
     if (greetingEl) {
-      const name = this.currentUser?.first_name || 'O‘quvchi';
+      const name = this.currentUser?.first_name || 'Foydalanuvchi';
       greetingEl.innerText = `Assalomu alaykum, ${name}!`;
     }
     this.updateHeaderClassPill();
@@ -174,7 +281,7 @@ export const App = {
     const schoolEl = document.getElementById('profile-school-text');
 
     if (nameEl) nameEl.innerText = this.currentUser?.first_name || 'Foydalanuvchi';
-    if (userEl) userEl.innerText = this.currentUser?.username ? `@${this.currentUser.username}` : (this.currentUser?.id ? `ID: ${this.currentUser.id}` : 'Telegram Mini App');
+    if (userEl) userEl.innerText = this.currentUser?.username ? `@${this.currentUser.username}` : (this.currentUser?.id ? `ID: ${this.currentUser.id}` : 'Foydalanuvchi');
     if (classEl) classEl.innerText = this.currentClassName || 'Tanlanmagan';
     if (schoolEl) schoolEl.innerText = `${this.currentSchoolName} (${this.currentSchoolCode})`;
   },
@@ -250,7 +357,7 @@ export const App = {
       </div>
     `;
 
-    this.showCustomModal('🏫 Maktabni tanlash / Kod kiritish', bodyHtml);
+    this.showCustomModal('Maktabni tanlash / Kod kiritish', bodyHtml);
 
     try {
       const schools = await Api.getSchools();
@@ -327,6 +434,11 @@ export const App = {
     const next = current === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('maktab_theme', next);
+
+    const themeToggleBtn = document.getElementById('theme-toggle-btn-icon');
+    if (themeToggleBtn) {
+      themeToggleBtn.innerHTML = next === 'dark' ? Icons.sun : Icons.moon;
+    }
   },
 
   showToast(message, type = 'info') {
@@ -336,7 +448,8 @@ export const App = {
 
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.innerHTML = `<span>${type === 'success' ? '✅' : (type === 'error' ? '⚠️' : 'ℹ️')}</span> <span>${message}</span>`;
+    const iconSvg = type === 'success' ? Icons.check : (type === 'error' ? Icons.alert : Icons.info);
+    toast.innerHTML = `<span style="display:inline-flex;align-items:center;">${iconSvg}</span> <span>${message}</span>`;
 
     container.appendChild(toast);
     setTimeout(() => {

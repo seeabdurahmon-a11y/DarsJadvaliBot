@@ -229,12 +229,14 @@ body {
 }
 
 .welcome-card::after {
-  content: '🏫';
+  content: '';
   position: absolute;
-  right: -10px;
-  bottom: -15px;
-  font-size: 80px;
-  opacity: 0.15;
+  right: -20px;
+  bottom: -20px;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
+  border-radius: 50%;
   pointer-events: none;
 }
 

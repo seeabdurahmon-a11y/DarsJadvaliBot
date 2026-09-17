@@ -1,12 +1,12 @@
 import { Api } from './api.js';
 import { TelegramApp } from './telegram.js';
+import { Icons } from './icons.js';
 
 export const AdminView = {
   currentTab: 'stats', // 'stats' | 'classes' | 'teachers' | 'subjects' | 'lessons' | 'import' | 'broadcast'
   authMode: 'login', // 'login' | 'register'
 
   async render(container) {
-    // Check if user is logged in as Admin (via Telegram or School Token)
     const token = localStorage.getItem('maktab_school_token');
     if (!window.App.isAdmin && !token) {
       if (this.authMode === 'register') {
@@ -22,36 +22,38 @@ export const AdminView = {
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,0.03);">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
-            <div style="font-size:11px;color:var(--text-muted);font-weight:800;letter-spacing:0.5px;">🏫 MAKTAB BOSHQARUV PANELI</div>
+            <div style="font-size:11px;color:var(--text-muted);font-weight:800;letter-spacing:0.5px;">MAKTAB BOSHQARUV PANELI</div>
             <div style="font-size:16px;font-weight:800;color:var(--text-primary);margin-top:2px;">
               ${window.App.currentSchoolName || 'Maktab'}
               <span style="background:var(--primary);color:#fff;font-size:11px;padding:2px 8px;border-radius:6px;margin-left:6px;font-weight:800;">${window.App.currentSchoolCode}</span>
             </div>
             <div style="font-size:12px;color:var(--primary);font-weight:600;margin-top:2px;">
-              👤 ${adminName} ${adminEmail ? `<span style="color:var(--text-muted);font-weight:400;">(${adminEmail})</span>` : ''}
+              ${adminName} ${adminEmail ? `<span style="color:var(--text-muted);font-weight:400;">(${adminEmail})</span>` : ''}
             </div>
           </div>
-          <button class="btn-sm" style="background:#fee2e2;color:#ef4444;border:1px solid #fecaca;border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:700;" onclick="window.AdminView.logout()">🚪 Chiqish</button>
+          <button class="btn-sm" style="background:#fee2e2;color:#ef4444;border:1px solid #fecaca;border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:700;display:inline-flex;align-items:center;gap:4px;" onclick="window.App.logout()">
+            ${Icons.logout} Chiqish
+          </button>
         </div>
 
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
-          <button class="btn-sm" style="background:var(--bg-body);border:1px solid var(--border);padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-weight:600;" onclick="navigator.clipboard?.writeText('${window.App.currentSchoolCode}'); window.App.showToast('Maktab kodi nusxalandi: ${window.App.currentSchoolCode}', 'success');">
-            📋 Kod: <b>${window.App.currentSchoolCode}</b>
+          <button class="btn-sm" style="background:var(--bg-body);border:1px solid var(--border);padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer;font-weight:700;display:inline-flex;align-items:center;gap:5px;" onclick="navigator.clipboard?.writeText('${window.App.currentSchoolCode}'); window.App.showToast('Maktab kodi nusxalandi: ${window.App.currentSchoolCode}', 'success');">
+            ${Icons.copy} Kod: <b>${window.App.currentSchoolCode}</b>
           </button>
-          <a href="https://t.me/JadvaliBot?start=code_${window.App.currentSchoolCode?.replace('-', '')}" target="_blank" class="btn-sm" style="background:#e0e7ff;color:#4338ca;border:1px solid #c7d2fe;padding:5px 10px;border-radius:6px;font-size:11px;text-decoration:none;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
-            🤖 Telegram Botga havola
+          <a href="https://t.me/JadvaliBot?start=code_${window.App.currentSchoolCode?.replace('-', '')}" target="_blank" class="btn-sm" style="background:#e0e7ff;color:#4338ca;border:1px solid #c7d2fe;padding:6px 12px;border-radius:6px;font-size:11px;text-decoration:none;font-weight:700;display:inline-flex;align-items:center;gap:5px;">
+            ${Icons.send} Telegram Botga havola
           </a>
         </div>
       </div>
 
       <div class="tab-pills" id="admin-pills" style="overflow-x:auto;white-space:nowrap;margin-bottom:14px;">
-        <button class="tab-pill active" onclick="window.AdminView.switchTab('stats')">📊 Statistika</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('classes')">🏫 Sinflar</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('teachers')">👨‍🏫 Ustozlar</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('subjects')">📚 Fanlar</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('lessons')">📅 Dars jadvali</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('import')">📥 Jadval yuklash</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('broadcast')">📤 Hozir yuborish</button>
+        <button class="tab-pill active" onclick="window.AdminView.switchTab('stats')">Statistika</button>
+        <button class="tab-pill" onclick="window.AdminView.switchTab('classes')">Sinflar</button>
+        <button class="tab-pill" onclick="window.AdminView.switchTab('teachers')">Ustozlar</button>
+        <button class="tab-pill" onclick="window.AdminView.switchTab('subjects')">Fanlar</button>
+        <button class="tab-pill" onclick="window.AdminView.switchTab('lessons')">Dars jadvali</button>
+        <button class="tab-pill" onclick="window.AdminView.switchTab('import')">Jadval yuklash</button>
+        <button class="tab-pill" onclick="window.AdminView.switchTab('broadcast')">Hozir yuborish</button>
       </div>
 
       <div id="admin-tab-body">
@@ -67,8 +69,9 @@ export const AdminView = {
       <div class="auth-page-wrapper">
         <div class="auth-header-center">
           <div class="auth-brand-logo-icon">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 3L1 9L12 15L21 10.09V17H23V9M5 13.18V17.18L12 21L19 17.18V13.18L12 17L5 13.18Z" />
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
             </svg>
           </div>
           <div class="auth-brand-title">Maktab Jadvali</div>
@@ -79,7 +82,7 @@ export const AdminView = {
           <div class="form-group" style="margin-bottom:14px;">
             <label class="auth-field-label">Foydalanuvchi nomi</label>
             <div class="auth-input-container">
-              <span class="auth-input-left-icon">👤</span>
+              <span class="auth-input-left-icon">${Icons.user}</span>
               <input type="text" id="admin-login-id" class="auth-input-control" value="test@darsjadvali.uz" placeholder="Email yoki maktab kodi" autocomplete="username">
             </div>
           </div>
@@ -87,10 +90,10 @@ export const AdminView = {
           <div class="form-group" style="margin-bottom:18px;">
             <label class="auth-field-label">Parol</label>
             <div class="auth-input-container">
-              <span class="auth-input-left-icon">🔒</span>
+              <span class="auth-input-left-icon">${Icons.lock}</span>
               <input type="password" id="admin-login-pwd" class="auth-input-control" value="darsjadvoli0751" placeholder="Parolni kiriting" autocomplete="current-password">
               <button type="button" class="auth-password-toggle-btn" onclick="window.AdminView.togglePasswordVisibility('admin-login-pwd', this)" title="Parolni ko‘rsatish">
-                👁️
+                ${Icons.eye}
               </button>
             </div>
           </div>
@@ -100,14 +103,14 @@ export const AdminView = {
           <div class="auth-test-box">
             <div style="font-size:11px;color:#047857;font-weight:700;">TEST AKKAUNTI:</div>
             <div style="font-size:12px;color:#065f46;font-weight:600;margin-top:2px;">Email: <b>test@darsjadvali.uz</b> | Parol: <b>darsjadvoli0751</b></div>
-            <button class="auth-test-fill-btn" onclick="window.AdminView.fillTestCredentials()">✨ 1-bosishda test bilan kirish</button>
+            <button class="auth-test-fill-btn" onclick="window.AdminView.fillTestCredentials()">1-bosishda test bilan kirish</button>
           </div>
 
           <hr style="margin:20px 0;border:none;border-top:1px solid #f1f5f9;">
 
           <div style="text-align:center;">
             <div style="font-size:12.5px;color:#64748b;margin-bottom:8px;">Yangi maktab yoki zavuch akkaunti ochmoqchimisiz?</div>
-            <button class="auth-toggle-auth-btn" onclick="window.AdminView.setAuthMode('register')">➕ Yangi Akkaunt Ochish</button>
+            <button class="auth-toggle-auth-btn" onclick="window.AdminView.setAuthMode('register')">Yangi Akkaunt Ochish</button>
           </div>
         </div>
       </div>
@@ -119,8 +122,9 @@ export const AdminView = {
       <div class="auth-page-wrapper">
         <div class="auth-header-center">
           <div class="auth-brand-logo-icon">
-            <svg viewBox="0 0 24 24">
-              <path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" x2="12" y1="5" y2="19"/>
+              <line x1="5" x2="19" y1="12" y2="12"/>
             </svg>
           </div>
           <div class="auth-brand-title">Maktab Jadvali</div>
@@ -131,7 +135,7 @@ export const AdminView = {
           <div class="form-group" style="margin-bottom:12px;">
             <label class="auth-field-label">Zavuch / Mas'ul Ismi</label>
             <div class="auth-input-container">
-              <span class="auth-input-left-icon">👤</span>
+              <span class="auth-input-left-icon">${Icons.user}</span>
               <input type="text" id="reg-admin-name" class="auth-input-control" placeholder="Masalan: Aliyev Botir">
             </div>
           </div>
@@ -139,7 +143,7 @@ export const AdminView = {
           <div class="form-group" style="margin-bottom:12px;">
             <label class="auth-field-label">Email Manzili (Login uchun)</label>
             <div class="auth-input-container">
-              <span class="auth-input-left-icon">✉️</span>
+              <span class="auth-input-left-icon">${Icons.mail}</span>
               <input type="email" id="reg-admin-email" class="auth-input-control" placeholder="Masalan: zavuch@maktab.uz">
             </div>
           </div>
@@ -147,10 +151,10 @@ export const AdminView = {
           <div class="form-group" style="margin-bottom:12px;">
             <label class="auth-field-label">Parol</label>
             <div class="auth-input-container">
-              <span class="auth-input-left-icon">🔒</span>
+              <span class="auth-input-left-icon">${Icons.lock}</span>
               <input type="password" id="reg-admin-pwd" class="auth-input-control" value="darsjadvoli0751" placeholder="Parol kiriting">
               <button type="button" class="auth-password-toggle-btn" onclick="window.AdminView.togglePasswordVisibility('reg-admin-pwd', this)">
-                👁️
+                ${Icons.eye}
               </button>
             </div>
           </div>
@@ -158,7 +162,7 @@ export const AdminView = {
           <div class="form-group" style="margin-bottom:12px;">
             <label class="auth-field-label">Maktab Nomi</label>
             <div class="auth-input-container">
-              <span class="auth-input-left-icon">🏫</span>
+              <span class="auth-input-left-icon">${Icons.school}</span>
               <input type="text" id="reg-school-name" class="auth-input-control" placeholder="Masalan: 12-IDUM yoki 45-maktab">
             </div>
           </div>
@@ -166,7 +170,7 @@ export const AdminView = {
           <div class="form-group" style="margin-bottom:12px;">
             <label class="auth-field-label">Maktab Kodi (Ixtiyoriy)</label>
             <div class="auth-input-container">
-              <span class="auth-input-left-icon">🔑</span>
+              <span class="auth-input-left-icon">${Icons.key}</span>
               <input type="text" id="reg-school-code" class="auth-input-control" placeholder="Bo‘sh qoldirilsa M-02 kabi beriladi" style="text-transform:uppercase;">
             </div>
           </div>
@@ -174,7 +178,7 @@ export const AdminView = {
           <div class="form-group" style="margin-bottom:12px;">
             <label class="auth-field-label">Viloyat / Tuman</label>
             <div class="auth-input-container">
-              <span class="auth-input-left-icon">📍</span>
+              <span class="auth-input-left-icon">${Icons.room}</span>
               <input type="text" id="reg-school-region" class="auth-input-control" placeholder="Masalan: Toshkent shahar">
             </div>
           </div>
@@ -182,18 +186,18 @@ export const AdminView = {
           <div class="form-group" style="margin-bottom:16px;">
             <label class="auth-field-label">Ertalabki dars jadvalini yuborish vaqti</label>
             <div class="auth-input-container">
-              <span class="auth-input-left-icon">⏰</span>
+              <span class="auth-input-left-icon">${Icons.clock}</span>
               <input type="time" id="reg-school-time" class="auth-input-control" value="06:00">
             </div>
           </div>
 
-          <button class="auth-submit-btn-emerald" onclick="window.AdminView.submitRegisterSchool()">🚀 Akkaunt Ochish va Kirish</button>
+          <button class="auth-submit-btn-emerald" onclick="window.AdminView.submitRegisterSchool()">Akkaunt Ochish va Kirish</button>
 
           <hr style="margin:20px 0;border:none;border-top:1px solid #f1f5f9;">
 
           <div style="text-align:center;">
             <div style="font-size:12.5px;color:#64748b;margin-bottom:8px;">Akkauntingiz bormi?</div>
-            <button class="auth-toggle-auth-btn" onclick="window.AdminView.setAuthMode('login')">🔑 Tizimga Kirish</button>
+            <button class="auth-toggle-auth-btn" onclick="window.AdminView.setAuthMode('login')">Tizimga Kirish</button>
           </div>
         </div>
       </div>
@@ -205,17 +209,17 @@ export const AdminView = {
     if (!input) return;
     if (input.type === 'password') {
       input.type = 'text';
-      btn.textContent = '🙈';
+      btn.innerHTML = Icons.eyeOff;
     } else {
       input.type = 'password';
-      btn.textContent = '👁️';
+      btn.innerHTML = Icons.eye;
     }
   },
 
   setAuthMode(mode) {
     this.authMode = mode;
-    const container = document.getElementById('admin-view-container');
-    if (container) this.render(container);
+    const mount = document.getElementById('auth-gate-mount') || document.getElementById('admin-view-container');
+    if (mount) this.render(mount);
   },
 
   fillTestCredentials() {
@@ -248,25 +252,12 @@ export const AdminView = {
       window.App.currentSchoolCode = res.school.code;
       window.App.currentSchoolName = res.school.name;
       window.App.currentSchoolId = res.school.id;
-      window.App.updateHeaderClassPill();
 
       window.App.showToast(`Xush kelibsiz, ${res.school.admin_name || res.school.name}!`, 'success');
-      const container = document.getElementById('admin-view-container');
-      if (container) this.render(container);
+      window.App.showMainApp();
     } catch (err) {
       window.App.showToast(err.message, 'error');
     }
-  },
-
-  logout() {
-    localStorage.removeItem('maktab_school_token');
-    localStorage.removeItem('maktab_admin_name');
-    localStorage.removeItem('maktab_admin_email');
-    window.App.isAdmin = false;
-    this.authMode = 'login';
-    window.App.showToast('Tizimdan chiqildi', 'info');
-    const container = document.getElementById('admin-view-container');
-    if (container) this.render(container);
   },
 
   async submitRegisterSchool() {
@@ -306,10 +297,8 @@ export const AdminView = {
       window.App.currentSchoolCode = res.school.code;
       window.App.currentSchoolName = res.school.name;
       window.App.currentSchoolId = res.school.id;
-      window.App.updateHeaderClassPill();
 
-      const container = document.getElementById('admin-view-container');
-      if (container) this.render(container);
+      window.App.showMainApp();
     } catch (err) {
       window.App.showToast(err.message, 'error');
     }
@@ -351,7 +340,6 @@ export const AdminView = {
     } catch (err) {
       body.innerHTML = `
         <div class="state-box">
-          <div class="state-icon">⚠️</div>
           <div class="state-title">Yuklashda xatolik</div>
           <div class="state-desc">${err.message}</div>
         </div>
@@ -369,29 +357,31 @@ export const AdminView = {
             <div style="font-size:11px;color:var(--text-muted);font-weight:700;">BOTGA ULANISH KODI:</div>
             <div style="font-size:20px;font-weight:800;color:var(--primary);">${window.App.currentSchoolCode}</div>
           </div>
-          <button class="btn-sm" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:700;" onclick="navigator.clipboard?.writeText('${window.App.currentSchoolCode}'); window.App.showToast('Kodi nusxalandi: ${window.App.currentSchoolCode}', 'success');">📋 Kodni nusxalash</button>
+          <button class="btn-sm" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-weight:700;display:inline-flex;align-items:center;gap:4px;" onclick="navigator.clipboard?.writeText('${window.App.currentSchoolCode}'); window.App.showToast('Kodi nusxalandi: ${window.App.currentSchoolCode}', 'success');">
+            ${Icons.copy} Kodni nusxalash
+          </button>
         </div>
         <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">
-          💡 <i>O‘quvchilar va guruhlar botga kirib <b>${window.App.currentSchoolCode}</b> deb yozsa, to‘g‘ridan-to‘g‘ri ushbu maktab dars jadvali ochiladi.</i>
+          O‘quvchilar va guruhlar botga kirib <b>${window.App.currentSchoolCode}</b> deb yozsa, to‘g‘ridan-to‘g‘ri ushbu maktab dars jadvali ochiladi.
         </div>
       </div>
 
       <div class="admin-stats-grid">
         <div class="stat-box">
           <div class="stat-val">${stats.classesCount || 0}</div>
-          <div class="stat-label">🏫 Sinflar</div>
+          <div class="stat-label">Sinflar</div>
         </div>
         <div class="stat-box">
           <div class="stat-val">${stats.teachersCount || 0}</div>
-          <div class="stat-label">👨‍🏫 O‘qituvchilar</div>
+          <div class="stat-label">O‘qituvchilar</div>
         </div>
         <div class="stat-box">
           <div class="stat-val">${stats.subjectsCount || 0}</div>
-          <div class="stat-label">📚 Fanlar</div>
+          <div class="stat-label">Fanlar</div>
         </div>
         <div class="stat-box">
           <div class="stat-val">${stats.lessonsCount || 0}</div>
-          <div class="stat-label">📅 Darslar</div>
+          <div class="stat-label">Darslar</div>
         </div>
       </div>
     `;
@@ -401,7 +391,9 @@ export const AdminView = {
   async renderClasses(container) {
     const classes = await Api.getClasses(window.App.currentSchoolCode);
     let html = `
-      <button class="admin-action-btn" onclick="window.AdminView.openAddClassModal()">➕ Yangi Sinf Qo‘shish</button>
+      <button class="admin-action-btn" onclick="window.AdminView.openAddClassModal()" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+        ${Icons.plus} Yangi Sinf Qo‘shish
+      </button>
       <div class="lessons-list">
     `;
 
@@ -412,12 +404,12 @@ export const AdminView = {
         html += `
           <div class="admin-list-item">
             <div>
-              <div class="admin-item-title">🏫 ${c.name}</div>
-              <div class="admin-item-subtitle">⏰ Yuborish: ${c.send_time} | 📚 Darslar: ${c.lessons_count || 0} ta</div>
+              <div class="admin-item-title">${c.name}</div>
+              <div class="admin-item-subtitle">Yuborish: ${c.send_time} | Darslar: ${c.lessons_count || 0} ta</div>
             </div>
             <div class="admin-btn-group">
-              <button class="btn-icon-action" onclick="window.AdminView.openEditClassModal(${c.id}, '${c.name}', '${c.send_time}')">✏️</button>
-              <button class="btn-icon-action danger" onclick="window.AdminView.deleteClass(${c.id}, '${c.name}')">🗑</button>
+              <button class="btn-icon-action" onclick="window.AdminView.openEditClassModal(${c.id}, '${c.name}', '${c.send_time}')">${Icons.edit}</button>
+              <button class="btn-icon-action danger" onclick="window.AdminView.deleteClass(${c.id}, '${c.name}')">${Icons.trash}</button>
             </div>
           </div>
         `;
@@ -437,9 +429,9 @@ export const AdminView = {
         <label class="form-label">Dars jadvalini yuborish vaqti:</label>
         <input type="time" id="add-class-time" class="form-control" value="06:00">
       </div>
-      <button class="admin-action-btn" onclick="window.AdminView.submitAddClass()">💾 Sinfni Saqlash</button>
+      <button class="admin-action-btn" onclick="window.AdminView.submitAddClass()">Sinfni Saqlash</button>
     `;
-    window.App.showCustomModal('➕ Yangi Sinf Qo‘shish', bodyHtml);
+    window.App.showCustomModal('Yangi Sinf Qo‘shish', bodyHtml);
   },
 
   async submitAddClass() {
@@ -468,9 +460,9 @@ export const AdminView = {
         <label class="form-label">Yuborish vaqti:</label>
         <input type="time" id="edit-class-time" class="form-control" value="${currentTime || '06:00'}">
       </div>
-      <button class="admin-action-btn" onclick="window.AdminView.submitEditClass(${id})">💾 O‘zgarishlarni Saqlash</button>
+      <button class="admin-action-btn" onclick="window.AdminView.submitEditClass(${id})">O‘zgarishlarni Saqlash</button>
     `;
-    window.App.showCustomModal('✏️ Sinfni Tahrirlash', bodyHtml);
+    window.App.showCustomModal('Sinfni Tahrirlash', bodyHtml);
   },
 
   async submitEditClass(id) {
@@ -503,7 +495,9 @@ export const AdminView = {
   async renderTeachers(container) {
     const teachers = await Api.getTeachers(window.App.currentSchoolCode);
     let html = `
-      <button class="admin-action-btn" onclick="window.AdminView.openAddTeacherModal()">➕ O‘qituvchi Qo‘shish</button>
+      <button class="admin-action-btn" onclick="window.AdminView.openAddTeacherModal()" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+        ${Icons.plus} O‘qituvchi Qo‘shish
+      </button>
       <div class="lessons-list">
     `;
 
@@ -514,11 +508,11 @@ export const AdminView = {
         html += `
           <div class="admin-list-item">
             <div>
-              <div class="admin-item-title">👨‍🏫 ${t.last_name} ${t.first_name}</div>
-              <div class="admin-item-subtitle">📖 ${t.subject || 'Fan biriktirilmagan'} ${t.phone ? `| 📞 ${t.phone}` : ''}</div>
+              <div class="admin-item-title">${t.last_name} ${t.first_name}</div>
+              <div class="admin-item-subtitle">${t.subject || 'Fan biriktirilmagan'} ${t.phone ? `| Tel: ${t.phone}` : ''}</div>
             </div>
             <div class="admin-btn-group">
-              <button class="btn-icon-action danger" onclick="window.AdminView.deleteTeacher(${t.id})">🗑</button>
+              <button class="btn-icon-action danger" onclick="window.AdminView.deleteTeacher(${t.id})">${Icons.trash}</button>
             </div>
           </div>
         `;
@@ -542,9 +536,9 @@ export const AdminView = {
         <label class="form-label">Fani:</label>
         <input type="text" id="add-t-subj" class="form-control" placeholder="Masalan: Matematika">
       </div>
-      <button class="admin-action-btn" onclick="window.AdminView.submitAddTeacher()">💾 O‘qituvchini Saqlash</button>
+      <button class="admin-action-btn" onclick="window.AdminView.submitAddTeacher()">O‘qituvchini Saqlash</button>
     `;
-    window.App.showCustomModal('➕ Yangi O‘qituvchi Qo‘shish', bodyHtml);
+    window.App.showCustomModal('Yangi O‘qituvchi Qo‘shish', bodyHtml);
   },
 
   async submitAddTeacher() {
@@ -580,7 +574,9 @@ export const AdminView = {
   async renderSubjects(container) {
     const subjects = await Api.getSubjects(window.App.currentSchoolCode);
     let html = `
-      <button class="admin-action-btn" onclick="window.AdminView.openAddSubjectModal()">➕ Yangi Fan Qo‘shish</button>
+      <button class="admin-action-btn" onclick="window.AdminView.openAddSubjectModal()" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+        ${Icons.plus} Yangi Fan Qo‘shish
+      </button>
       <div class="lessons-list">
     `;
 
@@ -591,10 +587,10 @@ export const AdminView = {
         html += `
           <div class="admin-list-item">
             <div>
-              <div class="admin-item-title">${s.emoji || '📚'} ${s.name}</div>
+              <div class="admin-item-title">${s.name}</div>
             </div>
             <div class="admin-btn-group">
-              <button class="btn-icon-action danger" onclick="window.AdminView.deleteSubject(${s.id})">🗑</button>
+              <button class="btn-icon-action danger" onclick="window.AdminView.deleteSubject(${s.id})">${Icons.trash}</button>
             </div>
           </div>
         `;
@@ -610,23 +606,17 @@ export const AdminView = {
         <label class="form-label">Fan Nomi:</label>
         <input type="text" id="add-s-name" class="form-control" placeholder="Masalan: Kimyo">
       </div>
-      <div class="form-group">
-        <label class="form-label">Emoji (Ixtiyoriy):</label>
-        <input type="text" id="add-s-emoji" class="form-control" placeholder="Masalan: 🧪">
-      </div>
-      <button class="admin-action-btn" onclick="window.AdminView.submitAddSubject()">💾 Fanni Saqlash</button>
+      <button class="admin-action-btn" onclick="window.AdminView.submitAddSubject()">Fanni Saqlash</button>
     `;
-    window.App.showCustomModal('➕ Yangi Fan Qo‘shish', bodyHtml);
+    window.App.showCustomModal('Yangi Fan Qo‘shish', bodyHtml);
   },
 
   async submitAddSubject() {
     const name = document.getElementById('add-s-name')?.value?.trim();
-    const emoji = document.getElementById('add-s-emoji')?.value?.trim();
-
     if (!name) return window.App.showToast('Fan nomini kiriting', 'error');
 
     try {
-      await Api.createSubject({ name, emoji, school_id: window.App.currentSchoolId });
+      await Api.createSubject({ name, school_id: window.App.currentSchoolId });
       window.App.closeModal();
       window.App.showToast('Fan saqlandi', 'success');
       this.loadTabContent();
@@ -647,7 +637,7 @@ export const AdminView = {
     }
   },
 
-  // 5. LESSONS (Dars jadvali)
+  // 5. LESSONS
   async renderLessons(container) {
     const classes = await Api.getClasses(window.App.currentSchoolCode);
 
@@ -670,7 +660,9 @@ export const AdminView = {
         </select>
       </div>
 
-      <button class="admin-action-btn" onclick="window.AdminView.openAddLessonModal(${selectedClassId})">➕ Dars Qo‘shish</button>
+      <button class="admin-action-btn" onclick="window.AdminView.openAddLessonModal(${selectedClassId})" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+        ${Icons.plus} Dars Qo‘shish
+      </button>
     `;
 
     const dayNames = { 1: 'Dushanba', 2: 'Seshanba', 3: 'Chorshanba', 4: 'Payshanba', 5: 'Juma', 6: 'Shanba' };
@@ -679,7 +671,7 @@ export const AdminView = {
       const dayLessons = weekly[day]?.lessons || [];
       html += `
         <div style="margin-top:16px;">
-          <div class="section-title" style="margin-bottom:8px;font-size:14px;color:var(--primary);">🗓 ${dayNames[day]}</div>
+          <div class="section-title" style="margin-bottom:8px;font-size:14px;color:var(--primary);">${dayNames[day]}</div>
           <div class="lessons-list">
       `;
 
@@ -691,10 +683,10 @@ export const AdminView = {
             <div class="admin-list-item">
               <div>
                 <div class="admin-item-title">${idx + 1}. ${l.subject}</div>
-                <div class="admin-item-subtitle">🕐 ${l.start_time} - ${l.end_time} ${l.teacher ? `| 👨‍🏫 ${l.teacher}` : ''} ${l.room ? `| 🏫 ${l.room}` : ''}</div>
+                <div class="admin-item-subtitle">${l.start_time} - ${l.end_time} ${l.teacher ? `| ${l.teacher}` : ''} ${l.room ? `| ${l.room}-xona` : ''}</div>
               </div>
               <div class="admin-btn-group">
-                <button class="btn-icon-action danger" onclick="window.AdminView.deleteLesson(${l.id})">🗑</button>
+                <button class="btn-icon-action danger" onclick="window.AdminView.deleteLesson(${l.id})">${Icons.trash}</button>
               </div>
             </div>
           `;
@@ -739,9 +731,9 @@ export const AdminView = {
         <label class="form-label">Xona (Ixtiyoriy):</label>
         <input type="text" id="add-l-room" class="form-control" placeholder="Masalan: 204">
       </div>
-      <button class="admin-action-btn" onclick="window.AdminView.submitAddLesson(${groupId})">💾 Darsni Saqlash</button>
+      <button class="admin-action-btn" onclick="window.AdminView.submitAddLesson(${groupId})">Darsni Saqlash</button>
     `;
-    window.App.showCustomModal('➕ Dars Qo‘shish', bodyHtml);
+    window.App.showCustomModal('Dars Qo‘shish', bodyHtml);
   },
 
   async submitAddLesson(groupId) {
@@ -785,11 +777,11 @@ export const AdminView = {
     }
   },
 
-  // 6. IMPORT (Jadval yuklash)
+  // 6. IMPORT
   async renderImport(container) {
     container.innerHTML = `
       <div class="welcome-card" style="margin-bottom:16px;">
-        <div class="welcome-title">📥 Dars Jadvallarini Ommaviy Yuklash</div>
+        <div class="welcome-title">Dars Jadvallarini Ommaviy Yuklash</div>
         <div class="welcome-subtitle">Barcha sinflar va darslarni 1 zumda saytga kiritish</div>
       </div>
 
@@ -805,7 +797,9 @@ export const AdminView = {
   }
 ]'></textarea>
 
-        <button class="admin-action-btn" style="margin-top:10px;" onclick="window.AdminView.submitImport()">🚀 Jadvalni Bazaga Yuklash</button>
+        <button class="admin-action-btn" style="margin-top:10px;display:inline-flex;align-items:center;justify-content:center;gap:6px;" onclick="window.AdminView.submitImport()">
+          ${Icons.upload} Jadvalni Bazaga Yuklash
+        </button>
       </div>
     `;
   },
@@ -826,25 +820,27 @@ export const AdminView = {
     }
   },
 
-  // 7. BROADCAST (Telegram guruhlarga yuborish)
+  // 7. BROADCAST
   async renderBroadcast(container) {
     const classes = await Api.getClasses(window.App.currentSchoolCode);
 
     container.innerHTML = `
       <div class="welcome-card" style="margin-bottom:16px;">
-        <div class="welcome-title">📤 Telegram Guruhlarga Yuborish</div>
+        <div class="welcome-title">Telegram Guruhlarga Yuborish</div>
         <div class="welcome-subtitle">Bugungi dars jadvalini Telegram guruhlariga darhol jo‘natish</div>
       </div>
 
       <div class="form-group">
         <label class="form-label">Qaysi sinfga yuborilsin?</label>
         <select id="broadcast-class" class="custom-select">
-          <option value="all">📤 Barcha faol sinflarga</option>
+          <option value="all">Barcha faol sinflarga</option>
           ${classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
         </select>
       </div>
 
-      <button class="admin-action-btn" onclick="window.AdminView.triggerBroadcast()">🚀 Hozir Yuborish</button>
+      <button class="admin-action-btn" onclick="window.AdminView.triggerBroadcast()" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+        ${Icons.send} Hozir Yuborish
+      </button>
     `;
   },
 
