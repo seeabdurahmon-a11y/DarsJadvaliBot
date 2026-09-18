@@ -4,6 +4,7 @@ import { createBot } from './bot/bot.js';
 import { createWebServer } from './api/server.js';
 import { scheduler } from './scheduler/cron.scheduler.js';
 import { logger } from './utils/logger.js';
+import { initKeepAlive, stopKeepAlive } from './utils/keepAlive.js';
 
 let isShuttingDown = false;
 
@@ -46,12 +47,16 @@ async function main() {
     // 5. Avtomatik dars jadvalini yuboruvchi schedulerni ishga tushirish
     scheduler.init(bot);
 
-    // 6. Graceful shutdown handler
+    // 6. 24/7 Keep-Alive xizmatini ishga tushirish (Render/Cloud serverlar uxlamasligi uchun)
+    initKeepAlive();
+
+    // 7. Graceful shutdown handler
     const shutdown = async (signal) => {
       if (isShuttingDown) return;
       isShuttingDown = true;
 
       logger.info(`[SHUTDOWN] Bot va Web Server to'xtatilmoqda (${signal})...`);
+      stopKeepAlive();
       scheduler.stop();
       try {
         await webServer.stop();
