@@ -82,26 +82,40 @@ export const teachersRepo = {
       teacher = this.getTeacherById(Number(teacherIdOrName));
     }
     
-    let searchTerms = [];
+    let clause = '';
+    let params = [];
+
     if (teacher) {
-      if (teacher.last_name) searchTerms.push(`%${teacher.last_name.trim()}%`);
-      if (teacher.first_name) searchTerms.push(`%${teacher.first_name.trim()}%`);
+      const lastName = (teacher.last_name || '').trim();
+      const firstName = (teacher.first_name || '').trim();
+
+      if (lastName && firstName && firstName.length <= 2) {
+        clause = '(l.teacher LIKE ? OR l.teacher LIKE ? OR l.teacher LIKE ?)';
+        params = ['%' + lastName + ' ' + firstName + '%', '%' + firstName + '. ' + lastName + '%', '%' + lastName + '%'];
+      } else if (lastName && firstName) {
+        clause = '(l.teacher LIKE ? OR l.teacher LIKE ? OR l.teacher LIKE ?)';
+        params = ['%' + lastName + '%' + firstName + '%', '%' + firstName + '%' + lastName + '%', '%' + lastName + '%'];
+      } else if (lastName) {
+        clause = 'l.teacher LIKE ?';
+        params = ['%' + lastName + '%'];
+      }
     } else if (typeof teacherIdOrName === 'string' && teacherIdOrName.trim()) {
-      searchTerms.push(`%${teacherIdOrName.trim()}%`);
+      clause = 'l.teacher LIKE ?';
+      params = ['%' + teacherIdOrName.trim() + '%'];
     }
 
-    if (searchTerms.length === 0) return [];
+    if (!clause) return [];
 
-    const whereClauses = searchTerms.map(() => `l.teacher LIKE ?`).join(' OR ');
     let query = `
       SELECT l.*, g.name as group_name, g.telegram_chat_id
       FROM lessons l
       JOIN groups g ON l.group_id = g.id
-      WHERE (${whereClauses})
+      WHERE ${clause}
         AND l.day_of_week = ?
         AND g.is_active = 1
     `;
-    const params = [...searchTerms, Number(dayOfWeek)];
+    params.push(Number(dayOfWeek));
+
     if (schoolId) {
       query += ` AND (l.school_id = ? OR g.school_id = ?)`;
       params.push(schoolId, schoolId);
@@ -117,25 +131,37 @@ export const teachersRepo = {
       teacher = this.getTeacherById(Number(teacherIdOrName));
     }
     
-    let searchTerms = [];
+    let clause = '';
+    let params = [];
+
     if (teacher) {
-      if (teacher.last_name) searchTerms.push(`%${teacher.last_name.trim()}%`);
-      if (teacher.first_name) searchTerms.push(`%${teacher.first_name.trim()}%`);
+      const lastName = (teacher.last_name || '').trim();
+      const firstName = (teacher.first_name || '').trim();
+
+      if (lastName && firstName && firstName.length <= 2) {
+        clause = '(l.teacher LIKE ? OR l.teacher LIKE ? OR l.teacher LIKE ?)';
+        params = ['%' + lastName + ' ' + firstName + '%', '%' + firstName + '. ' + lastName + '%', '%' + lastName + '%'];
+      } else if (lastName && firstName) {
+        clause = '(l.teacher LIKE ? OR l.teacher LIKE ? OR l.teacher LIKE ?)';
+        params = ['%' + lastName + '%' + firstName + '%', '%' + firstName + '%' + lastName + '%', '%' + lastName + '%'];
+      } else if (lastName) {
+        clause = 'l.teacher LIKE ?';
+        params = ['%' + lastName + '%'];
+      }
     } else if (typeof teacherIdOrName === 'string' && teacherIdOrName.trim()) {
-      searchTerms.push(`%${teacherIdOrName.trim()}%`);
+      clause = 'l.teacher LIKE ?';
+      params = ['%' + teacherIdOrName.trim() + '%'];
     }
 
-    if (searchTerms.length === 0) return [];
+    if (!clause) return [];
 
-    const whereClauses = searchTerms.map(() => `l.teacher LIKE ?`).join(' OR ');
     let query = `
       SELECT l.*, g.name as group_name, g.telegram_chat_id
       FROM lessons l
       JOIN groups g ON l.group_id = g.id
-      WHERE (${whereClauses})
+      WHERE ${clause}
         AND g.is_active = 1
     `;
-    const params = [...searchTerms];
     if (schoolId) {
       query += ` AND (l.school_id = ? OR g.school_id = ?)`;
       params.push(schoolId, schoolId);
