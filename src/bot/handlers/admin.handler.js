@@ -1,6 +1,7 @@
 import { groupsRepo } from '../../database/groups.repo.js';
 import { lessonsRepo } from '../../database/lessons.repo.js';
 import { settingsRepo } from '../../database/settings.repo.js';
+import { usersRepo } from '../../database/users.repo.js';
 import { adminService } from '../../services/admin.service.js';
 import { adminAuthService } from '../../services/admin-auth.service.js';
 import { scheduleService } from '../../services/schedule.service.js';
@@ -63,6 +64,117 @@ export function registerAdminHandlers(bot) {
     await ctx.reply(`🔐 <b>Admin panelga kirish uchun parolni kiriting:</b>`, {
       parse_mode: 'HTML'
     });
+  });
+
+  // ==========================================
+  // 🔓 /adminchiqarish BUYRUG'I
+  // ==========================================
+  bot.command(['adminchiqarish', 'chiqarish', 'releaseuser', 'resetrole'], async (ctx) => {
+    if (!isAdmin(ctx.from?.id)) {
+      return ctx.reply(BOT_TEXTS.NOT_AUTHORIZED);
+    }
+
+    const input = ctx.match?.trim();
+    let targetId = input;
+
+    // 1. Agar xabarga javob (reply) qilingan bo'lsa
+    if (!targetId && ctx.message?.reply_to_message?.from?.id) {
+      targetId = String(ctx.message.reply_to_message.from.id);
+    }
+
+    // 2. ID berilgan bo'lsa
+    if (targetId) {
+      const user = usersRepo.getUserByTelegramId(targetId);
+      if (!user) {
+        return ctx.reply(
+          `⚠️ <b>"${escapeHtml(targetId)}"</b> ID li foydalanuvchi topilmadi.`,
+          { parse_mode: 'HTML' }
+        );
+      }
+
+      usersRepo.releaseUserRole(targetId);
+
+      // Foydalanuvchiga xabar yuborish
+      try {
+        await ctx.api.sendMessage(
+          targetId,
+          `🔔 <b>Administrator sizning hisobingizni chiqardi (bo‘shatdi).</b>\n\n` +
+          `Endi siz /start buyrug‘ini yuborib, qaytadan <b>👨‍🏫 Ustoz</b> yoki <b>👨‍🎓 O‘quvchi</b> rolini tanlashingiz mumkin.`,
+          { parse_mode: 'HTML' }
+        );
+      } catch (e) {}
+
+      const roleText = user.role === 'teacher' ? '👨‍🏫 Ustoz' : (user.role === 'student' ? '👨‍🎓 O‘quvchi' : 'Nomaʼlum');
+      return ctx.reply(
+        `✅ <b>Foydalanuvchi muvaffaqiyatli chiqarildi!</b>\n\n` +
+        `👤 <b>Ism:</b> ${escapeHtml(user.first_name || 'Foydalanuvchi')}\n` +
+        `🆔 <b>Telegram ID:</b> <code>${targetId}</code>\n` +
+        `📋 <b>Oldingi roli:</b> ${roleText}\n\n` +
+        `📌 Endi bu foydalanuvchi botga /start yozganda qaytadan tanlash imkoniga ega bo‘ldi.`,
+        { parse_mode: 'HTML' }
+      );
+    }
+
+    // 3. Parametrsiz chaqirilganda: Biriktirilgan foydalanuvchilar ro'yxati
+    const lockedUsers = usersRepo.getLockedUsers();
+
+    if (!lockedUsers || lockedUsers.length === 0) {
+      return ctx.reply(
+        `ℹ️ <b>Hozircha biriktirilgan yoki qulflangan ustoz/o‘quvchilar mavjud emas.</b>\n\n` +
+        `Biron foydalanuvchini chiqarish uchun: <code>/adminchiqarish [Telegram_ID]</code> deb yuboring.`,
+        { parse_mode: 'HTML' }
+      );
+    }
+
+    const keyboard = new InlineKeyboard();
+    lockedUsers.slice(0, 20).forEach(u => {
+      const name = u.first_name || u.username || u.telegram_id;
+      const roleLabel = u.role === 'teacher' 
+        ? `👨‍🏫 ${u.teacher_last_name || 'Ustoz'}` 
+        : `👨‍🎓 ${u.selected_group_name || 'Sinf'}`;
+      keyboard.text(`🔓 ${name} (${roleLabel})`, `admin_release_usr_${u.telegram_id}`).row();
+    });
+
+    await ctx.reply(
+      `👥 <b>BIRIKTIRILGAN FOYDALANUVCHILAR VA USTOZLAR:</b>\n\n` +
+      `Quyidagi tugmalardan birini bosib, foydalanuvchini chiqarishingiz va unga qaytadan tanlash imkonini berishingiz mumkin:\n\n` +
+      `<i>Yoki to‘g‘ridan-to‘g‘ri ID orqali: <code>/adminchiqarish [ID]</code></i>`,
+      { parse_mode: 'HTML', reply_markup: keyboard }
+    );
+  });
+
+  // Callback: admin_release_usr_<id>
+  bot.callbackQuery(/^admin_release_usr_(\d+)$/, async (ctx) => {
+    if (!isAdmin(ctx.from?.id)) {
+      return ctx.answerCallbackQuery({ text: 'Ruxsat yo‘q', show_alert: true });
+    }
+
+    const targetId = ctx.match[1];
+    const user = usersRepo.getUserByTelegramId(targetId);
+
+    if (!user) {
+      return ctx.answerCallbackQuery({ text: 'Foydalanuvchi topilmadi', show_alert: true });
+    }
+
+    usersRepo.releaseUserRole(targetId);
+    await ctx.answerCallbackQuery({ text: `✅ Foydalanuvchi chiqarildi!` });
+
+    try {
+      await ctx.api.sendMessage(
+        targetId,
+        `🔔 <b>Administrator profilingizni chiqardi (bo‘shatdi).</b>\n\n` +
+        `Endi siz /start buyrug‘ini yuborib, qaytadan <b>👨‍🏫 Ustoz</b> yoki <b>👨‍🎓 O‘quvchi</b> rolini tanlashingiz mumkin.`,
+        { parse_mode: 'HTML' }
+      );
+    } catch (e) {}
+
+    await ctx.editMessageText(
+      `✅ <b>Foydalanuvchi muvaffaqiyatli chiqarildi!</b>\n\n` +
+      `👤 <b>Ism:</b> ${escapeHtml(user.first_name || 'Foydalanuvchi')}\n` +
+      `🆔 <b>ID:</b> <code>${targetId}</code>\n\n` +
+      `Ushbu foydalanuvchi endi qaytadan rol va sinf/ustoz tanlashi mumkin.`,
+      { parse_mode: 'HTML' }
+    );
   });
 
   // Admin callback query lari uchun autentifikatsiya tekshiruvchisi

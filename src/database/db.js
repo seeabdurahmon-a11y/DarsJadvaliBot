@@ -75,6 +75,9 @@ function initSchema(db) {
       username TEXT,
       first_name TEXT,
       is_admin INTEGER DEFAULT 0,
+      role TEXT DEFAULT NULL,
+      selected_teacher_id INTEGER DEFAULT NULL,
+      is_role_locked INTEGER DEFAULT 0,
       selected_school_id INTEGER,
       selected_group_id INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -145,12 +148,15 @@ function initSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_sent_schedules_lookup ON sent_schedules(group_id, schedule_date);
   `);
 
-  // Multi-school migration for existing tables
+  // Multi-school & Teacher/Student Role migration for existing tables
   const columnMigrations = [
     `ALTER TABLE schools ADD COLUMN admin_name TEXT DEFAULT 'Zavuch / Admin';`,
     `ALTER TABLE schools ADD COLUMN admin_email TEXT DEFAULT '';`,
     `ALTER TABLE users ADD COLUMN selected_school_id INTEGER;`,
     `ALTER TABLE users ADD COLUMN selected_group_id INTEGER;`,
+    `ALTER TABLE users ADD COLUMN role TEXT DEFAULT NULL;`,
+    `ALTER TABLE users ADD COLUMN selected_teacher_id INTEGER DEFAULT NULL;`,
+    `ALTER TABLE users ADD COLUMN is_role_locked INTEGER DEFAULT 0;`,
     `ALTER TABLE groups ADD COLUMN school_id INTEGER DEFAULT 1;`,
     `ALTER TABLE teachers ADD COLUMN school_id INTEGER DEFAULT 1;`,
     `ALTER TABLE subjects ADD COLUMN school_id INTEGER DEFAULT 1;`,

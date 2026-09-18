@@ -1,11 +1,13 @@
 import { lessonsRepo } from '../database/lessons.repo.js';
 import { groupsRepo } from '../database/groups.repo.js';
-import { getTodayInfo, getTomorrowInfo } from '../utils/date.util.js';
-import { formatDailySchedule, formatWeeklySchedule, getSubjectEmoji } from '../utils/formatter.js';
+import { teachersRepo } from '../database/teachers.repo.js';
+import { schoolsRepo } from '../database/schools.repo.js';
+import { getTodayInfo, getTomorrowInfo, getDayName } from '../utils/date.util.js';
+import { formatDailySchedule, formatWeeklySchedule, getSubjectEmoji, escapeHtml } from '../utils/formatter.js';
 
 export const scheduleService = {
   /**
-   * Bugungi dars jadvalini olish va formatlash
+   * Bugungi dars jadvalini olish va formatlash (Sinf uchun)
    */
   getTodaySchedule(groupId = null) {
     const today = getTodayInfo();
@@ -32,7 +34,7 @@ export const scheduleService = {
   },
 
   /**
-   * Hozir qaysi dars ketayotganini aniqlash va formatlash
+   * Hozir qaysi dars ketayotganini aniqlash va formatlash (Sinf uchun)
    */
   getCurrentLesson(groupId = null) {
     const today = getTodayInfo();
@@ -93,7 +95,7 @@ export const scheduleService = {
       };
     }
 
-    // Agar tanaffus bo'lsa (oldingi darslar bor va keyingi dars ham bor)
+    // Agar tanaffus bo'lsa
     if (pastLessons.length > 0 && nextLesson) {
       const nextEmoji = getSubjectEmoji(nextLesson.subject);
       formattedText = `☕ <b>HOZIR TANAFFUS</b>\n\n` +
@@ -115,7 +117,7 @@ export const scheduleService = {
       };
     }
 
-    // Agar darslar hali boshlanmagan bo'lsa (birinchi darsdan oldin)
+    // Agar darslar hali boshlanmagan bo'lsa
     if (pastLessons.length === 0 && nextLesson) {
       const firstLesson = nextLesson;
       const firstEmoji = getSubjectEmoji(firstLesson.subject);
@@ -154,7 +156,7 @@ export const scheduleService = {
   },
 
   /**
-   * Ertangi dars jadvalini olish va formatlash
+   * Ertangi dars jadvalini olish va formatlash (Sinf uchun)
    */
   getTomorrowSchedule(groupId = null) {
     const tomorrow = getTomorrowInfo();
@@ -181,7 +183,7 @@ export const scheduleService = {
   },
 
   /**
-   * Haftalik dars jadvalini olish va formatlash
+   * Haftalik dars jadvalini olish va formatlash (Sinf uchun)
    */
   getWeeklySchedule(groupId = null) {
     const lessons = lessonsRepo.getWeeklyLessons(groupId);
@@ -202,5 +204,218 @@ export const scheduleService = {
       lessons,
       formattedText
     };
+  },
+
+  // ==========================================
+  // 👨‍🏫 USTOZLAR DARS JADVALI (TEACHER METHODS)
+  // ==========================================
+
+  /**
+   * Ustozning bugungi dars jadvali
+   */
+  getTeacherTodaySchedule(teacherIdOrName, schoolId = null) {
+    const today = getTodayInfo();
+    const teacher = (typeof teacherIdOrName === 'number' || (!isNaN(teacherIdOrName) && Number(teacherIdOrName) > 0))
+      ? teachersRepo.getTeacherById(Number(teacherIdOrName))
+      : null;
+
+    const teacherName = teacher ? `${teacher.last_name} ${teacher.first_name}` : String(teacherIdOrName);
+    const lessons = teachersRepo.getTeacherLessonsByDay(teacherIdOrName, today.dayOfWeek, schoolId);
+
+    let formattedText = `👨‍🏫 <b>USTOZ DARS JADVALI</b>\n` +
+      `👤 <b>O‘qituvchi:</b> <b>${escapeHtml(teacherName)}</b> ${teacher?.subject ? `(${escapeHtml(teacher.subject)})` : ''}\n` +
+      `📅 <b>Bugun:</b> ${today.formattedDate}\n\n`;
+
+    if (!lessons || lessons.length === 0) {
+      formattedText += `<i>📚 Bugun sizga darslar biriktirilmagan yoki dam olish kuni.</i>`;
+    } else {
+      formattedText += `📋 <b>Bugungi darslaringiz (${lessons.length} ta):</b>\n\n`;
+      lessons.forEach((l, idx) => {
+        const emoji = getSubjectEmoji(l.subject);
+        formattedText += `<b>${idx + 1}-dars:</b> ⏰ <code>${l.start_time} — ${l.end_time}</code>\n` +
+          `👥 <b>Sinf:</b> <b>${escapeHtml(l.group_name || 'Sinf')}</b>\n` +
+          `${emoji} <b>Fan:</b> ${escapeHtml(l.subject)}\n` +
+          (l.room ? `🚪 <b>Xona:</b> ${escapeHtml(l.room)}-xona\n` : '') +
+          `\n`;
+      });
+    }
+
+    return {
+      today,
+      teacher,
+      lessons,
+      formattedText: formattedText.trim()
+    };
+  },
+
+  /**
+   * Ustozning ertangi dars jadvali
+   */
+  getTeacherTomorrowSchedule(teacherIdOrName, schoolId = null) {
+    const tomorrow = getTomorrowInfo();
+    const teacher = (typeof teacherIdOrName === 'number' || (!isNaN(teacherIdOrName) && Number(teacherIdOrName) > 0))
+      ? teachersRepo.getTeacherById(Number(teacherIdOrName))
+      : null;
+
+    const teacherName = teacher ? `${teacher.last_name} ${teacher.first_name}` : String(teacherIdOrName);
+    const lessons = teachersRepo.getTeacherLessonsByDay(teacherIdOrName, tomorrow.dayOfWeek, schoolId);
+
+    let formattedText = `👨‍🏫 <b>USTOZ DARS JADVALI</b>\n` +
+      `👤 <b>O‘qituvchi:</b> <b>${escapeHtml(teacherName)}</b> ${teacher?.subject ? `(${escapeHtml(teacher.subject)})` : ''}\n` +
+      `📆 <b>Ertaga:</b> ${tomorrow.formattedDate}\n\n`;
+
+    if (!lessons || lessons.length === 0) {
+      formattedText += `<i>📚 Ertaga sizga darslar biriktirilmagan yoki dam olish kuni.</i>`;
+    } else {
+      formattedText += `📋 <b>Ertangi darslaringiz (${lessons.length} ta):</b>\n\n`;
+      lessons.forEach((l, idx) => {
+        const emoji = getSubjectEmoji(l.subject);
+        formattedText += `<b>${idx + 1}-dars:</b> ⏰ <code>${l.start_time} — ${l.end_time}</code>\n` +
+          `👥 <b>Sinf:</b> <b>${escapeHtml(l.group_name || 'Sinf')}</b>\n` +
+          `${emoji} <b>Fan:</b> ${escapeHtml(l.subject)}\n` +
+          (l.room ? `🚪 <b>Xona:</b> ${escapeHtml(l.room)}-xona\n` : '') +
+          `\n`;
+      });
+    }
+
+    return {
+      tomorrow,
+      teacher,
+      lessons,
+      formattedText: formattedText.trim()
+    };
+  },
+
+  /**
+   * Ustozning haftalik dars jadvali (Barcha sinflar bo‘yicha)
+   */
+  getTeacherWeeklySchedule(teacherIdOrName, schoolId = null) {
+    const teacher = (typeof teacherIdOrName === 'number' || (!isNaN(teacherIdOrName) && Number(teacherIdOrName) > 0))
+      ? teachersRepo.getTeacherById(Number(teacherIdOrName))
+      : null;
+
+    const teacherName = teacher ? `${teacher.last_name} ${teacher.first_name}` : String(teacherIdOrName);
+    const allLessons = teachersRepo.getTeacherWeeklyLessons(teacherIdOrName, schoolId);
+
+    let formattedText = `📚 <b>USTOZ HAFTALIK DARS JADVALI</b>\n` +
+      `👤 <b>O‘qituvchi:</b> <b>${escapeHtml(teacherName)}</b> ${teacher?.subject ? `(${escapeHtml(teacher.subject)})` : ''}\n\n`;
+
+    if (!allLessons || allLessons.length === 0) {
+      formattedText += `<i>Jadvalda sizga hali darslar biriktirilmagan.</i>`;
+      return { teacher, allLessons, formattedText };
+    }
+
+    const DAYS = [
+      { id: 1, name: 'Dushanba' },
+      { id: 2, name: 'Seshanba' },
+      { id: 3, name: 'Chorshanba' },
+      { id: 4, name: 'Payshanba' },
+      { id: 5, name: 'Juma' },
+      { id: 6, name: 'Shanba' }
+    ];
+
+    DAYS.forEach(d => {
+      const dayLessons = allLessons.filter(l => l.day_of_week === d.id);
+      if (dayLessons.length > 0) {
+        formattedText += `🗓 <b>${d.name.toUpperCase()} (${dayLessons.length} ta dars):</b>\n`;
+        dayLessons.forEach((l, idx) => {
+          const emoji = getSubjectEmoji(l.subject);
+          formattedText += `  • <code>${l.start_time}</code> — <b>${escapeHtml(l.group_name || 'Sinf')}</b>: ${emoji} ${escapeHtml(l.subject)}${l.room ? ` (<i>${escapeHtml(l.room)}-xona</i>)` : ''}\n`;
+        });
+        formattedText += `\n`;
+      }
+    });
+
+    return {
+      teacher,
+      allLessons,
+      formattedText: formattedText.trim()
+    };
+  },
+
+  /**
+   * Ustozning hozirgi darsi va tanaffus holati
+   */
+  getTeacherCurrentLesson(teacherIdOrName, schoolId = null) {
+    const today = getTodayInfo();
+    const teacher = (typeof teacherIdOrName === 'number' || (!isNaN(teacherIdOrName) && Number(teacherIdOrName) > 0))
+      ? teachersRepo.getTeacherById(Number(teacherIdOrName))
+      : null;
+
+    const teacherName = teacher ? `${teacher.last_name} ${teacher.first_name}` : String(teacherIdOrName);
+    const lessons = teachersRepo.getTeacherLessonsByDay(teacherIdOrName, today.dayOfWeek, schoolId);
+    const nowStr = today.timeStr;
+
+    if (!lessons || lessons.length === 0) {
+      return {
+        status: 'no_lessons',
+        formattedText: `👨‍🏫 <b>Ustoz:</b> ${escapeHtml(teacherName)}\n\n` +
+          `📅 <b>Bugun:</b> ${today.formattedDate}\n` +
+          `🕐 <b>Hozirgi vaqt:</b> ${nowStr}\n\n` +
+          `<i>Bugun sizga darslar biriktirilmagan yoki dam olish kuni.</i>`
+      };
+    }
+
+    const sorted = [...lessons].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+    const currentLesson = sorted.find(l => l.start_time && l.end_time && nowStr >= l.start_time && nowStr <= l.end_time);
+    const nextLesson = sorted.find(l => l.start_time && nowStr < l.start_time);
+    const pastLessons = sorted.filter(l => l.end_time && nowStr > l.end_time);
+
+    let formattedText = '';
+
+    if (currentLesson) {
+      const emoji = getSubjectEmoji(currentLesson.subject);
+      const nextEmoji = nextLesson ? getSubjectEmoji(nextLesson.subject) : '';
+
+      formattedText = `🔔 <b>HOZIRGI DARSINGIZ:</b>\n\n` +
+        `👨‍🏫 <b>Ustoz:</b> ${escapeHtml(teacherName)}\n` +
+        `👥 <b>Sinf:</b> <b>${escapeHtml(currentLesson.group_name || 'Sinf')}</b>\n` +
+        `🕐 <b>Vaqt:</b> <code>${currentLesson.start_time} — ${currentLesson.end_time}</code>\n` +
+        `${emoji} <b>Fan:</b> <b>${escapeHtml(currentLesson.subject)}</b>\n` +
+        (currentLesson.room ? `🚪 <b>Xona:</b> ${escapeHtml(currentLesson.room)}-xona\n` : '') +
+        `\n` +
+        (nextLesson
+          ? `➡️ <i>Keyingi darsingiz:</i> <b>${escapeHtml(nextLesson.group_name || 'Sinf')}</b> da ${nextEmoji} <b>${escapeHtml(nextLesson.subject)}</b> (soat <code>${nextLesson.start_time}</code>)\n`
+          : `🏁 <i>Bu bugungi oxirgi darsingiz.</i>\n`);
+
+      return { status: 'ongoing', currentLesson, nextLesson, formattedText };
+    }
+
+    if (pastLessons.length > 0 && nextLesson) {
+      const nextEmoji = getSubjectEmoji(nextLesson.subject);
+      formattedText = `☕ <b>HOZIR TANAFFUS</b>\n\n` +
+        `👨‍🏫 <b>Ustoz:</b> ${escapeHtml(teacherName)}\n` +
+        `🕐 <b>Hozirgi vaqt:</b> <code>${nowStr}</code>\n\n` +
+        `➡️ <b>Keyingi darsingiz:</b>\n` +
+        `👥 <b>Sinf:</b> <b>${escapeHtml(nextLesson.group_name || 'Sinf')}</b>\n` +
+        `⏰ <b>Vaqt:</b> <code>${nextLesson.start_time} — ${nextLesson.end_time}</code>\n` +
+        `${nextEmoji} <b>Fan:</b> <b>${escapeHtml(nextLesson.subject)}</b>\n` +
+        (nextLesson.room ? `🚪 <b>Xona:</b> ${escapeHtml(nextLesson.room)}-xona\n` : '');
+
+      return { status: 'break', nextLesson, formattedText };
+    }
+
+    if (pastLessons.length === 0 && nextLesson) {
+      const firstLesson = nextLesson;
+      const firstEmoji = getSubjectEmoji(firstLesson.subject);
+      formattedText = `⏳ <b>DARSLAR HALI BOSHLANMAGAN</b>\n\n` +
+        `👨‍🏫 <b>Ustoz:</b> ${escapeHtml(teacherName)}\n` +
+        `🕐 <b>Hozirgi vaqt:</b> <code>${nowStr}</code>\n\n` +
+        `🔔 <b>Birinchi darsingiz:</b>\n` +
+        `👥 <b>Sinf:</b> <b>${escapeHtml(firstLesson.group_name || 'Sinf')}</b>\n` +
+        `⏰ <b>Vaqt:</b> <code>${firstLesson.start_time} — ${firstLesson.end_time}</code>\n` +
+        `${firstEmoji} <b>Fan:</b> <b>${escapeHtml(firstLesson.subject)}</b>\n` +
+        (firstLesson.room ? `🚪 <b>Xona:</b> ${escapeHtml(firstLesson.room)}-xona\n` : '');
+
+      return { status: 'before_school', firstLesson, formattedText };
+    }
+
+    formattedText = `🏁 <b>BUGUNGI BARCHA DARSLARINGIZ YAKUNLANGAN</b>\n\n` +
+      `👨‍🏫 <b>Ustoz:</b> ${escapeHtml(teacherName)}\n` +
+      `🕐 <b>Hozirgi vaqt:</b> <code>${nowStr}</code>\n\n` +
+      `Bugungi rejadagi barcha (${sorted.length} ta) darslaringiz o‘z nihoyasiga yetdi. Rahmat!\n\n` +
+      `📆 <i>Ertangi jadvalingizni ko‘rish uchun pastdagi "Ertangi darslarim" tugmasini bosing.</i>`;
+
+    return { status: 'ended', formattedText };
   }
 };

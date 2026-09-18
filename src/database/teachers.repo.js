@@ -75,6 +75,75 @@ export const teachersRepo = {
     return db.prepare(query).all(...params);
   },
 
+  getTeacherLessonsByDay(teacherIdOrName, dayOfWeek, schoolId = null) {
+    const db = getDatabase();
+    let teacher = null;
+    if (typeof teacherIdOrName === 'number' || (!isNaN(teacherIdOrName) && Number(teacherIdOrName) > 0)) {
+      teacher = this.getTeacherById(Number(teacherIdOrName));
+    }
+    
+    let searchTerms = [];
+    if (teacher) {
+      if (teacher.last_name) searchTerms.push(`%${teacher.last_name.trim()}%`);
+      if (teacher.first_name) searchTerms.push(`%${teacher.first_name.trim()}%`);
+    } else if (typeof teacherIdOrName === 'string' && teacherIdOrName.trim()) {
+      searchTerms.push(`%${teacherIdOrName.trim()}%`);
+    }
+
+    if (searchTerms.length === 0) return [];
+
+    const whereClauses = searchTerms.map(() => `l.teacher LIKE ?`).join(' OR ');
+    let query = `
+      SELECT l.*, g.name as group_name, g.telegram_chat_id
+      FROM lessons l
+      JOIN groups g ON l.group_id = g.id
+      WHERE (${whereClauses})
+        AND l.day_of_week = ?
+        AND g.is_active = 1
+    `;
+    const params = [...searchTerms, Number(dayOfWeek)];
+    if (schoolId) {
+      query += ` AND (l.school_id = ? OR g.school_id = ?)`;
+      params.push(schoolId, schoolId);
+    }
+    query += ` ORDER BY l.start_time ASC`;
+    return db.prepare(query).all(...params);
+  },
+
+  getTeacherWeeklyLessons(teacherIdOrName, schoolId = null) {
+    const db = getDatabase();
+    let teacher = null;
+    if (typeof teacherIdOrName === 'number' || (!isNaN(teacherIdOrName) && Number(teacherIdOrName) > 0)) {
+      teacher = this.getTeacherById(Number(teacherIdOrName));
+    }
+    
+    let searchTerms = [];
+    if (teacher) {
+      if (teacher.last_name) searchTerms.push(`%${teacher.last_name.trim()}%`);
+      if (teacher.first_name) searchTerms.push(`%${teacher.first_name.trim()}%`);
+    } else if (typeof teacherIdOrName === 'string' && teacherIdOrName.trim()) {
+      searchTerms.push(`%${teacherIdOrName.trim()}%`);
+    }
+
+    if (searchTerms.length === 0) return [];
+
+    const whereClauses = searchTerms.map(() => `l.teacher LIKE ?`).join(' OR ');
+    let query = `
+      SELECT l.*, g.name as group_name, g.telegram_chat_id
+      FROM lessons l
+      JOIN groups g ON l.group_id = g.id
+      WHERE (${whereClauses})
+        AND g.is_active = 1
+    `;
+    const params = [...searchTerms];
+    if (schoolId) {
+      query += ` AND (l.school_id = ? OR g.school_id = ?)`;
+      params.push(schoolId, schoolId);
+    }
+    query += ` ORDER BY l.day_of_week ASC, l.start_time ASC`;
+    return db.prepare(query).all(...params);
+  },
+
   getTeachersCount(schoolId = null) {
     const db = getDatabase();
     if (schoolId) {
