@@ -132,7 +132,105 @@ export function registerScheduleHandlers(bot) {
     );
   });
 
-  // Callback: Eslatmalarni yoqish/o'chirish (user_toggle_teacher_notify)
+  // ==========================================
+  // 🔔 5 DAQIQA OLDIN ESLATMA (BILDIRISHNOMA)
+  // ==========================================
+
+  bot.hears(['🔔 5 daqiqa oldin eslatma', '5 daqiqa oldin eslatma', 'Dars eslatmasi', 'Eslatma', 'eslatma', 'eslatmalar'], async (ctx) => {
+    if (ctx.chat.type !== 'private') return;
+
+    const { user, school, group, teacher } = getUserContext(ctx.from?.id);
+
+    if (user?.role === 'teacher' && teacher) {
+      const isNotifyEnabled = user.teacher_notifications !== 0;
+      const keyboard = new InlineKeyboard()
+        .text(
+          isNotifyEnabled ? '🔕 Eslatmalarni o‘chirish' : '🔔 Eslatmalarni yoqish (5 daqiqa oldin)',
+          'user_toggle_teacher_notify'
+        );
+
+      return ctx.reply(
+        `🔔 <b>DARS BOSHLANISHIDAN 5 DAQIQA OLDIN OGOHLANTIRISH</b>\n\n` +
+        `👤 <b>Ustoz:</b> <b>${escapeHtml(teacher.last_name)} ${escapeHtml(teacher.first_name)}</b>\n` +
+        `📚 <b>Fan:</b> <b>${escapeHtml(teacher.subject || 'O‘qituvchi')}</b>\n` +
+        `🏫 <b>Maktab:</b> ${escapeHtml(school?.name || 'Maktab')} (Kodi: <code>${school?.code || 'M-01'}</code>)\n\n` +
+        `🔔 <b>Eslatma holati:</b> ${isNotifyEnabled ? '✅ <b>Faol (Yoqilgan)</b>' : '❌ <b>O‘chirilgan</b>'}\n\n` +
+        `ℹ️ <i>Tizim har kuni dars jadvalingiz bo‘yicha har bir dars boshlanishidan 5 daqiqa oldin qaysi sinfda darsingiz borligi, xona va fan haqida avtomatik ogohlantirish xabarini yuboradi.</i>`,
+        { parse_mode: 'HTML', reply_markup: keyboard }
+      );
+    }
+
+    if (group || user?.selected_group_name) {
+      const isNotifyEnabled = user?.teacher_notifications !== 0;
+      const keyboard = new InlineKeyboard()
+        .text(
+          isNotifyEnabled ? '🔕 Eslatmalarni o‘chirish' : '🔔 Eslatmalarni yoqish (5 daqiqa oldin)',
+          'user_toggle_student_notify'
+        );
+
+      return ctx.reply(
+        `🔔 <b>DARS BOSHLANISHIDAN 5 DAQIQA OLDIN OGOHLANTIRISH</b>\n\n` +
+        `👥 <b>Sinf:</b> <b>${escapeHtml(group?.name || user?.selected_group_name || 'Sinf')}</b>\n` +
+        `🏫 <b>Maktab:</b> ${escapeHtml(school?.name || 'Maktab')} (Kodi: <code>${school?.code || 'M-01'}</code>)\n\n` +
+        `🔔 <b>Eslatma holati:</b> ${isNotifyEnabled ? '✅ <b>Faol (Yoqilgan)</b>' : '❌ <b>O‘chirilgan</b>'}\n\n` +
+        `ℹ️ <i>Har bir dars boshlanishidan 5 daqiqa oldin qaysi fan, o‘qituvchi va qaysi xonada dars bo‘lishi haqida Telegram orqali avtomatik eslatma yuboriladi.</i>`,
+        { parse_mode: 'HTML', reply_markup: keyboard }
+      );
+    }
+
+    return ctx.reply(
+      `ℹ️ Eslatmalarni sozlash uchun avval /start orqali o‘z sinfingiz yoki ustoz profilingizni biriktiring.`
+    );
+  });
+
+  bot.command(['eslatma', 'eslatmalar', 'notify', 'reminder', 'ogohlantirish'], async (ctx) => {
+    if (ctx.chat.type !== 'private') return;
+
+    const { user, school, group, teacher } = getUserContext(ctx.from?.id);
+
+    if (user?.role === 'teacher' && teacher) {
+      const isNotifyEnabled = user.teacher_notifications !== 0;
+      const keyboard = new InlineKeyboard()
+        .text(
+          isNotifyEnabled ? '🔕 Eslatmalarni o‘chirish' : '🔔 Eslatmalarni yoqish (5 daqiqa oldin)',
+          'user_toggle_teacher_notify'
+        );
+
+      return ctx.reply(
+        `🔔 <b>DARS BOSHLANISHIDAN 5 DAQIQA OLDIN OGOHLANTIRISH</b>\n\n` +
+        `👤 <b>Ustoz:</b> <b>${escapeHtml(teacher.last_name)} ${escapeHtml(teacher.first_name)}</b>\n` +
+        `📚 <b>Fan:</b> <b>${escapeHtml(teacher.subject || 'O‘qituvchi')}</b>\n` +
+        `🏫 <b>Maktab:</b> ${escapeHtml(school?.name || 'Maktab')} (Kodi: <code>${school?.code || 'M-01'}</code>)\n\n` +
+        `🔔 <b>Eslatma holati:</b> ${isNotifyEnabled ? '✅ <b>Faol (Yoqilgan)</b>' : '❌ <b>O‘chirilgan</b>'}\n\n` +
+        `ℹ️ <i>Tizim har kuni dars jadvalingiz bo‘yicha har bir dars boshlanishidan 5 daqiqa oldin qaysi sinfda darsingiz borligi, xona va fan haqida avtomatik ogohlantirish xabarini yuboradi.</i>`,
+        { parse_mode: 'HTML', reply_markup: keyboard }
+      );
+    }
+
+    if (group || user?.selected_group_name) {
+      const isNotifyEnabled = user?.teacher_notifications !== 0;
+      const keyboard = new InlineKeyboard()
+        .text(
+          isNotifyEnabled ? '🔕 Eslatmalarni o‘chirish' : '🔔 Eslatmalarni yoqish (5 daqiqa oldin)',
+          'user_toggle_student_notify'
+        );
+
+      return ctx.reply(
+        `🔔 <b>DARS BOSHLANISHIDAN 5 DAQIQA OLDIN OGOHLANTIRISH</b>\n\n` +
+        `👥 <b>Sinf:</b> <b>${escapeHtml(group?.name || user?.selected_group_name || 'Sinf')}</b>\n` +
+        `🏫 <b>Maktab:</b> ${escapeHtml(school?.name || 'Maktab')} (Kodi: <code>${school?.code || 'M-01'}</code>)\n\n` +
+        `🔔 <b>Eslatma holati:</b> ${isNotifyEnabled ? '✅ <b>Faol (Yoqilgan)</b>' : '❌ <b>O‘chirilgan</b>'}\n\n` +
+        `ℹ️ <i>Har bir dars boshlanishidan 5 daqiqa oldin qaysi fan, o‘qituvchi va qaysi xonada dars bo‘lishi haqida Telegram orqali avtomatik eslatma yuboriladi.</i>`,
+        { parse_mode: 'HTML', reply_markup: keyboard }
+      );
+    }
+
+    return ctx.reply(
+      `ℹ️ Eslatmalarni sozlash uchun avval /start orqali o‘z sinfingiz yoki ustoz profilingizni biriktiring.`
+    );
+  });
+
+  // Callback: Ustoz eslatmalarini yoqish/o'chirish (user_toggle_teacher_notify)
   bot.callbackQuery('user_toggle_teacher_notify', async (ctx) => {
     const user = usersRepo.getUserByTelegramId(ctx.from.id);
     if (!user || user.role !== 'teacher') {
@@ -157,14 +255,41 @@ export function registerScheduleHandlers(bot) {
       );
 
     await ctx.editMessageText(
-      `👨‍🏫 <b>USTOZNING SHAXSIY PROFILI</b>\n\n` +
-      `👤 <b>F.I.O:</b> <b>${escapeHtml(teacher?.last_name || '')} ${escapeHtml(teacher?.first_name || '')}</b>\n` +
+      `🔔 <b>DARS BOSHLANISHIDAN 5 DAQIQA OLDIN OGOHLANTIRISH</b>\n\n` +
+      `👤 <b>Ustoz:</b> <b>${escapeHtml(teacher?.last_name || '')} ${escapeHtml(teacher?.first_name || '')}</b>\n` +
       `📚 <b>Fan:</b> <b>${escapeHtml(teacher?.subject || 'O‘qituvchi')}</b>\n` +
       (teacher?.phone ? `📞 <b>Telefon:</b> ${escapeHtml(teacher.phone)}\n` : '') +
-      `🏫 <b>Maktab:</b> ${escapeHtml(school?.name || 'Maktab')} (Kodi: <code>${school?.code || 'M-01'}</code>)\n` +
-      `🔔 <b>Darsdan 5 daqiqa oldin ogohlantirish:</b> ${newStatus ? '✅ <b>Faol (Yoqilgan)</b>' : '❌ <b>O‘chirilgan</b>'}\n` +
-      `🆔 <b>Telegram ID:</b> <code>${ctx.from.id}</code>\n\n` +
-      `🔒 <b>Holat:</b> <i>Profil qulflangan.</i>`,
+      `🏫 <b>Maktab:</b> ${escapeHtml(school?.name || 'Maktab')} (Kodi: <code>${school?.code || 'M-01'}</code>)\n\n` +
+      `🔔 <b>Eslatma holati:</b> ${newStatus ? '✅ <b>Faol (Yoqilgan)</b>' : '❌ <b>O‘chirilgan</b>'}\n\n` +
+      `ℹ️ <i>Tizim har kuni dars jadvalingiz bo‘yicha har bir dars boshlanishidan 5 daqiqa oldin qaysi sinfda darsingiz borligi, xona va fan haqida avtomatik ogohlantirish xabarini yuboradi.</i>`,
+      { parse_mode: 'HTML', reply_markup: keyboard }
+    );
+  });
+
+  // Callback: O'quvchi eslatmalarini yoqish/o'chirish (user_toggle_student_notify)
+  bot.callbackQuery('user_toggle_student_notify', async (ctx) => {
+    const user = usersRepo.getUserByTelegramId(ctx.from.id);
+    const currentStatus = user?.teacher_notifications !== 0;
+    const newStatus = !currentStatus;
+    usersRepo.setTeacherNotifications(ctx.from.id, newStatus ? 1 : 0);
+
+    await ctx.answerCallbackQuery({
+      text: newStatus ? '🔔 Dars eslatmalari yoqildi!' : '🔕 Dars eslatmalari o‘chirildi!'
+    });
+
+    const { school, group } = getUserContext(ctx.from?.id);
+    const keyboard = new InlineKeyboard()
+      .text(
+        newStatus ? '🔕 Eslatmalarni o‘chirish' : '🔔 Eslatmalarni yoqish (5 daqiqa oldin)',
+        'user_toggle_student_notify'
+      );
+
+    await ctx.editMessageText(
+      `🔔 <b>DARS BOSHLANISHIDAN 5 DAQIQA OLDIN OGOHLANTIRISH</b>\n\n` +
+      `👥 <b>Sinf:</b> <b>${escapeHtml(group?.name || user?.selected_group_name || 'Sinf')}</b>\n` +
+      `🏫 <b>Maktab:</b> ${escapeHtml(school?.name || 'Maktab')} (Kodi: <code>${school?.code || 'M-01'}</code>)\n\n` +
+      `🔔 <b>Eslatma holati:</b> ${newStatus ? '✅ <b>Faol (Yoqilgan)</b>' : '❌ <b>O‘chirilgan</b>'}\n\n` +
+      `ℹ️ <i>Har bir dars boshlanishidan 5 daqiqa oldin qaysi fan, o‘qituvchi va qaysi xonada dars bo‘lishi haqida Telegram orqali avtomatik eslatma yuboriladi.</i>`,
       { parse_mode: 'HTML', reply_markup: keyboard }
     );
   });

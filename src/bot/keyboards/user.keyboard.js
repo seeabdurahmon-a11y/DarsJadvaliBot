@@ -30,7 +30,7 @@ export function getStudentMainMenuKeyboard() {
   keyboard
     .text('🔔 Hozirgi dars').text('📅 Bugungi jadval')
     .row()
-    .text('📆 Ertangi jadval').text('📚 Haftalik jadval')
+    .text('📆 Ertangi jadval').text('🔔 5 daqiqa oldin eslatma')
     .row()
     .text('🏫 Mening sinfim').text('ℹ️ Bot haqida')
     .resized();
@@ -53,7 +53,7 @@ export function getTeacherMainMenuKeyboard() {
   keyboard
     .text('🔔 Hozirgi darsim').text('📅 Bugungi darslarim')
     .row()
-    .text('📆 Ertangi darslarim').text('📚 Haftalik dars jadvalim')
+    .text('📆 Ertangi darslarim').text('🔔 5 daqiqa oldin eslatma')
     .row()
     .text('👨‍🏫 Mening profilim').text('ℹ️ Bot haqida')
     .resized();

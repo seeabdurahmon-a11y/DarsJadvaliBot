@@ -273,6 +273,7 @@ export function registerStartHandlers(bot) {
       `🔹 <code>/sinf 11-D</code> — O‘z sinfingizni biriktirish (O‘quvchilar uchun)\n` +
       `🔹 <code>/hozir</code> — Hozir qaysi dars ketayotganini ko‘rish\n` +
       `🔹 <code>/darsjadvali</code> — Bugungi dars jadvalini olish\n` +
+      `🔹 <code>/eslatma</code> — Darsdan 5 daqiqa oldin eslatma sozlamalari\n` +
       `🔹 <code>/schedule</code> — Dars jadvalini ko‘rish\n` +
       `🔹 <code>/cods</code> — Barcha buyruqlar ro‘yxati\n\n` +
       `👥 <b>Guruh buyruqlari (Sinf guruhlari uchun):</b>\n` +

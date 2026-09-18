@@ -26,8 +26,8 @@ export const scheduler = {
         // 1. Sinf guruhlariga tonggi dars jadvalini yuborish
         await this.checkAndSendSchedules(bot);
 
-        // 2. Ustozlarga dars boshlanishidan 5 daqiqa oldin eslatma yuborish
-        await teacherReminderService.checkAndSendTeacherReminders(bot, 5);
+        // 2. Ustozlar va o'quvchilarga dars boshlanishidan 5 daqiqa oldin eslatma yuborish
+        await teacherReminderService.checkAndSendAllReminders(bot, 5);
       } catch (err) {
         logger.error('[SCHEDULER] Avtomatik yuborishda kutilmagan xatolik:', err);
       }

@@ -238,6 +238,28 @@ export const usersRepo = {
     return db.prepare(query).all(...params);
   },
 
+  getActiveStudentUsers(schoolId = null) {
+    const db = getDatabase();
+    let query = `
+      SELECT u.*, 
+        g.name as selected_group_name,
+        s.name as selected_school_name
+      FROM users u
+      JOIN groups g ON u.selected_group_id = g.id
+      LEFT JOIN schools s ON (u.selected_school_id = s.id OR g.school_id = s.id)
+      WHERE (u.role = 'student' OR u.role IS NULL)
+        AND u.selected_group_id IS NOT NULL
+        AND g.is_active = 1
+        AND (u.teacher_notifications IS NULL OR u.teacher_notifications = 1)
+    `;
+    const params = [];
+    if (schoolId) {
+      query += ` AND (u.selected_school_id = ? OR g.school_id = ?)`;
+      params.push(schoolId, schoolId);
+    }
+    return db.prepare(query).all(...params);
+  },
+
   getAllUsers(schoolId = null) {
     const db = getDatabase();
     if (schoolId) {
