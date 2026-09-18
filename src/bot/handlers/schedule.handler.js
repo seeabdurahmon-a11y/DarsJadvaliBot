@@ -97,15 +97,23 @@ export function registerScheduleHandlers(bot) {
     const { user, school, teacher } = getUserContext(ctx.from?.id);
 
     if (user?.role === 'teacher' && teacher) {
+      const isNotifyEnabled = user.teacher_notifications !== 0;
+      const keyboard = new InlineKeyboard()
+        .text(
+          isNotifyEnabled ? '🔕 Eslatmalarni o‘chirish' : '🔔 Eslatmalarni yoqish (5 daqiqa oldin)',
+          'user_toggle_teacher_notify'
+        );
+
       return ctx.reply(
         `👨‍🏫 <b>USTOZNING SHAXSIY PROFILI</b>\n\n` +
         `👤 <b>F.I.O:</b> <b>${escapeHtml(teacher.last_name)} ${escapeHtml(teacher.first_name)}</b>\n` +
         `📚 <b>Fan:</b> <b>${escapeHtml(teacher.subject || 'O‘qituvchi')}</b>\n` +
         (teacher.phone ? `📞 <b>Telefon:</b> ${escapeHtml(teacher.phone)}\n` : '') +
         `🏫 <b>Maktab:</b> ${escapeHtml(school?.name || 'Maktab')} (Kodi: <code>${school?.code || 'M-01'}</code>)\n` +
+        `🔔 <b>Darsdan 5 daqiqa oldin ogohlantirish:</b> ${isNotifyEnabled ? '✅ <b>Faol (Yoqilgan)</b>' : '❌ <b>O‘chirilgan</b>'}\n` +
         `🆔 <b>Telegram ID:</b> <code>${ctx.from.id}</code>\n\n` +
         `🔒 <b>Holat:</b> <i>Profil qulflangan. Ustozlik ma'lumotlarini o‘zgartirish faqat admin (/adminchiqarish) orqali amalga oshiriladi.</i>`,
-        { parse_mode: 'HTML' }
+        { parse_mode: 'HTML', reply_markup: keyboard }
       );
     }
 
@@ -121,6 +129,43 @@ export function registerScheduleHandlers(bot) {
 
     return ctx.reply(
       `ℹ️ Siz hali profilingizni biriktirmagansiz. Iltimos, /start bosing va profilingizni tanlang.`
+    );
+  });
+
+  // Callback: Eslatmalarni yoqish/o'chirish (user_toggle_teacher_notify)
+  bot.callbackQuery('user_toggle_teacher_notify', async (ctx) => {
+    const user = usersRepo.getUserByTelegramId(ctx.from.id);
+    if (!user || user.role !== 'teacher') {
+      return ctx.answerCallbackQuery({ text: 'Faqat ustozlar uchun', show_alert: true });
+    }
+
+    const currentStatus = user.teacher_notifications !== 0;
+    const newStatus = !currentStatus;
+    usersRepo.setTeacherNotifications(ctx.from.id, newStatus ? 1 : 0);
+
+    await ctx.answerCallbackQuery({
+      text: newStatus ? '🔔 Dars eslatmalari yoqildi!' : '🔕 Dars eslatmalari o‘chirildi!'
+    });
+
+    const teacher = teachersRepo.getTeacherById(user.selected_teacher_id);
+    const school = schoolsRepo.getSchoolById(user.selected_school_id || 1);
+
+    const keyboard = new InlineKeyboard()
+      .text(
+        newStatus ? '🔕 Eslatmalarni o‘chirish' : '🔔 Eslatmalarni yoqish (5 daqiqa oldin)',
+        'user_toggle_teacher_notify'
+      );
+
+    await ctx.editMessageText(
+      `👨‍🏫 <b>USTOZNING SHAXSIY PROFILI</b>\n\n` +
+      `👤 <b>F.I.O:</b> <b>${escapeHtml(teacher?.last_name || '')} ${escapeHtml(teacher?.first_name || '')}</b>\n` +
+      `📚 <b>Fan:</b> <b>${escapeHtml(teacher?.subject || 'O‘qituvchi')}</b>\n` +
+      (teacher?.phone ? `📞 <b>Telefon:</b> ${escapeHtml(teacher.phone)}\n` : '') +
+      `🏫 <b>Maktab:</b> ${escapeHtml(school?.name || 'Maktab')} (Kodi: <code>${school?.code || 'M-01'}</code>)\n` +
+      `🔔 <b>Darsdan 5 daqiqa oldin ogohlantirish:</b> ${newStatus ? '✅ <b>Faol (Yoqilgan)</b>' : '❌ <b>O‘chirilgan</b>'}\n` +
+      `🆔 <b>Telegram ID:</b> <code>${ctx.from.id}</code>\n\n` +
+      `🔒 <b>Holat:</b> <i>Profil qulflangan.</i>`,
+      { parse_mode: 'HTML', reply_markup: keyboard }
     );
   });
 

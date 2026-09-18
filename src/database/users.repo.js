@@ -205,6 +205,39 @@ export const usersRepo = {
     return db.prepare(query).all(...params);
   },
 
+  setTeacherNotifications(telegramId, enabled = 1) {
+    const db = getDatabase();
+    db.prepare(`
+      UPDATE users
+      SET teacher_notifications = ?
+      WHERE telegram_id = ?
+    `).run(enabled ? 1 : 0, String(telegramId));
+    return this.getUserByTelegramId(telegramId);
+  },
+
+  getActiveTeacherUsers(schoolId = null) {
+    const db = getDatabase();
+    let query = `
+      SELECT u.*, 
+        t.first_name as teacher_first_name,
+        t.last_name as teacher_last_name,
+        t.subject as teacher_subject,
+        s.name as selected_school_name
+      FROM users u
+      JOIN teachers t ON u.selected_teacher_id = t.id
+      LEFT JOIN schools s ON (u.selected_school_id = s.id OR t.school_id = s.id)
+      WHERE u.role = 'teacher' 
+        AND u.selected_teacher_id IS NOT NULL
+        AND (u.teacher_notifications IS NULL OR u.teacher_notifications = 1)
+    `;
+    const params = [];
+    if (schoolId) {
+      query += ` AND (u.selected_school_id = ? OR t.school_id = ?)`;
+      params.push(schoolId, schoolId);
+    }
+    return db.prepare(query).all(...params);
+  },
+
   getAllUsers(schoolId = null) {
     const db = getDatabase();
     if (schoolId) {
