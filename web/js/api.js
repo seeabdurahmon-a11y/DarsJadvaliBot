@@ -269,6 +269,19 @@ export const Api = {
       method: 'POST',
       body: JSON.stringify(payload)
     });
+  },
+  swapLessons(idA, idB) {
+    return this.request('/admin/swap-lessons', {
+      method: 'POST',
+      body: JSON.stringify({ idA, idB })
+    });
+  },
+  bulkSaveTimetable(payload) {
+    return this.request('/admin/bulk-save-timetable', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
   }
 };
+
 

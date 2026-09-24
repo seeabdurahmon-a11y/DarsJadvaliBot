@@ -79,11 +79,15 @@ export const AdminView = {
           <a href="https://t.me/JadvaliBot?start=code_${window.App.currentSchoolCode?.replace('-', '')}" target="_blank" class="btn-sm" style="background:#e0e7ff;color:#4338ca;border:1px solid #c7d2fe;padding:6px 12px;border-radius:6px;font-size:11px;text-decoration:none;font-weight:700;display:inline-flex;align-items:center;gap:5px;">
             ${Icons.send} Telegram Botga havola
           </a>
+          <a href="schedule-test.html" target="_blank" class="btn-sm" style="background:linear-gradient(135deg,#0284c7 0%,#0f766e 100%);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:11.5px;text-decoration:none;font-weight:800;display:inline-flex;align-items:center;gap:5px;box-shadow:0 2px 6px rgba(2,132,199,0.3);">
+            🔀 Barcha Sinflar Jadvali & Darslarni Almashtirish (Test)
+          </a>
         </div>
       </div>
 
       <div class="tab-pills" id="admin-pills" style="overflow-x:auto;white-space:nowrap;margin-bottom:14px;display:flex;gap:6px;">
         <button class="tab-pill active" onclick="window.AdminView.switchTab('excel')" style="background:#0284c7;color:#fff;font-weight:800;">📊 Dars jadvalini yangilash (Excel)</button>
+        <a href="schedule-test.html" target="_blank" class="tab-pill" style="background:#0f766e;color:#fff;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">🔀 Barcha Sinflar (Almashtirish)</a>
         <button class="tab-pill" onclick="window.AdminView.switchTab('stats')">Statistika</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('classes')">Sinflar</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('teachers')">Ustozlar</button>

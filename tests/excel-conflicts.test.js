@@ -120,3 +120,43 @@ test('Excel & Conflicts 3: deleteLessonsByGroupId cleans previous lessons before
 
   closeDatabase();
 });
+
+test('Excel & Conflicts 4: swapLessons correctly exchanges subject, teacher, and room between 2 lessons', () => {
+  setupTestDb();
+
+  const school = schoolsRepo.getSchoolById(1) || schoolsRepo.addSchool({ name: '32-maktab', code: '32-MAKTAB' });
+  const groupA = groupsRepo.addGroup({ school_id: school.id, name: '5-A sinf' });
+
+  const l1 = lessonsRepo.addLesson({
+    school_id: school.id,
+    group_id: groupA.id,
+    day_of_week: 1,
+    start_time: '08:00',
+    end_time: '08:45',
+    subject: 'Matematika',
+    teacher: 'Aliyev',
+    room: '101'
+  });
+
+  const l2 = lessonsRepo.addLesson({
+    school_id: school.id,
+    group_id: groupA.id,
+    day_of_week: 1,
+    start_time: '08:50',
+    end_time: '09:35',
+    subject: 'Fizika',
+    teacher: 'Karimov',
+    room: '202'
+  });
+
+  const swapped = lessonsRepo.swapLessons(l1.id, l2.id);
+  assert.equal(swapped.lessonA.subject, 'Fizika');
+  assert.equal(swapped.lessonA.teacher, 'Karimov');
+  assert.equal(swapped.lessonA.room, '202');
+
+  assert.equal(swapped.lessonB.subject, 'Matematika');
+  assert.equal(swapped.lessonB.teacher, 'Aliyev');
+  assert.equal(swapped.lessonB.room, '101');
+
+  closeDatabase();
+});

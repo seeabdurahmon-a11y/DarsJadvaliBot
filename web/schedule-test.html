@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Barcha Sinflar Dars Jadvali — Drag & Drop va Almashtirish Test Paneli</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Dedicated Master Timetable & Drag-and-Drop Styles */
+    :root {
+      --test-primary: #0284c7;
+      --test-primary-dark: #0369a1;
+      --test-bg: #f8fafc;
+      --test-card: #ffffff;
+      --test-border: #e2e8f0;
+      --test-danger: #ef4444;
+      --test-danger-bg: #fef2f2;
+      --test-success: #10b981;
+      --test-success-bg: #ecfdf5;
+      --test-warning: #f59e0b;
+      --test-swap-active: #dbeafe;
+      --test-swap-border: #3b82f6;
+    }
+
+    body.test-page {
+      background-color: var(--test-bg);
+      color: #0f172a;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    .test-header-bar {
+      background: linear-gradient(135deg, #1e3a8a 0%, #0284c7 100%);
+      color: #ffffff;
+      padding: 18px 24px;
+      box-shadow: 0 4px 20px rgba(2, 132, 199, 0.25);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .test-header-inner {
+      max-width: 1600px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .test-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .test-badge-logo {
+      width: 44px;
+      height: 44px;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .test-brand h1 {
+      font-size: 20px;
+      font-weight: 800;
+      margin: 0;
+      letter-spacing: -0.3px;
+    }
+
+    .test-brand p {
+      font-size: 12px;
+      margin: 2px 0 0 0;
+      opacity: 0.9;
+    }
+
+    .test-header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .test-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 8px 16px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .test-status-pill.danger {
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fca5a5;
+      animation: pulseAlert 2s infinite ease-in-out;
+    }
+
+    .test-status-pill.success {
+      background: #ecfdf5;
+      color: #065f46;
+      border-color: #a7f3d0;
+    }
+
+    @keyframes pulseAlert {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(239, 68, 68, 0); }
+      50% { transform: scale(1.03); box-shadow: 0 0 16px rgba(239, 68, 68, 0.4); }
+    }
+
+    .test-main-container {
+      max-width: 1600px;
+      margin: 20px auto;
+      padding: 0 20px 60px 20px;
+    }
+
+    .test-toolbar {
+      background: var(--test-card);
+      border: 1px solid var(--test-border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+
+    .test-day-buttons {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .test-day-btn {
+      padding: 9px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--test-border);
+      background: #f8fafc;
+      color: #475569;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .test-day-btn:hover {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+
+    .test-day-btn.active {
+      background: var(--test-primary);
+      color: #ffffff;
+      border-color: var(--test-primary);
+      box-shadow: 0 3px 10px rgba(2, 132, 199, 0.3);
+    }
+
+    .test-action-buttons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-test {
+      padding: 9px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-test-primary {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+    }
+
+    .btn-test-primary:hover {
+      background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+      transform: translateY(-1px);
+    }
+
+    .btn-test-secondary {
+      background: #ffffff;
+      color: #334155;
+      border-color: var(--test-border);
+    }
+
+    .btn-test-secondary:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .btn-test-warning {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #fde68a;
+    }
+
+    .btn-test-danger {
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fca5a5;
+    }
+
+    /* Master Timetable Grid Layout */
+    .master-grid-wrapper {
+      background: var(--test-card);
+      border: 1px solid var(--test-border);
+      border-radius: 16px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
+      overflow-x: auto;
+      position: relative;
+    }
+
+    .master-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 1200px;
+    }
+
+    .master-table th {
+      background: #0f766e;
+      color: #ffffff;
+      padding: 12px 14px;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-right: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .master-table th:first-child {
+      left: 0;
+      z-index: 20;
+      background: #042f2e;
+      width: 100px;
+      min-width: 100px;
+    }
+
+    .master-table td {
+      border-bottom: 1px solid var(--test-border);
+      border-right: 1px solid var(--test-border);
+      padding: 8px;
+      vertical-align: top;
+      background: #ffffff;
+    }
+
+    .master-table tr td:first-child {
+      position: sticky;
+      left: 0;
+      background: #f8fafc;
+      font-weight: 800;
+      font-size: 13px;
+      text-align: center;
+      z-index: 5;
+      border-right: 2px solid #cbd5e1;
+    }
+
+    .period-time-badge {
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 600;
+      margin-top: 2px;
+      display: block;
+    }
+
+    /* Lesson Card in Grid */
+    .lesson-card-slot {
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 8px 10px;
+      min-height: 86px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: grab;
+      user-select: none;
+      position: relative;
+    }
+
+    .lesson-card-slot:hover {
+      border-color: var(--test-primary);
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .lesson-card-slot:active {
+      cursor: grabbing;
+    }
+
+    .lesson-card-slot.empty-slot {
+      border: 1.5px dashed #cbd5e1;
+      background: rgba(248, 250, 252, 0.5);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .lesson-card-slot.empty-slot:hover {
+      border-color: var(--test-primary);
+      background: #f0f9ff;
+      color: var(--test-primary);
+    }
+
+    /* Swap Active Selected State */
+    .lesson-card-slot.swap-selected {
+      background: #eff6ff !important;
+      border: 2px solid #2563eb !important;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2) !important;
+      animation: swapPulse 1.5s infinite ease-in-out;
+    }
+
+    @keyframes swapPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+
+    /* Drag Target Drop Hover State */
+    .lesson-card-slot.drag-over {
+      border: 2px dashed #0284c7 !important;
+      background: #e0f2fe !important;
+      transform: scale(1.04);
+    }
+
+    /* Conflict / Clash Red Alert State */
+    .lesson-card-slot.conflict-slot {
+      background: #fef2f2 !important;
+      border: 2px solid #ef4444 !important;
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.2) !important;
+      animation: shakeBadge 0.4s ease;
+    }
+
+    @keyframes shakeBadge {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-3px); }
+      40%, 80% { transform: translateX(3px); }
+    }
+
+    .card-subj-title {
+      font-weight: 800;
+      font-size: 13.5px;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+    }
+
+    .card-teacher-name {
+      font-size: 12px;
+      color: #334155;
+      font-weight: 600;
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .card-meta-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      font-size: 11px;
+    }
+
+    .card-room-badge {
+      background: #e2e8f0;
+      color: #475569;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 10.5px;
+    }
+
+    .card-swap-btn {
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 10.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      transition: all 0.15s ease;
+    }
+
+    .card-swap-btn:hover {
+      background: #0284c7;
+      color: #ffffff;
+      border-color: #0284c7;
+    }
+
+    .conflict-warning-pill {
+      margin-top: 4px;
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+      color: #dc2626;
+      border-radius: 5px;
+      padding: 2px 6px;
+      font-size: 10px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Modal Styling */
+    .test-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .test-modal-card {
+      background: #ffffff;
+      border-radius: 20px;
+      max-width: 520px;
+      width: 100%;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+<body class="test-page">
+
+  <!-- Top Sticky Navigation Bar -->
+  <header class="test-header-bar">
+    <div class="test-header-inner">
+      <div class="test-brand">
+        <div class="test-badge-logo">📊</div>
+        <div>
+          <h1>Maktab Umumiy Dars Jadvali (Master Grid)</h1>
+          <p>Barcha sinflar dars jadvali, darslarni surish (Drag & Drop) va jonli ustozlar to‘qnashuvi monitoringi</p>
+        </div>
+      </div>
+
+      <div class="test-header-controls">
+        <div id="master-status-indicator" class="test-status-pill success">
+          <span>✅</span> <span>To‘qnashuvlar yo‘q (0 ta)</span>
+        </div>
+
+        <a href="index.html" class="btn-test btn-test-secondary" style="color:#ffffff;background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.3);text-decoration:none;">
+          🏠 Asosiy Ilovaga Qaytish
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Body -->
+  <main class="test-main-container">
+    <!-- Toolbar & Filters -->
+    <div class="test-toolbar">
+      <!-- Day Switcher -->
+      <div class="test-day-buttons">
+        <button class="test-day-btn active" onclick="MasterApp.setDay(1)">🗓 Dushanba</button>
+        <button class="test-day-btn" onclick="MasterApp.setDay(2)">🗓 Seshanba</button>
+        <button class="test-day-btn" onclick="MasterApp.setDay(3)">🗓 Chorshanba</button>
+        <button class="test-day-btn" onclick="MasterApp.setDay(4)">🗓 Payshanba</button>
+        <button class="test-day-btn" onclick="MasterApp.setDay(5)">🗓 Juma</button>
+        <button class="test-day-btn" onclick="MasterApp.setDay(6)">🗓 Shanba</button>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="test-action-buttons">
+        <input type="text" id="class-search-input" placeholder="🔍 Sinfni qidirish (masalan: 5-A)..." oninput="MasterApp.filterClasses(this.value)" style="padding:8px 12px;border:1px solid var(--test-border);border-radius:10px;font-size:13px;width:200px;">
+        
+        <button class="btn-test btn-test-secondary" id="undo-btn" onclick="MasterApp.undo()" title="Oxirgi almashtirishni bekor qilish" disabled>
+          ↩️ Bekor qilish (Undo)
+        </button>
+
+        <button class="btn-test btn-test-warning" onclick="MasterApp.createDemoClash()" title="Test uchun bitta ustozni bir vaqtda 2 ta sinfga qo‘yish">
+          🎲 Test To‘qnashuv Yaratish
+        </button>
+
+        <button class="btn-test btn-test-secondary" onclick="MasterApp.autoResolveConflicts()" title="Barcha to‘qnashuvlarni avtomatik bartaraf qilish">
+          ✨ Avtomatik To‘g‘rilash
+        </button>
+
+        <button class="btn-test btn-test-primary" onclick="MasterApp.saveAllTimetables()">
+          💾 Barcha Sinflarni Saqlash
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Swap Prompt Toast Banner -->
+    <div id="swap-banner" style="display:none;background:#eff6ff;border:1.5px solid #3b82f6;border-radius:12px;padding:12px 18px;margin-bottom:16px;color:#1e40af;font-weight:700;display:none;justify-content:space-between;align-items:center;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">🔀</span>
+        <div>
+          <span id="swap-banner-text">1-dars tanlandi. Endi almashtirmoqchi bo‘lgan 2-darsni bosing!</span>
+        </div>
+      </div>
+      <button class="btn-test btn-test-secondary" style="padding:4px 10px;font-size:12px;" onclick="MasterApp.cancelSwapSelection()">
+        ✕ Bekor qilish
+      </button>
+    </div>
+
+    <!-- Master Timetable Spreadsheet Grid -->
+    <div class="master-grid-wrapper">
+      <table class="master-table" id="master-timetable-table">
+        <thead>
+          <tr id="master-table-header-row">
+            <th>Soat / Vaqt</th>
+            <!-- Classes columns will be rendered here dynamically -->
+          </tr>
+        </thead>
+        <tbody id="master-table-body">
+          <!-- Periods rows will be rendered here dynamically -->
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Edit Lesson Modal -->
+  <div class="test-modal-overlay" id="edit-lesson-modal" style="display:none;" onclick="if(event.target===this) MasterApp.closeModal();">
+    <div class="test-modal-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 id="modal-title" style="margin:0;font-size:17px;font-weight:800;">Darsni Tahrirlash</h3>
+        <button onclick="MasterApp.closeModal()" style="background:none;border:none;font-size:18px;cursor:pointer;">✕</button>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">Fan Nomi:</label>
+        <input type="text" id="modal-subj-input" list="modal-subjects-datalist" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;box-sizing:border-box;">
+        <datalist id="modal-subjects-datalist"></datalist>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">Ustoz (O‘qituvchi):</label>
+        <input type="text" id="modal-teacher-input" list="modal-teachers-datalist" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;box-sizing:border-box;">
+        <datalist id="modal-teachers-datalist"></datalist>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <label style="font-size:12px;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">Xona (Ixtiyoriy):</label>
+        <input type="text" id="modal-room-input" placeholder="Masalan: 12 yoki Kimyo lab" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;box-sizing:border-box;">
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn-test btn-test-secondary" onclick="MasterApp.deleteCurrentModalLesson()" style="color:#ef4444;">
+          🗑 Darsni o‘chirish
+        </button>
+        <button class="btn-test btn-test-primary" onclick="MasterApp.saveModalLesson()">
+          💾 Saqlash
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { Api } from './js/api.js';
+
+    const PERIODS = [
+      { period: 1, start_time: '08:00', end_time: '08:45', label: '1-soat' },
+      { period: 2, start_time: '08:50', end_time: '09:35', label: '2-soat' },
+      { period: 3, start_time: '09:40', end_time: '10:25', label: '3-soat' },
+      { period: 4, start_time: '10:30', end_time: '11:15', label: '4-soat' },
+      { period: 5, start_time: '11:20', end_time: '12:05', label: '5-soat' },
+      { period: 6, start_time: '12:10', end_time: '12:55', label: '6-soat' },
+      { period: 7, start_time: '13:00', end_time: '13:45', label: '7-soat' }
+    ];
+
+    const DAY_NAMES = { 1: 'Dushanba', 2: 'Seshanba', 3: 'Chorshanba', 4: 'Payshanba', 5: 'Juma', 6: 'Shanba' };
+
+    const COMMON_SUBJECTS = [
+      'Matematika', 'Ona tili', 'Adabiyot', 'Ingliz tili', 'Rus tili',
+      'Tarix', 'Fizika', 'Kimyo', 'Biologiya', 'Geografiya',
+      'Informatika', 'Jismoniy tarbiya', 'Musiqa', 'Texnologiya', 'Tarbiya'
+    ];
+
+    const COMMON_TEACHERS = [
+      'Aliyev Rustam', 'Karimova Dilnoza', 'Rahmonov Jasur', 'Nazarova Gulnoza',
+      'Toshmatov Bobur', 'Abdullayeva Shahnoza', 'Ismoilov Farrux', 'Sobirova Feruza',
+      'Mirzayev Shavkat', 'Qodirova Nilufar', 'Sultonov Bekzod', 'Xoliqova Lola'
+    ];
+
+    window.MasterApp = {
+      activeDay: 1,
+      classes: [],
+      lessons: [], // all lessons
+      filterQuery: '',
+      selectedSwapSlot: null, // { classId, day, period }
+      undoHistory: [],
+      modalLessonTarget: null,
+
+      async init() {
+        try {
+          const [classList, teacherList, subjectList, allLessons] = await Promise.all([
+            Api.getClasses().catch(() => []),
+            Api.getTeachers().catch(() => []),
+            Api.getSubjects().catch(() => []),
+            Api.getAdminLessons().catch(() => [])
+          ]);
+
+          this.classes = classList && classList.length > 0 ? classList : this.generateMockClasses();
+          this.teachers = teacherList && teacherList.length > 0 ? teacherList : COMMON_TEACHERS.map(t => ({ last_name: t.split(' ')[0], first_name: t.split(' ')[1] }));
+          this.subjects = subjectList && subjectList.length > 0 ? subjectList : COMMON_SUBJECTS.map(s => ({ name: s }));
+          this.lessons = allLessons && allLessons.length > 0 ? allLessons : this.generateMockLessons(this.classes);
+
+          this.populateDatalists();
+          this.render();
+        } catch (e) {
+          console.error(e);
+          this.classes = this.generateMockClasses();
+          this.lessons = this.generateMockLessons(this.classes);
+          this.render();
+        }
+      },
+
+      generateMockClasses() {
+        const names = ['5-A sinf', '5-B sinf', '6-A sinf', '6-B sinf', '7-A sinf', '8-A sinf', '9-A sinf', '10-A sinf', '11-A sinf'];
+        return names.map((name, idx) => ({ id: 100 + idx, name, is_active: 1 }));
+      },
+
+      generateMockLessons(classes) {
+        const mockLessons = [];
+        let idCounter = 1;
+        classes.forEach(c => {
+          for (let d = 1; d <= 6; d++) {
+            for (let p = 1; p <= 5; p++) {
+              const subj = COMMON_SUBJECTS[(c.id + d + p) % COMMON_SUBJECTS.length];
+              const teach = COMMON_TEACHERS[(c.id * 2 + p) % COMMON_TEACHERS.length];
+              const pDef = PERIODS[p - 1];
+              mockLessons.push({
+                id: idCounter++,
+                group_id: c.id,
+                group_name: c.name,
+                day_of_week: d,
+                period: p,
+                start_time: pDef.start_time,
+                end_time: pDef.end_time,
+                subject: subj,
+                teacher: teach,
+                room: `${p}0${(c.id % 5) + 1}`
+              });
+            }
+          }
+        });
+        return mockLessons;
+      },
+
+      populateDatalists() {
+        const sList = document.getElementById('modal-subjects-datalist');
+        const tList = document.getElementById('modal-teachers-datalist');
+        if (sList) sList.innerHTML = COMMON_SUBJECTS.map(s => `<option value="${s}">`).join('');
+        if (tList) tList.innerHTML = COMMON_TEACHERS.map(t => `<option value="${t}">`).join('');
+      },
+
+      setDay(day) {
+        this.activeDay = day;
+        document.querySelectorAll('.test-day-btn').forEach((btn, i) => {
+          btn.classList.toggle('active', (i + 1) === day);
+        });
+        this.render();
+      },
+
+      filterClasses(query) {
+        this.filterQuery = (query || '').toLowerCase().trim();
+        this.render();
+      },
+
+      calculateConflicts() {
+        const conflicts = [];
+        const normalize = (str) => (str ? str.toLowerCase().replace(/[^a-zа-яё0-9]/gi, '').trim() : '');
+        const dayLessons = this.lessons.filter(l => Number(l.day_of_week) === this.activeDay && l.teacher && l.teacher.trim() && l.subject && l.subject.trim());
+
+        const map = new Map();
+        for (const l of dayLessons) {
+          const tNorm = normalize(l.teacher);
+          if (!tNorm) continue;
+          const key = `${l.start_time}_${tNorm}`;
+          if (!map.has(key)) map.set(key, []);
+          map.get(key).push(l);
+        }
+
+        for (const [key, list] of map.entries()) {
+          if (list.length > 1) {
+            list.forEach(item => {
+              const others = list.filter(o => o.id !== item.id);
+              const otherClassNames = others.map(o => o.group_name || `Sinf #${o.group_id}`).join(', ');
+              conflicts.push({
+                lessonId: item.id,
+                classId: item.group_id,
+                period: item.period || PERIODS.findIndex(p => p.start_time === item.start_time) + 1,
+                teacher: item.teacher,
+                otherClasses: otherClassNames,
+                message: `Ustoz ${item.teacher} ayni vaqtda "${otherClassNames}"da ham darsda!`
+              });
+            });
+          }
+        }
+
+        return conflicts;
+      },
+
+      render() {
+        const filteredClasses = this.classes.filter(c => {
+          if (!this.filterQuery) return true;
+          return c.name.toLowerCase().includes(this.filterQuery);
+        });
+
+        const conflicts = this.calculateConflicts();
+        this.updateStatusBanner(conflicts);
+
+        // Render Table Header
+        const headerRow = document.getElementById('master-table-header-row');
+        headerRow.innerHTML = `
+          <th>Soat / Vaqt</th>
+          ${filteredClasses.map(c => `<th>🏫 ${c.name}</th>`).join('')}
+        `;
+
+        // Render Table Body (7 Periods)
+        const tableBody = document.getElementById('master-table-body');
+        let bodyHtml = '';
+
+        for (let pIdx = 0; pIdx < PERIODS.length; pIdx++) {
+          const pDef = PERIODS[pIdx];
+          const period = pDef.period;
+
+          bodyHtml += `
+            <tr>
+              <td>
+                <div style="font-weight:800;color:var(--test-primary);">${period}-soat</div>
+                <span class="period-time-badge">${pDef.start_time} - ${pDef.end_time}</span>
+              </td>
+          `;
+
+          filteredClasses.forEach(cls => {
+            const lesson = this.lessons.find(l => 
+              Number(l.group_id) === Number(cls.id) && 
+              Number(l.day_of_week) === this.activeDay && 
+              (l.period === period || l.start_time === pDef.start_time)
+            );
+
+            const isSwapSelected = this.selectedSwapSlot && 
+              this.selectedSwapSlot.classId === cls.id && 
+              this.selectedSwapSlot.period === period;
+
+            const conflict = lesson ? conflicts.find(c => c.lessonId === lesson.id) : null;
+            const isConflict = Boolean(conflict);
+
+            const slotKey = `${cls.id}_${period}`;
+
+            if (lesson && lesson.subject && lesson.subject.trim()) {
+              bodyHtml += `
+                <td>
+                  <div class="lesson-card-slot ${isConflict ? 'conflict-slot' : ''} ${isSwapSelected ? 'swap-selected' : ''}" 
+                       id="slot-${slotKey}" 
+                       draggable="true" 
+                       ondragstart="MasterApp.onDragStart(event, ${cls.id}, ${period})" 
+                       ondragover="MasterApp.onDragOver(event)" 
+                       ondragleave="MasterApp.onDragLeave(event)" 
+                       ondrop="MasterApp.onDrop(event, ${cls.id}, ${period})">
+                    
+                    <div>
+                      <div class="card-subj-title">
+                        <span>📚 ${lesson.subject}</span>
+                        <span style="opacity:0.4;cursor:grab;" title="Ushlab surish (Drag & Drop)">⠿</span>
+                      </div>
+                      <div class="card-teacher-name">
+                        👨‍🏫 ${lesson.teacher || '<i style="color:#94a3b8;">Ustozsiz</i>'}
+                      </div>
+                    </div>
+
+                    ${isConflict ? `
+                      <div class="conflict-warning-pill">
+                        🚨 ${conflict.otherClasses}da band!
+                      </div>
+                    ` : ''}
+
+                    <div class="card-meta-bar">
+                      <span class="card-room-badge">${lesson.room ? lesson.room + '-xona' : 'Xona: —'}</span>
+                      <div style="display:flex;gap:4px;">
+                        <button class="card-swap-btn" onclick="MasterApp.onClickSwap(${cls.id}, ${period})" title="O‘rnini almashtirish">
+                          🔀 Almash
+                        </button>
+                        <button class="card-swap-btn" style="background:#f1f5f9;color:#475569;border-color:#cbd5e1;" onclick="MasterApp.openEditModal(${cls.id}, ${period})" title="Tahrirlash">
+                          ✏️
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              `;
+            } else {
+              bodyHtml += `
+                <td>
+                  <div class="lesson-card-slot empty-slot ${isSwapSelected ? 'swap-selected' : ''}" 
+                       id="slot-${slotKey}" 
+                       ondragover="MasterApp.onDragOver(event)" 
+                       ondragleave="MasterApp.onDragLeave(event)" 
+                       ondrop="MasterApp.onDrop(event, ${cls.id}, ${period})"
+                       onclick="MasterApp.onClickEmptySlot(${cls.id}, ${period})">
+                    + Dars qo‘yish
+                  </div>
+                </td>
+              `;
+            }
+          });
+
+          bodyHtml += `</tr>`;
+        }
+
+        tableBody.innerHTML = bodyHtml;
+      },
+
+      updateStatusBanner(conflicts) {
+        const ind = document.getElementById('master-status-indicator');
+        if (!ind) return;
+        if (conflicts.length > 0) {
+          ind.className = 'test-status-pill danger';
+          ind.innerHTML = `<span>🚨</span> <span>${conflicts.length} ta dars to‘qnashuvi aniqlandi!</span>`;
+        } else {
+          ind.className = 'test-status-pill success';
+          ind.innerHTML = `<span>✅</span> <span>To‘qnashuvlar yo‘q (0 ta)</span>`;
+        }
+      },
+
+      /* Drag and Drop Handlers */
+      onDragStart(e, classId, period) {
+        e.dataTransfer.setData('text/plain', JSON.stringify({ classId, period, day: this.activeDay }));
+        e.dataTransfer.effectAllowed = 'move';
+      },
+
+      onDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const target = e.currentTarget;
+        if (target && !target.classList.contains('drag-over')) {
+          target.classList.add('drag-over');
+        }
+      },
+
+      onDragLeave(e) {
+        e.currentTarget?.classList.remove('drag-over');
+      },
+
+      onDrop(e, targetClassId, targetPeriod) {
+        e.preventDefault();
+        e.currentTarget?.classList.remove('drag-over');
+        try {
+          const raw = e.dataTransfer.getData('text/plain');
+          if (!raw) return;
+          const source = JSON.parse(raw);
+          this.executeSwap(source.classId, source.period, targetClassId, targetPeriod);
+        } catch (err) {
+          console.error(err);
+        }
+      },
+
+      /* Click-to-Swap Mode Handlers */
+      onClickSwap(classId, period) {
+        if (!this.selectedSwapSlot) {
+          this.selectedSwapSlot = { classId, period };
+          const cls = this.classes.find(c => c.id === classId);
+          document.getElementById('swap-banner-text').innerText = `"${cls?.name}" ning ${period}-darsi tanlandi. Endi almashtirmoqchi bo‘lgan 2-darsni bosing!`;
+          document.getElementById('swap-banner').style.display = 'flex';
+          this.render();
+        } else {
+          const s = this.selectedSwapSlot;
+          this.selectedSwapSlot = null;
+          document.getElementById('swap-banner').style.display = 'none';
+          this.executeSwap(s.classId, s.period, classId, period);
+        }
+      },
+
+      onClickEmptySlot(classId, period) {
+        if (this.selectedSwapSlot) {
+          const s = this.selectedSwapSlot;
+          this.selectedSwapSlot = null;
+          document.getElementById('swap-banner').style.display = 'none';
+          this.executeSwap(s.classId, s.period, classId, period);
+        } else {
+          this.openEditModal(classId, period);
+        }
+      },
+
+      cancelSwapSelection() {
+        this.selectedSwapSlot = null;
+        document.getElementById('swap-banner').style.display = 'none';
+        this.render();
+      },
+
+      /* Atomic Swap Execution */
+      executeSwap(classIdA, periodA, classIdB, periodB) {
+        if (classIdA === classIdB && periodA === periodB) return;
+
+        // Save snapshot for Undo
+        this.undoHistory.push(JSON.parse(JSON.stringify(this.lessons)));
+        document.getElementById('undo-btn').disabled = false;
+
+        const pDefA = PERIODS[periodA - 1];
+        const pDefB = PERIODS[periodB - 1];
+
+        const idxA = this.lessons.findIndex(l => 
+          Number(l.group_id) === Number(classIdA) && 
+          Number(l.day_of_week) === this.activeDay && 
+          (l.period === periodA || l.start_time === pDefA.start_time)
+        );
+
+        const idxB = this.lessons.findIndex(l => 
+          Number(l.group_id) === Number(classIdB) && 
+          Number(l.day_of_week) === this.activeDay && 
+          (l.period === periodB || l.start_time === pDefB.start_time)
+        );
+
+        const lessonA = idxA !== -1 ? this.lessons[idxA] : null;
+        const lessonB = idxB !== -1 ? this.lessons[idxB] : null;
+
+        if (lessonA && lessonB) {
+          // Swap properties
+          const tempSubj = lessonA.subject;
+          const tempTeach = lessonA.teacher;
+          const tempRoom = lessonA.room;
+
+          lessonA.subject = lessonB.subject;
+          lessonA.teacher = lessonB.teacher;
+          lessonA.room = lessonB.room;
+
+          lessonB.subject = tempSubj;
+          lessonB.teacher = tempTeach;
+          lessonB.room = tempRoom;
+        } else if (lessonA && !lessonB) {
+          // Move A to B slot
+          lessonA.group_id = classIdB;
+          lessonA.group_name = this.classes.find(c => c.id === classIdB)?.name || `Sinf #${classIdB}`;
+          lessonA.period = periodB;
+          lessonA.start_time = pDefB.start_time;
+          lessonA.end_time = pDefB.end_time;
+        } else if (!lessonA && lessonB) {
+          // Move B to A slot
+          lessonB.group_id = classIdA;
+          lessonB.group_name = this.classes.find(c => c.id === classIdA)?.name || `Sinf #${classIdA}`;
+          lessonB.period = periodA;
+          lessonB.start_time = pDefA.start_time;
+          lessonB.end_time = pDefA.end_time;
+        }
+
+        this.render();
+      },
+
+      undo() {
+        if (this.undoHistory.length > 0) {
+          this.lessons = this.undoHistory.pop();
+          if (this.undoHistory.length === 0) {
+            document.getElementById('undo-btn').disabled = true;
+          }
+          this.render();
+        }
+      },
+
+      createDemoClash() {
+        this.undoHistory.push(JSON.parse(JSON.stringify(this.lessons)));
+        document.getElementById('undo-btn').disabled = false;
+
+        // Force a clash: Put 'Aliyev Rustam' at Day 1, Period 1 in first two classes
+        if (this.classes.length >= 2) {
+          const c1 = this.classes[0].id;
+          const c2 = this.classes[1].id;
+          const pDef = PERIODS[0];
+
+          let l1 = this.lessons.find(l => l.group_id === c1 && l.day_of_week === this.activeDay && l.period === 1);
+          let l2 = this.lessons.find(l => l.group_id === c2 && l.day_of_week === this.activeDay && l.period === 1);
+
+          if (!l1) {
+            l1 = { id: Date.now(), group_id: c1, group_name: this.classes[0].name, day_of_week: this.activeDay, period: 1, start_time: pDef.start_time, end_time: pDef.end_time, subject: 'Matematika' };
+            this.lessons.push(l1);
+          }
+          if (!l2) {
+            l2 = { id: Date.now() + 1, group_id: c2, group_name: this.classes[1].name, day_of_week: this.activeDay, period: 1, start_time: pDef.start_time, end_time: pDef.end_time, subject: 'Fizika' };
+            this.lessons.push(l2);
+          }
+
+          l1.teacher = 'Aliyev Rustam';
+          l2.teacher = 'Aliyev Rustam';
+        }
+
+        this.render();
+      },
+
+      autoResolveConflicts() {
+        const conflicts = this.calculateConflicts();
+        if (conflicts.length === 0) {
+          alert('Hech qanday to‘qnashuv topilmadi. Jadval toza!');
+          return;
+        }
+
+        this.undoHistory.push(JSON.parse(JSON.stringify(this.lessons)));
+        document.getElementById('undo-btn').disabled = false;
+
+        // For each conflict, shift one of the clashing lessons to an empty slot in that class
+        conflicts.forEach(conf => {
+          const lesson = this.lessons.find(l => l.id === conf.lessonId);
+          if (!lesson) return;
+
+          // Find empty period in that class
+          for (let p = 1; p <= 7; p++) {
+            const pDef = PERIODS[p - 1];
+            const exists = this.lessons.some(l => l.group_id === lesson.group_id && l.day_of_week === lesson.day_of_week && (l.period === p || l.start_time === pDef.start_time));
+            if (!exists) {
+              lesson.period = p;
+              lesson.start_time = pDef.start_time;
+              lesson.end_time = pDef.end_time;
+              break;
+            }
+          }
+        });
+
+        this.render();
+        alert('To‘qnashuvlar avtomatik to‘g‘rilandi!');
+      },
+
+      /* Modal Edit Lesson */
+      openEditModal(classId, period) {
+        const pDef = PERIODS[period - 1];
+        const cls = this.classes.find(c => c.id === classId);
+        const lesson = this.lessons.find(l => l.group_id === classId && l.day_of_week === this.activeDay && (l.period === period || l.start_time === pDef.start_time));
+
+        this.modalLessonTarget = { classId, period, lessonId: lesson?.id };
+
+        document.getElementById('modal-title').innerText = `${cls?.name} — ${period}-soat (${pDef.start_time})`;
+        document.getElementById('modal-subj-input').value = lesson?.subject || '';
+        document.getElementById('modal-teacher-input').value = lesson?.teacher || '';
+        document.getElementById('modal-room-input').value = lesson?.room || '';
+
+        document.getElementById('edit-lesson-modal').style.display = 'flex';
+      },
+
+      closeModal() {
+        document.getElementById('edit-lesson-modal').style.display = 'none';
+        this.modalLessonTarget = null;
+      },
+
+      saveModalLesson() {
+        if (!this.modalLessonTarget) return;
+        const { classId, period } = this.modalLessonTarget;
+        const pDef = PERIODS[period - 1];
+        const subj = document.getElementById('modal-subj-input').value.trim();
+        const teach = document.getElementById('modal-teacher-input').value.trim();
+        const room = document.getElementById('modal-room-input').value.trim();
+
+        this.undoHistory.push(JSON.parse(JSON.stringify(this.lessons)));
+        document.getElementById('undo-btn').disabled = false;
+
+        let lesson = this.lessons.find(l => l.group_id === classId && l.day_of_week === this.activeDay && (l.period === period || l.start_time === pDef.start_time));
+
+        if (!lesson) {
+          lesson = {
+            id: Date.now(),
+            group_id: classId,
+            group_name: this.classes.find(c => c.id === classId)?.name || `Sinf #${classId}`,
+            day_of_week: this.activeDay,
+            period,
+            start_time: pDef.start_time,
+            end_time: pDef.end_time,
+            subject: subj,
+            teacher: teach,
+            room
+          };
+          this.lessons.push(lesson);
+        } else {
+          lesson.subject = subj;
+          lesson.teacher = teach;
+          lesson.room = room;
+        }
+
+        this.closeModal();
+        this.render();
+      },
+
+      deleteCurrentModalLesson() {
+        if (!this.modalLessonTarget) return;
+        const { classId, period } = this.modalLessonTarget;
+        const pDef = PERIODS[period - 1];
+
+        this.undoHistory.push(JSON.parse(JSON.stringify(this.lessons)));
+        document.getElementById('undo-btn').disabled = false;
+
+        this.lessons = this.lessons.filter(l => !(l.group_id === classId && l.day_of_week === this.activeDay && (l.period === period || l.start_time === pDef.start_time)));
+
+        this.closeModal();
+        this.render();
+      },
+
+      async saveAllTimetables() {
+        const conflicts = this.calculateConflicts();
+        if (conflicts.length > 0) {
+          if (!confirm(`DIQQAT: ${conflicts.length} ta ustozda dars to‘qnashuvi mavjud! Baribir saqlashni xohlaysizmi?`)) {
+            return;
+          }
+        }
+
+        try {
+          const payloadClasses = this.classes.map(c => {
+            const classLessons = this.lessons.filter(l => Number(l.group_id) === Number(c.id) && l.subject && l.subject.trim());
+            return {
+              classId: c.id,
+              className: c.name,
+              lessons: classLessons
+            };
+          });
+
+          const res = await Api.bulkSaveTimetable({ classes: payloadClasses, force: true });
+          alert('🎉 ' + (res.message || 'Barcha sinflar dars jadvali muvaffaqiyatli saqlandi!'));
+        } catch (e) {
+          alert('Xatolik: ' + e.message);
+        }
+      }
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      MasterApp.init();
+    });
+  </script>
+</body>
+</html>

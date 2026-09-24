@@ -446,3 +446,114 @@ adminRouter.post('/save-class-timetable', (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+/**
+ * POST /api/admin/swap-lessons
+ * Swaps two lessons in database and validates conflicts
+ */
+adminRouter.post('/swap-lessons', (req, res) => {
+  try {
+    const schoolId = getEffectiveSchoolId(req);
+    const { idA, idB } = req.body;
+
+    if (!idA || !idB) {
+      return res.status(400).json({ success: false, error: 'Ikkala dars ID si kiritilishi shart' });
+    }
+
+    const result = lessonsRepo.swapLessons(idA, idB);
+    if (!result) {
+      return res.status(404).json({ success: false, error: 'Darslar topilmadi' });
+    }
+
+    const conflicts = lessonsRepo.detectTeacherConflicts(schoolId);
+    res.json({
+      success: true,
+      message: 'Darslar o‘rni muvaffaqiyatli almashtirildi!',
+      data: result,
+      hasConflicts: conflicts.length > 0,
+      conflicts
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/admin/bulk-save-timetable
+ * Saves multiple classes' timetables at once
+ */
+adminRouter.post('/bulk-save-timetable', (req, res) => {
+  try {
+    const schoolId = getEffectiveSchoolId(req);
+    const { classes, force } = req.body;
+
+    if (!Array.isArray(classes)) {
+      return res.status(400).json({ success: false, error: 'Sinflar ro‘yxati yuborilishi shart' });
+    }
+
+    // Prepare all proposed lessons across school
+    const proposedAll = [];
+    for (const c of classes) {
+      if (!c.classId || !Array.isArray(c.lessons)) continue;
+      for (const l of c.lessons) {
+        if (!l.subject || !l.day_of_week || !l.start_time || !l.end_time) continue;
+        proposedAll.push({
+          group_id: Number(c.classId),
+          group_name: c.className || `Sinf #${c.classId}`,
+          school_id: schoolId,
+          day_of_week: Number(l.day_of_week),
+          start_time: l.start_time,
+          end_time: l.end_time,
+          subject: l.subject,
+          teacher: l.teacher || null,
+          room: l.room || null
+        });
+      }
+    }
+
+    if (!force) {
+      const conflicts = lessonsRepo.detectTeacherConflicts(schoolId, proposedAll);
+      if (conflicts.length > 0) {
+        return res.status(409).json({
+          success: false,
+          hasConflicts: true,
+          count: conflicts.length,
+          conflicts,
+          error: `Diqqat: ${conflicts.length} ta ustozda dars to‘qnashuvi aniqlandi!`
+        });
+      }
+    }
+
+    let savedClassesCount = 0;
+    let totalLessonsCount = 0;
+
+    for (const c of classes) {
+      if (!c.classId || !Array.isArray(c.lessons)) continue;
+      lessonsRepo.deleteLessonsByGroupId(c.classId);
+      for (const l of c.lessons) {
+        if (!l.subject || !l.day_of_week || !l.start_time || !l.end_time) continue;
+        lessonsRepo.addLesson({
+          school_id: schoolId,
+          group_id: Number(c.classId),
+          day_of_week: Number(l.day_of_week),
+          start_time: l.start_time,
+          end_time: l.end_time,
+          subject: l.subject,
+          teacher: l.teacher || null,
+          room: l.room || null
+        });
+        totalLessonsCount++;
+      }
+      savedClassesCount++;
+    }
+
+    res.json({
+      success: true,
+      message: `Jami ${savedClassesCount} ta sinf va ${totalLessonsCount} ta dars muvaffaqiyatli saqlandi!`,
+      savedClassesCount,
+      totalLessonsCount
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});

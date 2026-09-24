@@ -108,6 +108,26 @@ export const lessonsRepo = {
     return this.getLessonById(id);
   },
 
+  swapLessons(idA, idB) {
+    const db = getDatabase();
+    const lessonA = this.getLessonById(idA);
+    const lessonB = this.getLessonById(idB);
+    if (!lessonA || !lessonB) return false;
+
+    db.prepare(`
+      UPDATE lessons SET subject = ?, teacher = ?, room = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `).run(lessonB.subject, lessonB.teacher, lessonB.room, idA);
+
+    db.prepare(`
+      UPDATE lessons SET subject = ?, teacher = ?, room = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `).run(lessonA.subject, lessonA.teacher, lessonA.room, idB);
+
+    return {
+      lessonA: this.getLessonById(idA),
+      lessonB: this.getLessonById(idB)
+    };
+  },
+
   deleteLesson(id) {
     const db = getDatabase();
     return db.prepare(`DELETE FROM lessons WHERE id = ?`).run(id);
