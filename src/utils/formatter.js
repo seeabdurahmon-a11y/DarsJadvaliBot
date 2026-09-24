@@ -16,6 +16,49 @@ export function getSubjectEmoji(subject = '') {
 }
 
 /**
+ * Dars boshlanish vaqti bo'yicha dars tartib raqamini (1..7) aniqlash
+ */
+export function getLessonNumber(lessonOrStartTime) {
+  const startTime = typeof lessonOrStartTime === 'object' ? lessonOrStartTime?.start_time : lessonOrStartTime;
+  if (!startTime || typeof startTime !== 'string') return 1;
+
+  const timeMap = {
+    '08:30': 1,
+    '09:20': 2,
+    '10:10': 3,
+    '11:15': 4,
+    '12:05': 5,
+    '12:55': 6,
+    '13:45': 7,
+    '08:00': 1,
+    '08:50': 2,
+    '09:40': 3,
+    '10:30': 4,
+    '11:20': 5,
+    '12:10': 6
+  };
+
+  const cleanTime = startTime.trim();
+  if (timeMap[cleanTime] !== undefined) {
+    return timeMap[cleanTime];
+  }
+
+  const [h, m] = cleanTime.split(':').map(Number);
+  if (!isNaN(h) && !isNaN(m)) {
+    const mins = h * 60 + m;
+    if (mins < 9 * 60) return 1;
+    if (mins < 10 * 60) return 2;
+    if (mins < 11 * 60) return 3;
+    if (mins < 12 * 60) return 4;
+    if (mins < 12 * 60 + 50) return 5;
+    if (mins < 13 * 60 + 40) return 6;
+    return 7;
+  }
+
+  return 1;
+}
+
+/**
  * Bitta dars ma'lumotlarini maktab formatida chiroyli formatlash
  */
 export function formatSingleLesson(lesson, showGroup = true) {

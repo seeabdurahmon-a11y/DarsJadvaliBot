@@ -138,7 +138,7 @@ export const usersRepo = {
     return this.getUserByTelegramId(telegramId);
   },
 
-  setSelectedGroup(telegramId, groupId, schoolId = null) {
+  setSelectedGroup(telegramId, groupId, schoolId = null, lock = true) {
     const db = getDatabase();
     let effectiveSchoolId = schoolId;
 
@@ -153,16 +153,18 @@ export const usersRepo = {
         telegram_id: telegramId, 
         role: 'student',
         selected_school_id: effectiveSchoolId, 
-        selected_group_id: groupId 
+        selected_group_id: groupId,
+        is_role_locked: lock ? 1 : 0
       });
     } else {
       db.prepare(`
         UPDATE users
         SET role = 'student',
             selected_group_id = ?,
+            is_role_locked = ?,
             selected_school_id = COALESCE(?, selected_school_id)
         WHERE telegram_id = ?
-      `).run(groupId ? Number(groupId) : null, effectiveSchoolId ? Number(effectiveSchoolId) : null, String(telegramId));
+      `).run(groupId ? Number(groupId) : null, lock ? 1 : 0, effectiveSchoolId ? Number(effectiveSchoolId) : null, String(telegramId));
     }
     return this.getUserByTelegramId(telegramId);
   },

@@ -73,17 +73,15 @@ function normalizeSubject(raw) {
   return s;
 }
 
-export function importOfficialSchedule(dbPath = null) {
-  console.log('🔄 Baza tozalanmoqda va 1-chorak dars jadvali to‘liq yuklanmoqda...');
+export function importOfficialSchedule(dbPath = null, schoolId = 1) {
+  console.log(`🔄 Maktab (ID: ${schoolId}) bazasi tozalanmoqda va yangi dars jadvali to‘liq yuklanmoqda...`);
   const db = getDatabase(dbPath);
 
-  // Eski darslar, sinflar, o'qituvchilar va fanlarni tozalash
-  db.exec(`
-    DELETE FROM lessons;
-    DELETE FROM teachers;
-    DELETE FROM subjects;
-    DELETE FROM groups;
-  `);
+  // Eski darslar, sinflar, o'qituvchilar va fanlarni tozalash (faqat ko'rsatilgan maktab uchun)
+  db.prepare('DELETE FROM lessons WHERE school_id = ?').run(schoolId);
+  db.prepare('DELETE FROM teachers WHERE school_id = ?').run(schoolId);
+  db.prepare('DELETE FROM subjects WHERE school_id = ?').run(schoolId);
+  db.prepare('DELETE FROM groups WHERE school_id = ?').run(schoolId);
 
   // Standart shablon sozlamalari
   settingsRepo.set('schedule_template', DEFAULT_TEMPLATE);
@@ -112,6 +110,7 @@ export function importOfficialSchedule(dbPath = null) {
       const formattedName = match ? `${match[1]}-${match[2].toUpperCase()} sinf` : `${rawClass} sinf`;
 
       const group = groupsRepo.addGroup({
+        school_id: schoolId,
         name: formattedName,
         send_time: '06:00'
       });
@@ -150,6 +149,7 @@ export function importOfficialSchedule(dbPath = null) {
           const time = LESSON_TIMES[lessonNum] || { start: '08:30', end: '09:15' };
 
           lessonsRepo.addLesson({
+            school_id: schoolId,
             group_id: group.id,
             day_of_week: currentDay,
             start_time: time.start,
@@ -176,7 +176,7 @@ export function importOfficialSchedule(dbPath = null) {
 
   // 4. Fanlarni kiritish
   subjectNames.forEach(subName => {
-    subjectsRepo.addSubject({ name: subName });
+    subjectsRepo.addSubject({ school_id: schoolId, name: subName });
   });
 
   // 5. O'qituvchilarni kiritish
@@ -185,6 +185,7 @@ export function importOfficialSchedule(dbPath = null) {
     const lastName = parts[0] || 'O‘qituvchi';
     const firstName = parts.slice(1).join(' ') || '';
     teachersRepo.addTeacher({
+      school_id: schoolId,
       first_name: firstName || lastName,
       last_name: lastName,
       subject: null

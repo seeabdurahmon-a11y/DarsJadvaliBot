@@ -7,6 +7,7 @@ import { registerStartHandlers } from './handlers/start.handler.js';
 import { registerScheduleHandlers } from './handlers/schedule.handler.js';
 import { registerGroupHandlers } from './handlers/group.handler.js';
 import { registerAdminHandlers } from './handlers/admin.handler.js';
+import { registerExamHandlers } from './handlers/exam.handler.js';
 
 export function createBot(token = config.BOT_TOKEN) {
   if (!token || token === 'YOUR_BOT_TOKEN_HERE') {
@@ -26,6 +27,7 @@ export function createBot(token = config.BOT_TOKEN) {
   registerScheduleHandlers(bot);
   registerGroupHandlers(bot);
   registerAdminHandlers(bot);
+  registerExamHandlers(bot);
 
   // Menu Button helper
   bot.setupMenuButton = async () => {

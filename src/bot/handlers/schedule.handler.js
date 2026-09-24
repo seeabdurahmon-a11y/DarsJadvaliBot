@@ -4,7 +4,8 @@ import { schoolsRepo } from '../../database/schools.repo.js';
 import { groupsRepo } from '../../database/groups.repo.js';
 import { teachersRepo } from '../../database/teachers.repo.js';
 import { usersRepo } from '../../database/users.repo.js';
-import { getClassesGridInlineKeyboard, getStudentMainMenuKeyboard } from '../keyboards/user.keyboard.js';
+import { getClassesGridInlineKeyboard, getRoleSelectionInlineKeyboard, getStudentMainMenuKeyboard, getTeacherMainMenuKeyboard } from '../keyboards/user.keyboard.js';
+import { adminAuthService } from '../../services/admin-auth.service.js';
 import { replySafely } from '../../utils/telegram-sender.util.js';
 import { escapeHtml } from '../../utils/formatter.js';
 
@@ -30,6 +31,27 @@ export function registerScheduleHandlers(bot) {
     return { user, school, group, teacher, schoolId: school?.id || 1 };
   }
 
+  // Yordamchi: Foydalanuvchi hisobi biriktirilganligini tekshirish
+  function isUserAuthenticated(user, telegramId) {
+    if (!user) return false;
+    if (user.is_admin || adminAuthService.isUserAdmin(telegramId)) return true;
+    if (user.role === 'teacher' && user.selected_teacher_id) return true;
+    if (user.role === 'student' && user.selected_group_id) return true;
+    return false;
+  }
+
+  // Yordamchi: Hisobga kirmagan/chiqarilgan foydalanuvchiga xabar berish
+  function sendUnauthenticatedPrompt(ctx, actionName = 'Dars jadvalini') {
+    return ctx.reply(
+      `⚠️ <b>Siz hali profilingizga kirmagansiz yoki hisobingiz administrator tomonidan chiqarilgan.</b>\n\n` +
+      `${actionName} ko‘rish uchun iltimos, avval hisobingizga kiring va o‘z rolingizni tanlang:`,
+      {
+        parse_mode: 'HTML',
+        reply_markup: getRoleSelectionInlineKeyboard()
+      }
+    );
+  }
+
   // Yordamchi: Jadval ostiga qo'shiladigan inline tugmalar
   function getScheduleActionKeyboard(groupId, type = 'today') {
     const keyboard = new InlineKeyboard();
@@ -47,6 +69,10 @@ export function registerScheduleHandlers(bot) {
     if (ctx.chat.type !== 'private') return;
 
     const { user, school, group, schoolId } = getUserContext(ctx.from?.id);
+
+    if (!isUserAuthenticated(user, ctx.from?.id)) {
+      return sendUnauthenticatedPrompt(ctx, "Sinf ma'lumotlarini");
+    }
 
     // Agar foydalanuvchi Ustoz bo'lsa
     if (user?.role === 'teacher' && user?.selected_teacher_id) {
@@ -66,10 +92,10 @@ export function registerScheduleHandlers(bot) {
         .text('🔔 Hozirgi dars', `user_now_grp_${group.id}`)
         .row()
         .text('📆 Ertangi jadval', `user_tmr_grp_${group.id}`)
-        .text('📚 Haftalik jadval', `user_week_grp_${group.id}`)
-        .row()
-        .text('🔄 Sinfni o‘zgartirish', 'user_change_sinf')
-        .text('🔑 Maktabni almashtirish', 'user_change_school');
+        .text('📚 Haftalik jadval', `user_week_grp_${group.id}`);
+
+      keyboard.row()
+        .text('🔄 Maktab / Sinfni almashtirish', 'user_reset_profile_prompt');
 
       return ctx.reply(
         `🏫 <b>Maktab:</b> <b>${escapeHtml(school?.name || 'Maktab')}</b> (Kodi: <code>${school?.code || 'M-01'}</code>)\n` +
@@ -96,13 +122,19 @@ export function registerScheduleHandlers(bot) {
 
     const { user, school, teacher } = getUserContext(ctx.from?.id);
 
+    if (!isUserAuthenticated(user, ctx.from?.id)) {
+      return sendUnauthenticatedPrompt(ctx, 'Shaxsiy profilingizni');
+    }
+
     if (user?.role === 'teacher' && teacher) {
       const isNotifyEnabled = user.teacher_notifications !== 0;
       const keyboard = new InlineKeyboard()
         .text(
           isNotifyEnabled ? '🔕 Eslatmalarni o‘chirish' : '🔔 Eslatmalarni yoqish (5 daqiqa oldin)',
           'user_toggle_teacher_notify'
-        );
+        )
+        .row()
+        .text('🔄 Maktab / Profilni almashtirish', 'user_reset_profile_prompt');
 
       return ctx.reply(
         `👨‍🏫 <b>USTOZNING SHAXSIY PROFILI</b>\n\n` +
@@ -112,24 +144,25 @@ export function registerScheduleHandlers(bot) {
         `🏫 <b>Maktab:</b> ${escapeHtml(school?.name || 'Maktab')} (Kodi: <code>${school?.code || 'M-01'}</code>)\n` +
         `🔔 <b>Darsdan 5 daqiqa oldin ogohlantirish:</b> ${isNotifyEnabled ? '✅ <b>Faol (Yoqilgan)</b>' : '❌ <b>O‘chirilgan</b>'}\n` +
         `🆔 <b>Telegram ID:</b> <code>${ctx.from.id}</code>\n\n` +
-        `🔒 <b>Holat:</b> <i>Profil qulflangan. Ustozlik ma'lumotlarini o‘zgartirish faqat admin (/adminchiqarish) orqali amalga oshiriladi.</i>`,
+        `ℹ️ <i>Boshqa maktab yoki profilga o‘tish uchun quyidagi tugmadan yoki /reset buyrug‘idan foydalaning.</i>`,
         { parse_mode: 'HTML', reply_markup: keyboard }
       );
     }
 
     if (user?.role === 'student' && user?.selected_group_name) {
+      const keyboard = new InlineKeyboard()
+        .text('🔄 Maktab / Sinfni almashtirish', 'user_reset_profile_prompt');
+
       return ctx.reply(
         `👨‍🎓 <b>O‘QUVCHI PROFILI</b>\n\n` +
         `👥 <b>Sinfingiz:</b> <b>${escapeHtml(user.selected_group_name)}</b>\n` +
         `🏫 <b>Maktab:</b> ${escapeHtml(school?.name || 'Maktab')} (Kodi: <code>${school?.code || 'M-01'}</code>)\n` +
         `🆔 <b>Telegram ID:</b> <code>${ctx.from.id}</code>`,
-        { parse_mode: 'HTML' }
+        { parse_mode: 'HTML', reply_markup: keyboard }
       );
     }
 
-    return ctx.reply(
-      `ℹ️ Siz hali profilingizni biriktirmagansiz. Iltimos, /start bosing va profilingizni tanlang.`
-    );
+    return sendUnauthenticatedPrompt(ctx, 'Shaxsiy profilingizni');
   });
 
   // ==========================================
@@ -140,6 +173,10 @@ export function registerScheduleHandlers(bot) {
     if (ctx.chat.type !== 'private') return;
 
     const { user, school, group, teacher } = getUserContext(ctx.from?.id);
+
+    if (!isUserAuthenticated(user, ctx.from?.id)) {
+      return sendUnauthenticatedPrompt(ctx, 'Dars eslatmalarini');
+    }
 
     if (user?.role === 'teacher' && teacher) {
       const isNotifyEnabled = user.teacher_notifications !== 0;
@@ -178,15 +215,17 @@ export function registerScheduleHandlers(bot) {
       );
     }
 
-    return ctx.reply(
-      `ℹ️ Eslatmalarni sozlash uchun avval /start orqali o‘z sinfingiz yoki ustoz profilingizni biriktiring.`
-    );
+    return sendUnauthenticatedPrompt(ctx, 'Dars eslatmalarini');
   });
 
   bot.command(['eslatma', 'eslatmalar', 'notify', 'reminder', 'ogohlantirish'], async (ctx) => {
     if (ctx.chat.type !== 'private') return;
 
     const { user, school, group, teacher } = getUserContext(ctx.from?.id);
+
+    if (!isUserAuthenticated(user, ctx.from?.id)) {
+      return sendUnauthenticatedPrompt(ctx, 'Dars eslatmalarini');
+    }
 
     if (user?.role === 'teacher' && teacher) {
       const isNotifyEnabled = user.teacher_notifications !== 0;
@@ -372,12 +411,22 @@ export function registerScheduleHandlers(bot) {
       return ctx.answerCallbackQuery({ text: 'Sinf topilmadi', show_alert: true });
     }
 
-    usersRepo.setSelectedGroup(ctx.from.id, group.id, group.school_id);
+    const user = usersRepo.getUserByTelegramId(ctx.from.id);
+    if (user?.is_role_locked && user?.role === 'student' && user?.selected_group_id && user.selected_group_id !== groupId) {
+      return ctx.answerCallbackQuery({
+        text: 'Siz allaqachon boshqa sinfga biriktirilgansiz va uni o‘zgartira olmaysiz!',
+        show_alert: true
+      });
+    }
+
+    // Sinfni biriktiramiz va qulflaymiz (lock = true)
+    usersRepo.setSelectedGroup(ctx.from.id, group.id, group.school_id, true);
     await ctx.answerCallbackQuery({ text: `✅ ${group.name} saqlandi!` });
 
     await ctx.editMessageText(
       `✅ <b>Sinfingiz muvaffaqiyatli biriktirildi: ${escapeHtml(group.name)}</b>\n\n` +
-      `🎉 Endi bot menyu tugmalari orqali to‘g‘ridan-to‘g‘ri o‘z sinfingiz dars jadvalini ko‘rishingiz mumkin!`,
+      `🔒 <i>Profilingiz saqlandi va qulflandi. Endi doimiy ravishda o‘z sinfingiz dars jadvalini ko‘rib borishingiz mumkin.</i>\n\n` +
+      `<i>O‘zgartirish faqat maktab admini orqali (/adminchiqarish) amalga oshiriladi.</i>`,
       { parse_mode: 'HTML' }
     );
 
@@ -395,8 +444,11 @@ export function registerScheduleHandlers(bot) {
     await ctx.answerCallbackQuery().catch(() => {});
     const { user, schoolId } = getUserContext(ctx.from?.id);
 
-    if (user?.is_role_locked && user?.role === 'teacher') {
-      return ctx.reply(`⚠️ Ustoz profilini o‘zgartira olmaysiz. Adminga murojaat qiling (/adminchiqarish).`);
+    if (user?.is_role_locked) {
+      const msg = user.role === 'teacher'
+        ? `⚠️ Ustoz profilini o‘zgartira olmaysiz. Adminga murojaat qiling (/adminchiqarish).`
+        : `⚠️ Sinf profilini o‘zgartira olmaysiz. Profilingiz qulflangan. Adminga murojaat qiling (/adminchiqarish).`;
+      return ctx.reply(msg);
     }
 
     const groups = groupsRepo.getAllGroups(true, schoolId);
@@ -409,50 +461,10 @@ export function registerScheduleHandlers(bot) {
     );
   });
 
-  // Callback: Maktabni almashtirish (user_change_school)
-  bot.callbackQuery('user_change_school', async (ctx) => {
-    await ctx.answerCallbackQuery().catch(() => {});
-    const schools = schoolsRepo.getAllSchools(true);
-
-    const keyboard = new InlineKeyboard();
-    schools.forEach((s) => {
-      keyboard.text(`🏫 ${s.name} (${s.code})`, `user_select_sch_${s.id}`);
-      keyboard.row();
-    });
-
-    await ctx.editMessageText(
-      `🔑 <b>Maktabingizni tanlang yoki kodini kiriting:</b>\n\n` +
-      `Kodni to‘g‘ridan-to‘g‘ri yozish uchun: <code>/kod M-01</code> yoki <code>/kod M-12</code> deb yuboring.\n\nYoki quyidagi ro‘yxatdan tanlang:`,
-      { parse_mode: 'HTML', reply_markup: keyboard }
-    );
-  });
-
-  // Callback: Maktab tanlanganda (user_select_sch_<id>)
-  bot.callbackQuery(/^user_select_sch_(\d+)$/, async (ctx) => {
-    const schoolId = parseInt(ctx.match[1], 10);
-    const school = schoolsRepo.getSchoolById(schoolId);
-
-    if (!school) {
-      return ctx.answerCallbackQuery({ text: 'Maktab topilmadi', show_alert: true });
-    }
-
-    usersRepo.setSelectedSchool(ctx.from.id, school.id);
-    await ctx.answerCallbackQuery({ text: `✅ ${school.name} tanlandi!` });
-
-    const classes = groupsRepo.getAllGroups(true, school.id);
-    const keyboard = getClassesGridInlineKeyboard(classes, 'user_bind_sinf_');
-
-    await ctx.editMessageText(
-      `✅ <b>Maktab tanlandi: ${escapeHtml(school.name)} (Kodi: ${school.code})</b>\n\n` +
-      `Endi o‘z sinfingizni tanlang:`,
-      { parse_mode: 'HTML', reply_markup: keyboard }
-    );
-  });
-
   // Callback: Mening sinfim bosh menyusi (user_my_class_menu)
   bot.callbackQuery('user_my_class_menu', async (ctx) => {
     await ctx.answerCallbackQuery().catch(() => {});
-    const { school, group, schoolId } = getUserContext(ctx.from?.id);
+    const { user, school, group, schoolId } = getUserContext(ctx.from?.id);
     const groups = groupsRepo.getAllGroups(true, schoolId);
 
     if (group) {
@@ -463,8 +475,7 @@ export function registerScheduleHandlers(bot) {
         .text('📆 Ertangi jadval', `user_tmr_grp_${group.id}`)
         .text('📚 Haftalik jadval', `user_week_grp_${group.id}`)
         .row()
-        .text('🔄 Sinfni o‘zgartirish', 'user_change_sinf')
-        .text('🔑 Maktabni almashtirish', 'user_change_school');
+        .text('🔄 Maktab / Sinfni almashtirish', 'user_reset_profile_prompt');
 
       return ctx.editMessageText(
         `🏫 <b>Maktab:</b> ${escapeHtml(school?.name || 'Maktab')} (Kodi: <code>${school?.code || 'M-01'}</code>)\n` +
@@ -474,6 +485,7 @@ export function registerScheduleHandlers(bot) {
     }
 
     const keyboard = getClassesGridInlineKeyboard(groups, 'user_bind_sinf_');
+    keyboard.row().text('🔄 Boshqa maktabni tanlash', 'user_change_school');
     await ctx.editMessageText(
       `🏫 <b>O‘zingiz o‘qiydigan sinfni tanlang:</b>`,
       { parse_mode: 'HTML', reply_markup: keyboard }
@@ -504,10 +516,14 @@ export function registerScheduleHandlers(bot) {
 
     const { user, group, schoolId } = getUserContext(ctx.from?.id);
 
+    if (!isUserAuthenticated(user, ctx.from?.id)) {
+      return sendUnauthenticatedPrompt(ctx, 'Hozirgi darsni');
+    }
+
     // Agar foydalanuvchi Ustoz bo'lsa
     if (user?.role === 'teacher' && user?.selected_teacher_id) {
       const { formattedText } = scheduleService.getTeacherCurrentLesson(user.selected_teacher_id, schoolId);
-      return replySafely(ctx, formattedText);
+      return replySafely(ctx, formattedText, { reply_markup: getTeacherMainMenuKeyboard() });
     }
 
     if (group) {
@@ -535,9 +551,13 @@ export function registerScheduleHandlers(bot) {
 
     const { user, group, schoolId } = getUserContext(ctx.from?.id);
 
+    if (!isUserAuthenticated(user, ctx.from?.id)) {
+      return sendUnauthenticatedPrompt(ctx, 'Hozirgi darsni');
+    }
+
     if (user?.role === 'teacher' && user?.selected_teacher_id) {
       const { formattedText } = scheduleService.getTeacherCurrentLesson(user.selected_teacher_id, schoolId);
-      return replySafely(ctx, formattedText);
+      return replySafely(ctx, formattedText, { reply_markup: getTeacherMainMenuKeyboard() });
     }
 
     if (group) {
@@ -562,10 +582,14 @@ export function registerScheduleHandlers(bot) {
 
     const { user, group, schoolId } = getUserContext(ctx.from?.id);
 
+    if (!isUserAuthenticated(user, ctx.from?.id)) {
+      return sendUnauthenticatedPrompt(ctx, 'Bugungi dars jadvalini');
+    }
+
     // Agar Ustoz bo'lsa -> ustozning bugungi darslari va qaysi sinflarda darsi borligi
     if (user?.role === 'teacher' && user?.selected_teacher_id) {
       const { formattedText } = scheduleService.getTeacherTodaySchedule(user.selected_teacher_id, schoolId);
-      return replySafely(ctx, formattedText);
+      return replySafely(ctx, formattedText, { reply_markup: getTeacherMainMenuKeyboard() });
     }
 
     if (group) {
@@ -594,9 +618,13 @@ export function registerScheduleHandlers(bot) {
 
     const { user, group, schoolId } = getUserContext(ctx.from?.id);
 
+    if (!isUserAuthenticated(user, ctx.from?.id)) {
+      return sendUnauthenticatedPrompt(ctx, 'Bugungi dars jadvalini');
+    }
+
     if (user?.role === 'teacher' && user?.selected_teacher_id) {
       const { formattedText } = scheduleService.getTeacherTodaySchedule(user.selected_teacher_id, schoolId);
-      return replySafely(ctx, formattedText);
+      return replySafely(ctx, formattedText, { reply_markup: getTeacherMainMenuKeyboard() });
     }
 
     if (group) {
@@ -621,9 +649,13 @@ export function registerScheduleHandlers(bot) {
 
     const { user, group, schoolId } = getUserContext(ctx.from?.id);
 
+    if (!isUserAuthenticated(user, ctx.from?.id)) {
+      return sendUnauthenticatedPrompt(ctx, 'Ertangi dars jadvalini');
+    }
+
     if (user?.role === 'teacher' && user?.selected_teacher_id) {
       const { formattedText } = scheduleService.getTeacherTomorrowSchedule(user.selected_teacher_id, schoolId);
-      return replySafely(ctx, formattedText);
+      return replySafely(ctx, formattedText, { reply_markup: getTeacherMainMenuKeyboard() });
     }
 
     if (group) {
@@ -644,9 +676,13 @@ export function registerScheduleHandlers(bot) {
 
     const { user, group, schoolId } = getUserContext(ctx.from?.id);
 
+    if (!isUserAuthenticated(user, ctx.from?.id)) {
+      return sendUnauthenticatedPrompt(ctx, 'Ertangi dars jadvalini');
+    }
+
     if (user?.role === 'teacher' && user?.selected_teacher_id) {
       const { formattedText } = scheduleService.getTeacherTomorrowSchedule(user.selected_teacher_id, schoolId);
-      return replySafely(ctx, formattedText);
+      return replySafely(ctx, formattedText, { reply_markup: getTeacherMainMenuKeyboard() });
     }
 
     if (group) {
@@ -671,9 +707,13 @@ export function registerScheduleHandlers(bot) {
 
     const { user, group, schoolId } = getUserContext(ctx.from?.id);
 
+    if (!isUserAuthenticated(user, ctx.from?.id)) {
+      return sendUnauthenticatedPrompt(ctx, 'Haftalik dars jadvalini');
+    }
+
     if (user?.role === 'teacher' && user?.selected_teacher_id) {
       const { formattedText } = scheduleService.getTeacherWeeklySchedule(user.selected_teacher_id, schoolId);
-      return replySafely(ctx, formattedText);
+      return replySafely(ctx, formattedText, { reply_markup: getTeacherMainMenuKeyboard() });
     }
 
     if (group) {
@@ -694,9 +734,13 @@ export function registerScheduleHandlers(bot) {
 
     const { user, group, schoolId } = getUserContext(ctx.from?.id);
 
+    if (!isUserAuthenticated(user, ctx.from?.id)) {
+      return sendUnauthenticatedPrompt(ctx, 'Haftalik dars jadvalini');
+    }
+
     if (user?.role === 'teacher' && user?.selected_teacher_id) {
       const { formattedText } = scheduleService.getTeacherWeeklySchedule(user.selected_teacher_id, schoolId);
-      return replySafely(ctx, formattedText);
+      return replySafely(ctx, formattedText, { reply_markup: getTeacherMainMenuKeyboard() });
     }
 
     if (group) {
@@ -746,5 +790,45 @@ export function registerScheduleHandlers(bot) {
     const groupId = param === 'all' ? null : parseInt(param, 10);
     const { formattedText } = scheduleService.getWeeklySchedule(groupId);
     await replySafely(ctx, formattedText, { reply_markup: groupId ? getScheduleActionKeyboard(groupId, 'week') : undefined });
+  });
+
+  // Ustozlar uchun dars jadvali callback query lari
+  bot.callbackQuery(/^user_tch_today_(\d+)$/, async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => {});
+    const teacherId = parseInt(ctx.match[1], 10);
+    const { schoolId } = getUserContext(ctx.from?.id);
+    const { formattedText } = scheduleService.getTeacherTodaySchedule(teacherId, schoolId);
+    const keyboard = new InlineKeyboard()
+      .text('📅 Bugungi darslarim', `user_tch_today_${teacherId}`)
+      .text('📆 Ertangi darslarim', `user_tch_tmr_${teacherId}`)
+      .row()
+      .text('📚 Haftalik jadvalim', `user_tch_week_${teacherId}`);
+    await editOrReplySafely(ctx, formattedText, { reply_markup: keyboard });
+  });
+
+  bot.callbackQuery(/^user_tch_tmr_(\d+)$/, async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => {});
+    const teacherId = parseInt(ctx.match[1], 10);
+    const { schoolId } = getUserContext(ctx.from?.id);
+    const { formattedText } = scheduleService.getTeacherTomorrowSchedule(teacherId, schoolId);
+    const keyboard = new InlineKeyboard()
+      .text('📅 Bugungi darslarim', `user_tch_today_${teacherId}`)
+      .text('📆 Ertangi darslarim', `user_tch_tmr_${teacherId}`)
+      .row()
+      .text('📚 Haftalik jadvalim', `user_tch_week_${teacherId}`);
+    await editOrReplySafely(ctx, formattedText, { reply_markup: keyboard });
+  });
+
+  bot.callbackQuery(/^user_tch_week_(\d+)$/, async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => {});
+    const teacherId = parseInt(ctx.match[1], 10);
+    const { schoolId } = getUserContext(ctx.from?.id);
+    const { formattedText } = scheduleService.getTeacherWeeklySchedule(teacherId, schoolId);
+    const keyboard = new InlineKeyboard()
+      .text('📅 Bugungi darslarim', `user_tch_today_${teacherId}`)
+      .text('📆 Ertangi darslarim', `user_tch_tmr_${teacherId}`)
+      .row()
+      .text('📚 Haftalik jadvalim', `user_tch_week_${teacherId}`);
+    await editOrReplySafely(ctx, formattedText, { reply_markup: keyboard });
   });
 }

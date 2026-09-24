@@ -22,7 +22,7 @@ async function canManageGroup(ctx) {
 }
 
 export function registerGroupHandlers(bot) {
-  // Bot guruhga qo'shilganda avtomatik ro'yxatga olish va maktab/sinfni so'rash
+  // Bot guruhga qo'shilganda maktab/sinfni so'rash
   bot.on('my_chat_member', async (ctx) => {
     const status = ctx.myChatMember.new_chat_member.status;
     const chat = ctx.chat;
@@ -30,16 +30,8 @@ export function registerGroupHandlers(bot) {
     if (['member', 'administrator'].includes(status)) {
       if (chat.type === 'group' || chat.type === 'supergroup') {
         const schools = schoolsRepo.getAllSchools(true);
-        const defaultSchool = schools[0] || { id: 1, name: '1-maktab', code: 'M-01' };
 
-        const group = groupsRepo.addGroup({
-          school_id: defaultSchool.id,
-          telegram_chat_id: chat.id,
-          name: chat.title || `Sinf ${chat.id}`,
-          send_time: config.DEFAULT_SEND_TIME
-        });
-
-        logger.info(`[GROUP AUTO ADD] Bot yangi guruhga qo'shildi: ${group.name} (${chat.id})`);
+        logger.info(`[GROUP JOIN] Bot yangi guruhga qo'shildi: ${chat.title || 'Guruh'} (${chat.id})`);
 
         const keyboard = new InlineKeyboard();
         schools.forEach((s) => {

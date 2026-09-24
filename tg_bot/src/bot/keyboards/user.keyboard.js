@@ -3,9 +3,40 @@ import { DAYS_LIST } from '../../config/constants.js';
 import { config } from '../../config/index.js';
 
 /**
- * Foydalanuvchi asosiy menyu tugmalari (Reply Keyboard)
+ * Kimligini tanlash uchun Inline klaviatura (Ustoz yoki O'quvchi)
  */
-export function getUserMainMenuKeyboard() {
+export function getRoleSelectionInlineKeyboard(school = null) {
+  const keyboard = new InlineKeyboard();
+  keyboard
+    .text('👨‍🏫 Ustoz (O‘qituvchi)', 'user_role_teacher')
+    .row()
+    .text('👨‍🎓 O‘quvchi', 'user_role_student')
+    .row()
+    .text('👑 Zavuch (Admin kodi)', 'user_role_zavuch');
+
+  // Maktabni o'zgartirish tugmasi
+  keyboard.row().text('🔄 Boshqa maktabni tanlash', 'user_change_school');
+  return keyboard;
+}
+
+/**
+ * Maktablar ro'yxatini tanlash uchun Inline klaviatura
+ */
+export function getSchoolsSelectionInlineKeyboard(schools, actionPrefix = 'user_select_sch_') {
+  const keyboard = new InlineKeyboard();
+  if (!schools || schools.length === 0) {
+    return keyboard.text("ℹ️ Maktablar topilmadi", 'noop');
+  }
+  schools.forEach((s) => {
+    keyboard.text(`🏫 ${s.name} (${s.code})`, `${actionPrefix}${s.id}`).row();
+  });
+  return keyboard;
+}
+
+/**
+ * O'quvchi asosiy menyu tugmalari (Reply Keyboard)
+ */
+export function getStudentMainMenuKeyboard() {
   const keyboard = new Keyboard();
 
   // Mini App WebApp tugmasi
@@ -18,12 +49,46 @@ export function getUserMainMenuKeyboard() {
   keyboard
     .text('🔔 Hozirgi dars').text('📅 Bugungi jadval')
     .row()
-    .text('📆 Ertangi jadval').text('📚 Haftalik jadval')
+    .text('📆 Ertangi jadval').text('📝 Nazorat ishlari')
     .row()
-    .text('🏫 Mening sinfim').text('ℹ️ Bot haqida')
+    .text('🔔 5 daqiqa oldin eslatma').text('🏫 Mening sinfim')
+    .row()
+    .text('ℹ️ Bot haqida')
     .resized();
 
   return keyboard;
+}
+
+/**
+ * Ustoz asosiy menyu tugmalari (Reply Keyboard)
+ */
+export function getTeacherMainMenuKeyboard() {
+  const keyboard = new Keyboard();
+
+  if (config.WEB_APP_URL && config.WEB_APP_URL.startsWith('https://')) {
+    keyboard.webApp('🌐 Dars jadvalini ochish', config.WEB_APP_URL).row();
+  } else {
+    keyboard.text('🌐 Dars jadvalini ochish').row();
+  }
+
+  keyboard
+    .text('🔔 Hozirgi darsim').text('📅 Bugungi darslarim')
+    .row()
+    .text('📆 Ertangi darslarim').text('📝 Nazorat ishi')
+    .row()
+    .text('🔔 5 daqiqa oldin eslatma').text('👨‍🏫 Mening profilim')
+    .row()
+    .text('ℹ️ Bot haqida')
+    .resized();
+
+  return keyboard;
+}
+
+/**
+ * Standart asosiy menyu (Backward compatibility)
+ */
+export function getUserMainMenuKeyboard() {
+  return getStudentMainMenuKeyboard();
 }
 
 /**
@@ -48,7 +113,6 @@ export function getClassesGridInlineKeyboard(groups, actionPrefix = 'user_bind_s
     return keyboard.text("ℹ️ Hozircha sinflar yo'q", 'noop');
   }
 
-  // Sinf tugmalarini qisqa ko'rinishda (masalan "11-D") 4 tadan joylashtirish
   groups.forEach((group, index) => {
     const displayName = group.name.replace(/\s*sinf\s*/gi, '').trim() || group.name;
     keyboard.text(displayName, `${actionPrefix}${group.id}`);
@@ -65,10 +129,22 @@ export function getClassesGridInlineKeyboard(groups, actionPrefix = 'user_bind_s
 }
 
 /**
- * Guruhlarni tanlash uchun Inline klaviatura
+ * O'qituvchilarni tanlash uchun qulay Inline klaviatura
  */
-export function getGroupSelectionInlineKeyboard(groups, actionPrefix = 'user_group_') {
-  return getClassesGridInlineKeyboard(groups, actionPrefix, true);
+export function getTeachersGridInlineKeyboard(teachers, actionPrefix = 'user_bind_tch_') {
+  const keyboard = new InlineKeyboard();
+
+  if (!teachers || teachers.length === 0) {
+    return keyboard.text("ℹ️ O‘qituvchilar ro‘yxati topilmadi", 'noop');
+  }
+
+  teachers.forEach((t, index) => {
+    const displayName = `${t.last_name} ${t.first_name}${t.subject ? ` (${t.subject})` : ''}`;
+    keyboard.text(displayName, `${actionPrefix}${t.id}`);
+    keyboard.row();
+  });
+
+  return keyboard;
 }
 
 /**

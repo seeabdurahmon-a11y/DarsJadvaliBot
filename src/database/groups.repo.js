@@ -102,6 +102,8 @@ export const groupsRepo = {
       clauses.push(`school_id = ?`);
       params.push(schoolId);
     }
+    // Faqat haqiqiy sinflarni chiqaramiz (unlinked yoki dummy guruhlar chiqmaydi)
+    clauses.push(`telegram_chat_id NOT LIKE 'unlinked_%'`);
 
     if (clauses.length > 0) {
       query += ` WHERE ` + clauses.join(' AND ');
@@ -118,7 +120,7 @@ export const groupsRepo = {
         (SELECT COUNT(*) FROM lessons WHERE group_id = g.id) as lessons_count,
         (SELECT COUNT(*) FROM users WHERE selected_group_id = g.id) as students_count
       FROM groups g
-      WHERE g.is_active = 1
+      WHERE g.is_active = 1 AND g.telegram_chat_id NOT LIKE 'unlinked_%'
     `;
     const params = [];
     if (schoolId) {
@@ -145,7 +147,13 @@ export const groupsRepo = {
 
     if (!targetClass) return null;
 
-    // Disconnect any other group that had this chatId
+    // Ushbu chatId ga ega bo'lgan darslari yo'q dummy guruhlarni butunlay o'chiramiz
+    db.prepare(`
+      DELETE FROM groups 
+      WHERE telegram_chat_id = ? AND id != ? AND (SELECT COUNT(*) FROM lessons WHERE group_id = groups.id) = 0
+    `).run(strChatId, targetClass.id);
+
+    // Boshqa darsli guruh bo'lsa unlinked qilamiz
     db.prepare(`
       UPDATE groups 
       SET telegram_chat_id = 'unlinked_' || id || '_' || ? 

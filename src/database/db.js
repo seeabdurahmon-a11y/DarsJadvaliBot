@@ -154,9 +154,27 @@ function initSchema(db) {
       UNIQUE(telegram_id, lesson_id, schedule_date)
     );
 
+    CREATE TABLE IF NOT EXISTS exams (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      school_id INTEGER DEFAULT 1,
+      teacher_id INTEGER,
+      group_id INTEGER NOT NULL,
+      subject TEXT NOT NULL,
+      date TEXT NOT NULL,
+      lesson_number INTEGER,
+      title TEXT DEFAULT 'Nazorat ishi',
+      description TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+      FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_lessons_day_group ON lessons(day_of_week, group_id);
     CREATE INDEX IF NOT EXISTS idx_sent_schedules_lookup ON sent_schedules(group_id, schedule_date);
     CREATE INDEX IF NOT EXISTS idx_sent_teacher_reminders ON sent_teacher_reminders(telegram_id, lesson_id, schedule_date);
+    CREATE INDEX IF NOT EXISTS idx_exams_date_group ON exams(date, group_id);
+    CREATE INDEX IF NOT EXISTS idx_exams_teacher ON exams(teacher_id);
+    CREATE INDEX IF NOT EXISTS idx_exams_school ON exams(school_id);
   `);
 
   // Multi-school, Teacher/Student Role & Notification migration for existing tables

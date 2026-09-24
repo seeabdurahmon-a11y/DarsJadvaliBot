@@ -75,6 +75,9 @@ function initSchema(db) {
       username TEXT,
       first_name TEXT,
       is_admin INTEGER DEFAULT 0,
+      role TEXT DEFAULT NULL,
+      selected_teacher_id INTEGER DEFAULT NULL,
+      is_role_locked INTEGER DEFAULT 0,
       selected_school_id INTEGER,
       selected_group_id INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -141,16 +144,49 @@ function initSchema(db) {
       FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS sent_teacher_reminders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      teacher_id INTEGER,
+      telegram_id TEXT NOT NULL,
+      lesson_id INTEGER NOT NULL,
+      schedule_date TEXT NOT NULL,
+      sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(telegram_id, lesson_id, schedule_date)
+    );
+
+    CREATE TABLE IF NOT EXISTS exams (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      school_id INTEGER DEFAULT 1,
+      teacher_id INTEGER,
+      group_id INTEGER NOT NULL,
+      subject TEXT NOT NULL,
+      date TEXT NOT NULL,
+      lesson_number INTEGER,
+      title TEXT DEFAULT 'Nazorat ishi',
+      description TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+      FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_lessons_day_group ON lessons(day_of_week, group_id);
     CREATE INDEX IF NOT EXISTS idx_sent_schedules_lookup ON sent_schedules(group_id, schedule_date);
+    CREATE INDEX IF NOT EXISTS idx_sent_teacher_reminders ON sent_teacher_reminders(telegram_id, lesson_id, schedule_date);
+    CREATE INDEX IF NOT EXISTS idx_exams_date_group ON exams(date, group_id);
+    CREATE INDEX IF NOT EXISTS idx_exams_teacher ON exams(teacher_id);
+    CREATE INDEX IF NOT EXISTS idx_exams_school ON exams(school_id);
   `);
 
-  // Multi-school migration for existing tables
+  // Multi-school, Teacher/Student Role & Notification migration for existing tables
   const columnMigrations = [
     `ALTER TABLE schools ADD COLUMN admin_name TEXT DEFAULT 'Zavuch / Admin';`,
     `ALTER TABLE schools ADD COLUMN admin_email TEXT DEFAULT '';`,
     `ALTER TABLE users ADD COLUMN selected_school_id INTEGER;`,
     `ALTER TABLE users ADD COLUMN selected_group_id INTEGER;`,
+    `ALTER TABLE users ADD COLUMN role TEXT DEFAULT NULL;`,
+    `ALTER TABLE users ADD COLUMN selected_teacher_id INTEGER DEFAULT NULL;`,
+    `ALTER TABLE users ADD COLUMN is_role_locked INTEGER DEFAULT 0;`,
+    `ALTER TABLE users ADD COLUMN teacher_notifications INTEGER DEFAULT 1;`,
     `ALTER TABLE groups ADD COLUMN school_id INTEGER DEFAULT 1;`,
     `ALTER TABLE teachers ADD COLUMN school_id INTEGER DEFAULT 1;`,
     `ALTER TABLE subjects ADD COLUMN school_id INTEGER DEFAULT 1;`,

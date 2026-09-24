@@ -35,9 +35,10 @@ test('Teacher Reminder 1: Dars boshlanishidan 5 daqiqa oldin eslatma yuborish', 
   const group = groupsRepo.addGroup({ name: '8-B sinf' });
 
   const now = getNowInTashkent();
-  const dayOfWeek = now.weekday; // bugungi kun
-  const targetStartTime = now.plus({ minutes: 5 }).toFormat('HH:mm');
-  const targetEndTime = now.plus({ minutes: 50 }).toFormat('HH:mm');
+  const testNow = now.weekday > 6 ? now.set({ weekday: 1 }) : now;
+  const dayOfWeek = testNow.weekday; // Dushanba - Shanba
+  const targetStartTime = testNow.plus({ minutes: 5 }).toFormat('HH:mm');
+  const targetEndTime = testNow.plus({ minutes: 50 }).toFormat('HH:mm');
 
   const lesson = lessonsRepo.addLesson({
     group_id: group.id,
@@ -58,7 +59,7 @@ test('Teacher Reminder 1: Dars boshlanishidan 5 daqiqa oldin eslatma yuborish', 
     }
   };
 
-  const sentCount = await teacherReminderService.checkAndSendTeacherReminders(mockBot, 5);
+  const sentCount = await teacherReminderService.checkAndSendTeacherReminders(mockBot, 5, testNow);
   assert.strictEqual(sentCount, 1);
   assert.strictEqual(sentMessages.length, 1);
   assert.strictEqual(sentMessages[0].chatId, telegramId);
@@ -68,7 +69,7 @@ test('Teacher Reminder 1: Dars boshlanishidan 5 daqiqa oldin eslatma yuborish', 
   assert.ok(sentMessages[0].text.includes('5 daqiqadan so‘ng'));
 
   // Qayta chaqirilganda duplicate (takroriy) yuborilmasligi kerak
-  const secondCount = await teacherReminderService.checkAndSendTeacherReminders(mockBot, 5);
+  const secondCount = await teacherReminderService.checkAndSendTeacherReminders(mockBot, 5, testNow);
   assert.strictEqual(secondCount, 0);
   assert.strictEqual(sentMessages.length, 1);
 });
@@ -87,8 +88,9 @@ test('Teacher Reminder 2: Ustoz bildirishnomalarni o‘chirganda eslatma yuboril
 
   const group = groupsRepo.addGroup({ name: '10-G sinf' });
   const now = getNowInTashkent();
-  const dayOfWeek = now.weekday;
-  const targetStartTime = now.plus({ minutes: 5 }).toFormat('HH:mm');
+  const testNow = now.weekday > 6 ? now.set({ weekday: 1 }) : now;
+  const dayOfWeek = testNow.weekday;
+  const targetStartTime = testNow.plus({ minutes: 5 }).toFormat('HH:mm');
 
   lessonsRepo.addLesson({
     group_id: group.id,
@@ -109,7 +111,7 @@ test('Teacher Reminder 2: Ustoz bildirishnomalarni o‘chirganda eslatma yuboril
     }
   };
 
-  const sentCount = await teacherReminderService.checkAndSendTeacherReminders(mockBot, 5);
+  const sentCount = await teacherReminderService.checkAndSendTeacherReminders(mockBot, 5, testNow);
   assert.strictEqual(sentCount, 0);
   assert.strictEqual(sentMessages.length, 0);
 });

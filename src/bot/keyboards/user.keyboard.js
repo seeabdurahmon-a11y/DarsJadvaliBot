@@ -5,12 +5,31 @@ import { config } from '../../config/index.js';
 /**
  * Kimligini tanlash uchun Inline klaviatura (Ustoz yoki O'quvchi)
  */
-export function getRoleSelectionInlineKeyboard() {
+export function getRoleSelectionInlineKeyboard(school = null) {
   const keyboard = new InlineKeyboard();
   keyboard
     .text('👨‍🏫 Ustoz (O‘qituvchi)', 'user_role_teacher')
     .row()
-    .text('👨‍🎓 O‘quvchi', 'user_role_student');
+    .text('👨‍🎓 O‘quvchi', 'user_role_student')
+    .row()
+    .text('👑 Zavuch (Admin kodi)', 'user_role_zavuch');
+
+  // Maktabni o'zgartirish tugmasi
+  keyboard.row().text('🔄 Boshqa maktabni tanlash', 'user_change_school');
+  return keyboard;
+}
+
+/**
+ * Maktablar ro'yxatini tanlash uchun Inline klaviatura
+ */
+export function getSchoolsSelectionInlineKeyboard(schools, actionPrefix = 'user_select_sch_') {
+  const keyboard = new InlineKeyboard();
+  if (!schools || schools.length === 0) {
+    return keyboard.text("ℹ️ Maktablar topilmadi", 'noop');
+  }
+  schools.forEach((s) => {
+    keyboard.text(`🏫 ${s.name} (${s.code})`, `${actionPrefix}${s.id}`).row();
+  });
   return keyboard;
 }
 
@@ -30,9 +49,11 @@ export function getStudentMainMenuKeyboard() {
   keyboard
     .text('🔔 Hozirgi dars').text('📅 Bugungi jadval')
     .row()
-    .text('📆 Ertangi jadval').text('🔔 5 daqiqa oldin eslatma')
+    .text('📆 Ertangi jadval').text('📝 Nazorat ishlari')
     .row()
-    .text('🏫 Mening sinfim').text('ℹ️ Bot haqida')
+    .text('🔔 5 daqiqa oldin eslatma').text('🏫 Mening sinfim')
+    .row()
+    .text('ℹ️ Bot haqida')
     .resized();
 
   return keyboard;
@@ -53,9 +74,11 @@ export function getTeacherMainMenuKeyboard() {
   keyboard
     .text('🔔 Hozirgi darsim').text('📅 Bugungi darslarim')
     .row()
-    .text('📆 Ertangi darslarim').text('🔔 5 daqiqa oldin eslatma')
+    .text('📆 Ertangi darslarim').text('📝 Nazorat ishi')
     .row()
-    .text('👨‍🏫 Mening profilim').text('ℹ️ Bot haqida')
+    .text('🔔 5 daqiqa oldin eslatma').text('👨‍🏫 Mening profilim')
+    .row()
+    .text('ℹ️ Bot haqida')
     .resized();
 
   return keyboard;

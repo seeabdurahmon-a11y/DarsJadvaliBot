@@ -15,7 +15,7 @@
     "pm2:restart": "pm2 restart ecosystem.config.cjs",
     "pm2:status": "pm2 status",
     "pm2:logs": "pm2 logs jadvalibot",
-    "test": "node --test tests/admin-auth.test.js tests/api.test.js tests/auth.test.js tests/date.test.js tests/db.test.js tests/schedule.test.js tests/subjects.test.js tests/teachers.test.js tests/telegram-auth.test.js tests/telegram-sender.test.js tests/template.test.js tests/role-teacher.test.js tests/teacher-reminders.test.js",
+    "test": "node --test tests/admin-auth.test.js tests/api.test.js tests/auth.test.js tests/date.test.js tests/db.test.js tests/schedule.test.js tests/subjects.test.js tests/teachers.test.js tests/telegram-auth.test.js tests/telegram-sender.test.js tests/template.test.js tests/role-teacher.test.js tests/teacher-reminders.test.js tests/exams.test.js",
     "seed": "node scripts/seed.js"
   },
   "keywords": [

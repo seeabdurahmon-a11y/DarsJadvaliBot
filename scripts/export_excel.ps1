@@ -1,6 +1,6 @@
-$excelPath = "C:\Users\Pro\Downloads\Telegram Desktop\dars jadvali 1-chorak.xlsx"
+$excelPath = "C:\Users\Pro\Downloads\Telegram Desktop\21.09 ADVAL.xlsx"
 if (-not (Test-Path $excelPath)) {
-  $excelPath = "C:\Users\Pro\Downloads\Telegram Desktop\Dars jadvali 1-chorak .xlsx"
+  $excelPath = "C:\Users\Pro\Downloads\Telegram Desktop\dars jadvali 1-chorak.xlsx"
 }
 Write-Output "Extracting from: $excelPath"
 
@@ -52,5 +52,6 @@ try {
 
 $projectDir = (Get-Item "$PSScriptRoot\..").FullName
 $outputPath = Join-Path $projectDir "data\excel_dump.json"
-$allData | ConvertTo-Json -Depth 5 | Out-File -FilePath $outputPath -Encoding utf8
+$jsonStr = $allData | ConvertTo-Json -Depth 5
+[System.IO.File]::WriteAllText($outputPath, $jsonStr, [System.Text.Encoding]::UTF8)
 Write-Output "Exported to $outputPath successfully!"

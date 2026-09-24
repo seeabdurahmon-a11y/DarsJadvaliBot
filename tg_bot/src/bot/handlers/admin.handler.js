@@ -1,6 +1,7 @@
 import { groupsRepo } from '../../database/groups.repo.js';
 import { lessonsRepo } from '../../database/lessons.repo.js';
 import { settingsRepo } from '../../database/settings.repo.js';
+import { usersRepo } from '../../database/users.repo.js';
 import { adminService } from '../../services/admin.service.js';
 import { adminAuthService } from '../../services/admin-auth.service.js';
 import { scheduleService } from '../../services/schedule.service.js';
@@ -17,6 +18,7 @@ import {
 } from '../../utils/template.util.js';
 import { BOT_TEXTS, DAYS_LIST } from '../../config/constants.js';
 import { config, isAdmin } from '../../config/index.js';
+import { teachersRepo } from '../../database/teachers.repo.js';
 import {
   getAdminMainMenuKeyboard,
   getCancelKeyboard,
@@ -31,61 +33,204 @@ import {
   getTemplatePreviewKeyboard,
   getTemplateResetConfirmKeyboard
 } from '../keyboards/admin.keyboard.js';
+import { getRoleSelectionInlineKeyboard, getTeachersGridInlineKeyboard } from '../keyboards/user.keyboard.js';
 import { InlineKeyboard } from 'grammy';
 import { editOrReplySafely } from '../../utils/telegram-sender.util.js';
 
 export function registerAdminHandlers(bot) {
-  // /admin buyrug'i
+  // /admin buyrug'i - To'g'ridan-to'g'ri Admin Panelni ochish (Telegram ID tekshiruvi orqali)
   bot.command('admin', async (ctx) => {
-    // 1. Telegram ID tekshiruvi (Oddiy foydalanuvchidan parol so'ralmaydi)
-    if (!isAdmin(ctx.from?.id)) {
+    if (ctx.chat.type !== 'private') return;
+
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) {
       return ctx.reply(BOT_TEXTS.NOT_AUTHORIZED);
     }
 
-    // 2. Brute-force bloklash tekshiruvi
-    const lockout = adminAuthService.checkLockout(ctx.from.id);
-    if (lockout.isLocked) {
-      return ctx.reply(`⛔️ <b>Juda ko‘p noto‘g‘ri urinishlar!</b>\nIltimos, <b>${lockout.remainingSeconds}</b> soniya kuting.`, { parse_mode: 'HTML' });
-    }
-
-    // 3. Faol sessiya mavjudligini tekshirish (30 daqiqalik sessiya)
-    if (adminAuthService.isAuthenticated(ctx.from.id)) {
-      adminAuthService.extendSession(ctx.from.id);
-      adminService.clearSession(ctx.from.id);
-      return ctx.reply(`⚙️ <b>MAKTAB — Admin Boshqaruv Paneli</b>\n\nQuyidagi bo'limlardan birini tanlang:`, {
-        parse_mode: 'HTML',
-        reply_markup: getAdminMainMenuKeyboard()
-      });
-    }
-
-    // 4. Parol so'rash
-    adminService.setSession(ctx.from.id, { action: 'AWAITING_ADMIN_PASSWORD' });
-    await ctx.reply(`🔐 <b>Admin panelga kirish uchun parolni kiriting:</b>`, {
-      parse_mode: 'HTML'
+    usersRepo.upsertUser({
+      telegram_id: ctx.from.id,
+      username: ctx.from.username || null,
+      first_name: ctx.from.first_name || null,
+      is_admin: 1,
+      role: 'admin',
+      selected_school_id: 1,
+      is_role_locked: 1
     });
+
+    adminAuthService.recordSuccessfulLogin(ctx.from.id);
+    adminService.clearSession(ctx.from.id);
+
+    return ctx.reply(`⚙️ <b>MAKTAB — Admin Boshqaruv Paneli</b>\n\nQuyidagi bo‘limlardan birini tanlang:`, {
+      parse_mode: 'HTML',
+      reply_markup: getAdminMainMenuKeyboard()
+    });
+  });
+
+  // ==========================================
+  // 🔓 /adminchiqarish BUYRUG'I
+  // ==========================================
+  bot.command(['adminchiqarish', 'chiqarish', 'releaseuser', 'resetrole'], async (ctx) => {
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) {
+      return ctx.reply(BOT_TEXTS.NOT_AUTHORIZED);
+    }
+
+    const input = ctx.match?.trim();
+    let targetId = input;
+
+    // 1. Agar xabarga javob (reply) qilingan bo'lsa
+    if (!targetId && ctx.message?.reply_to_message?.from?.id) {
+      targetId = String(ctx.message.reply_to_message.from.id);
+    }
+
+    // 2. ID berilgan bo'lsa
+    if (targetId) {
+      const user = usersRepo.getUserByTelegramId(targetId);
+      if (!user) {
+        return ctx.reply(
+          `⚠️ <b>"${escapeHtml(targetId)}"</b> ID li foydalanuvchi topilmadi.`,
+          { parse_mode: 'HTML' }
+        );
+      }
+
+      usersRepo.releaseUserRole(targetId);
+
+      // Foydalanuvchiga to'g'ridan-to'g'ri yangi rol yoki o'qituvchilar ro'yxatini yuborish
+      try {
+        if (user.role === 'teacher' || user.selected_teacher_id) {
+          const schoolId = user.selected_school_id || 1;
+          const teachers = teachersRepo.getAllTeachers(schoolId);
+          const teachersKeyboard = getTeachersGridInlineKeyboard(teachers, 'user_bind_tch_');
+          teachersKeyboard.row().text('👨‍🎓 O‘quvchi roliga o‘tish', 'user_role_student');
+
+          await ctx.api.sendMessage(
+            targetId,
+            `🔔 <b>Hurmatli Ustoz! Administrator hisobingizni chiqardi (bo‘shatdi).</b>\n\n` +
+            `👨‍🏫 <b>Quyidagi ro‘yxatdan o‘zingizning ism-familiyangizni tanlang:</b>\n\n` +
+            `🔒 <i>Diqqat: Ustozlik profili 1 marta tanlanadi va qulflanadi. O‘zgartirish faqat admin orqali amalga oshiriladi.</i>`,
+            {
+              parse_mode: 'HTML',
+              reply_markup: teachersKeyboard
+            }
+          );
+        } else {
+          await ctx.api.sendMessage(
+            targetId,
+            `🔔 <b>Administrator hisobingizni chiqardi (bo‘shatdi).</b>\n\n` +
+            `Quyidagi tugmalardan birini tanlab, yangi hisobdan kirgandek qaytadan <b>👨‍🏫 Ustoz</b> yoki <b>👨‍🎓 O‘quvchi</b> rolingizni tanlashingiz va dars jadvalingizni biriktirishingiz mumkin:`,
+            {
+              parse_mode: 'HTML',
+              reply_markup: getRoleSelectionInlineKeyboard()
+            }
+          );
+        }
+      } catch (e) {}
+
+      const roleText = user.role === 'teacher' ? '👨‍🏫 Ustoz' : (user.role === 'student' ? '👨‍🎓 O‘quvchi' : 'Nomaʼlum');
+      return ctx.reply(
+        `✅ <b>Foydalanuvchi muvaffaqiyatli chiqarildi!</b>\n\n` +
+        `👤 <b>Ism:</b> ${escapeHtml(user.first_name || 'Foydalanuvchi')}\n` +
+        `🆔 <b>Telegram ID:</b> <code>${targetId}</code>\n` +
+        `📋 <b>Oldingi roli:</b> ${roleText}\n\n` +
+        `📌 Endi bu foydalanuvchi qaytadan tanlash imkoniga ega bo‘ldi.`,
+        { parse_mode: 'HTML' }
+      );
+    }
+
+    // 3. Parametrsiz chaqirilganda: Biriktirilgan foydalanuvchilar ro'yxati
+    const lockedUsers = usersRepo.getLockedUsers();
+
+    if (!lockedUsers || lockedUsers.length === 0) {
+      return ctx.reply(
+        `ℹ️ <b>Hozircha biriktirilgan yoki qulflangan ustoz/o‘quvchilar mavjud emas.</b>\n\n` +
+        `Biron foydalanuvchini chiqarish uchun: <code>/adminchiqarish [Telegram_ID]</code> deb yuboring.`,
+        { parse_mode: 'HTML' }
+      );
+    }
+
+    const keyboard = new InlineKeyboard();
+    lockedUsers.slice(0, 20).forEach(u => {
+      const name = u.first_name || u.username || u.telegram_id;
+      const roleLabel = u.role === 'teacher' 
+        ? `👨‍🏫 ${u.teacher_last_name || 'Ustoz'}` 
+        : `👨‍🎓 ${u.selected_group_name || 'Sinf'}`;
+      keyboard.text(`🔓 ${name} (${roleLabel})`, `admin_release_usr_${u.telegram_id}`).row();
+    });
+
+    await ctx.reply(
+      `👥 <b>BIRIKTIRILGAN FOYDALANUVCHILAR VA USTOZLAR:</b>\n\n` +
+      `Quyidagi tugmalardan birini bosib, foydalanuvchini chiqarishingiz va unga qaytadan tanlash imkonini berishingiz mumkin:\n\n` +
+      `<i>Yoki to‘g‘ridan-to‘g‘ri ID orqali: <code>/adminchiqarish [ID]</code></i>`,
+      { parse_mode: 'HTML', reply_markup: keyboard }
+    );
+  });
+
+  // Callback: admin_release_usr_<id>
+  bot.callbackQuery(/^admin_release_usr_(\d+)$/, async (ctx) => {
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) {
+      return ctx.answerCallbackQuery({ text: 'Ruxsat yo‘q', show_alert: true });
+    }
+
+    const targetId = ctx.match[1];
+    const user = usersRepo.getUserByTelegramId(targetId);
+
+    if (!user) {
+      return ctx.answerCallbackQuery({ text: 'Foydalanuvchi topilmadi', show_alert: true });
+    }
+
+    usersRepo.releaseUserRole(targetId);
+    await ctx.answerCallbackQuery({ text: `✅ Foydalanuvchi chiqarildi!` });
+
+    try {
+      if (user.role === 'teacher' || user.selected_teacher_id) {
+        const schoolId = user.selected_school_id || 1;
+        const teachers = teachersRepo.getAllTeachers(schoolId);
+        const teachersKeyboard = getTeachersGridInlineKeyboard(teachers, 'user_bind_tch_');
+        teachersKeyboard.row().text('👨‍🎓 O‘quvchi roliga o‘tish', 'user_role_student');
+
+        await ctx.api.sendMessage(
+          targetId,
+          `🔔 <b>Hurmatli Ustoz! Administrator hisobingizni chiqardi (bo‘shatdi).</b>\n\n` +
+          `👨‍🏫 <b>Quyidagi ro‘yxatdan o‘zingizning ism-familiyangizni tanlang:</b>\n\n` +
+          `🔒 <i>Diqqat: Ustozlik profili 1 marta tanlanadi va qulflanadi. O‘zgartirish faqat admin orqali amalga oshiriladi.</i>`,
+          {
+            parse_mode: 'HTML',
+            reply_markup: teachersKeyboard
+          }
+        );
+      } else {
+        await ctx.api.sendMessage(
+          targetId,
+          `🔔 <b>Administrator profilingizni chiqardi (bo‘shatdi).</b>\n\n` +
+          `Quyidagi tugmalardan birini tanlab, yangi hisobdan kirgandek qaytadan <b>👨‍🏫 Ustoz</b> yoki <b>👨‍🎓 O‘quvchi</b> rolingizni tanlashingiz va dars jadvalingizni biriktirishingiz mumkin:`,
+          {
+            parse_mode: 'HTML',
+            reply_markup: getRoleSelectionInlineKeyboard()
+          }
+        );
+      }
+    } catch (e) {}
+
+    await ctx.editMessageText(
+      `✅ <b>Foydalanuvchi muvaffaqiyatli chiqarildi!</b>\n\n` +
+      `👤 <b>Ism:</b> ${escapeHtml(user.first_name || 'Foydalanuvchi')}\n` +
+      `🆔 <b>ID:</b> <code>${targetId}</code>\n\n` +
+      `Ushbu foydalanuvchi endi qaytadan rol va sinf/ustoz tanlashi mumkin.`,
+      { parse_mode: 'HTML' }
+    );
   });
 
   // Admin callback query lari uchun autentifikatsiya tekshiruvchisi
   const checkAuth = async (ctx) => {
-    if (!isAdmin(ctx.from?.id)) {
-      await ctx.answerCallbackQuery({ text: 'Ruxsat yo‘q', show_alert: true });
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) {
+      await ctx.answerCallbackQuery({ text: 'Ruxsat berilmagan!', show_alert: true });
       return false;
     }
-
-    if (!adminAuthService.isAuthenticated(ctx.from?.id)) {
-      adminService.setSession(ctx.from.id, { action: 'AWAITING_ADMIN_PASSWORD' });
-      await ctx.answerCallbackQuery({ text: 'Sessiya tugagan', show_alert: true });
-      await ctx.reply('🔐 <b>Sessiyangiz muddati tugagan. Iltimos, parolni qaytadan kiriting:</b>', { parse_mode: 'HTML' });
-      return false;
-    }
-
-    adminAuthService.extendSession(ctx.from.id);
+    adminAuthService.recordSuccessfulLogin(ctx.from?.id);
     return true;
   };
 
   // 🚪 Admin paneldan chiqish (Logout)
   bot.callbackQuery('admin_logout', async (ctx) => {
-    if (!isAdmin(ctx.from?.id)) return ctx.answerCallbackQuery();
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) return ctx.answerCallbackQuery();
     adminAuthService.logout(ctx.from.id);
     adminService.clearSession(ctx.from.id);
     await ctx.answerCallbackQuery({ text: 'Chiqildi' });
@@ -123,18 +268,14 @@ export function registerAdminHandlers(bot) {
 
   // Bekor qilish
   bot.callbackQuery('admin_cancel', async (ctx) => {
-    if (!isAdmin(ctx.from?.id)) return ctx.answerCallbackQuery();
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) return ctx.answerCallbackQuery();
     adminService.clearSession(ctx.from.id);
     await ctx.answerCallbackQuery({ text: 'Amal bekor qilindi' });
 
-    if (adminAuthService.isAuthenticated(ctx.from.id)) {
-      await ctx.editMessageText(`❌ Amal bekor qilindi.\n\n⚙️ <b>Admin Boshqaruv Paneli:</b>`, {
-        parse_mode: 'HTML',
-        reply_markup: getAdminMainMenuKeyboard()
-      });
-    } else {
-      await ctx.editMessageText(`❌ Amal bekor qilindi.`);
-    }
+    await ctx.editMessageText(`❌ Amal bekor qilindi.\n\n⚙️ <b>Admin Boshqaruv Paneli:</b>`, {
+      parse_mode: 'HTML',
+      reply_markup: getAdminMainMenuKeyboard()
+    });
   });
 
   // 📊 Statistika
@@ -839,7 +980,7 @@ export function registerAdminHandlers(bot) {
   // ==========================================
 
   bot.on('message:text', async (ctx, next) => {
-    if (ctx.message.text.startsWith('/') || !isAdmin(ctx.from?.id)) {
+    if (ctx.message.text.startsWith('/') || (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id))) {
       return next();
     }
 
@@ -849,6 +990,51 @@ export function registerAdminHandlers(bot) {
     }
 
     const text = ctx.message.text.trim();
+
+    // 0.0. ZAVUCH KODINI TEKSHIRISH (AWAITING_ZAVUCH_CODE)
+    if (session.action === 'AWAITING_ZAVUCH_CODE') {
+      try { await ctx.deleteMessage(); } catch (e) {}
+
+      const lockout = adminAuthService.checkLockout(ctx.from.id);
+      if (lockout.isLocked) {
+        return ctx.reply(`⛔️ <b>Juda ko‘p noto‘g‘ri urinishlar!</b>\nIltimos, <b>${lockout.remainingSeconds}</b> soniya kuting.`, { parse_mode: 'HTML' });
+      }
+
+      const verifyRes = adminAuthService.verifyZavuchCode(text);
+
+      if (verifyRes.isValid) {
+        const school = verifyRes.school;
+        usersRepo.upsertUser({
+          telegram_id: ctx.from.id,
+          username: ctx.from.username || null,
+          first_name: ctx.from.first_name || null,
+          is_admin: 1,
+          role: 'zavuch',
+          selected_school_id: school.id,
+          is_role_locked: 1
+        });
+        adminAuthService.recordSuccessfulLogin(ctx.from.id);
+        adminService.clearSession(ctx.from.id);
+
+        return ctx.reply(
+          `👑 <b>Assalomu alaykum, Hurmatli Zavuch!</b>\n\n` +
+          `✅ Siz tizimga <b>${escapeHtml(school.name)}</b> boshqaruvchisi (Admin) sifatida muvaffaqiyatli ulandingiz!\n\n` +
+          `🔒 <i>Profilingiz saqlandi. Endi har doim /start yoki /admin orqali to‘g‘ridan-to‘g‘ri boshqaruv paneliga kirishingiz mumkin.</i>`,
+          {
+            parse_mode: 'HTML',
+            reply_markup: getAdminMainMenuKeyboard()
+          }
+        );
+      } else {
+        const record = adminAuthService.recordFailedAttempt(ctx.from.id);
+        if (record.count >= config.MAX_FAILED_ATTEMPTS) {
+          return ctx.reply(`⛔️ <b>Kod 5 marta noto‘g‘ri kiritildi.</b>\nXavfsizlik maqsadida kirish 5 daqiqaga bloklandi.`, { parse_mode: 'HTML' });
+        } else {
+          const remaining = config.MAX_FAILED_ATTEMPTS - record.count;
+          return ctx.reply(`⛔️ <b>Zavuch kodi noto‘g‘ri!</b>\nQolgan urinishlar soni: <b>${remaining}</b>\n\nIltimos, to‘g‘ri kodni kiriting:`, { parse_mode: 'HTML' });
+        }
+      }
+    }
 
     // 0. ADMIN PAROLINI TEKSHIRISH (AWAITING_ADMIN_PASSWORD)
     if (session.action === 'AWAITING_ADMIN_PASSWORD') {

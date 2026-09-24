@@ -51,5 +51,29 @@ export const settingsRepo = {
       WHERE schedule_date = ?
     `).get(scheduleDate);
     return res ? res.count : 0;
+  },
+
+  /**
+   * Ustozga dars oldidan eslatma allaqachon yuborilganmi?
+   */
+  isTeacherReminderSent(telegramId, lessonId, scheduleDate) {
+    const db = getDatabase();
+    const row = db.prepare(`
+      SELECT id FROM sent_teacher_reminders
+      WHERE telegram_id = ? AND lesson_id = ? AND schedule_date = ?
+    `).get(String(telegramId), Number(lessonId), String(scheduleDate));
+    return Boolean(row);
+  },
+
+  /**
+   * Ustozga dars oldidan eslatma yuborilganligini qayd etish
+   */
+  recordTeacherReminder(teacherId, telegramId, lessonId, scheduleDate) {
+    const db = getDatabase();
+    const stmt = db.prepare(`
+      INSERT OR IGNORE INTO sent_teacher_reminders (teacher_id, telegram_id, lesson_id, schedule_date, sent_at)
+      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `);
+    return stmt.run(teacherId ? Number(teacherId) : null, String(telegramId), Number(lessonId), String(scheduleDate));
   }
 };
