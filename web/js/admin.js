@@ -505,6 +505,10 @@ export const AdminView = {
       html += `<div class="state-box"><div class="state-title">O‘qituvchilar yo‘q</div></div>`;
     } else {
       teachers.forEach(t => {
+        const safeLast = (t.last_name || '').replace(/'/g, "\\'");
+        const safeFirst = (t.first_name || '').replace(/'/g, "\\'");
+        const safeSubj = (t.subject || '').replace(/'/g, "\\'");
+        const safePhone = (t.phone || '').replace(/'/g, "\\'");
         html += `
           <div class="admin-list-item">
             <div>
@@ -512,6 +516,7 @@ export const AdminView = {
               <div class="admin-item-subtitle">${t.subject || 'Fan biriktirilmagan'} ${t.phone ? `| Tel: ${t.phone}` : ''}</div>
             </div>
             <div class="admin-btn-group">
+              <button class="btn-icon-action" onclick="window.AdminView.openEditTeacherModal(${t.id}, '${safeLast}', '${safeFirst}', '${safeSubj}', '${safePhone}')">${Icons.edit}</button>
               <button class="btn-icon-action danger" onclick="window.AdminView.deleteTeacher(${t.id})">${Icons.trash}</button>
             </div>
           </div>
@@ -536,6 +541,10 @@ export const AdminView = {
         <label class="form-label">Fani:</label>
         <input type="text" id="add-t-subj" class="form-control" placeholder="Masalan: Matematika">
       </div>
+      <div class="form-group">
+        <label class="form-label">Telefon raqami (Ixtiyoriy):</label>
+        <input type="text" id="add-t-phone" class="form-control" placeholder="Masalan: +998901234567">
+      </div>
       <button class="admin-action-btn" onclick="window.AdminView.submitAddTeacher()">O‘qituvchini Saqlash</button>
     `;
     window.App.showCustomModal('Yangi O‘qituvchi Qo‘shish', bodyHtml);
@@ -545,13 +554,55 @@ export const AdminView = {
     const last_name = document.getElementById('add-t-last')?.value?.trim();
     const first_name = document.getElementById('add-t-first')?.value?.trim();
     const subject = document.getElementById('add-t-subj')?.value?.trim();
+    const phone = document.getElementById('add-t-phone')?.value?.trim();
 
     if (!last_name || !first_name) return window.App.showToast('Familiya va ism kiritilishi shart', 'error');
 
     try {
-      await Api.createTeacher({ last_name, first_name, subject, school_id: window.App.currentSchoolId });
+      await Api.createTeacher({ last_name, first_name, subject, phone, school_id: window.App.currentSchoolId });
       window.App.closeModal();
       window.App.showToast('O‘qituvchi saqlandi', 'success');
+      this.loadTabContent();
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
+    }
+  },
+
+  openEditTeacherModal(id, currentLast, currentFirst, currentSubj, currentPhone) {
+    const bodyHtml = `
+      <div class="form-group">
+        <label class="form-label">Familiya:</label>
+        <input type="text" id="edit-t-last" class="form-control" value="${currentLast}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ism:</label>
+        <input type="text" id="edit-t-first" class="form-control" value="${currentFirst}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fani:</label>
+        <input type="text" id="edit-t-subj" class="form-control" value="${currentSubj}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Telefon raqami:</label>
+        <input type="text" id="edit-t-phone" class="form-control" value="${currentPhone}">
+      </div>
+      <button class="admin-action-btn" onclick="window.AdminView.submitEditTeacher(${id})">O‘zgarishlarni Saqlash</button>
+    `;
+    window.App.showCustomModal('O‘qituvchini Tahrirlash', bodyHtml);
+  },
+
+  async submitEditTeacher(id) {
+    const last_name = document.getElementById('edit-t-last')?.value?.trim();
+    const first_name = document.getElementById('edit-t-first')?.value?.trim();
+    const subject = document.getElementById('edit-t-subj')?.value?.trim();
+    const phone = document.getElementById('edit-t-phone')?.value?.trim();
+
+    if (!last_name || !first_name) return window.App.showToast('Familiya va ism kiritilishi shart', 'error');
+
+    try {
+      await Api.updateTeacher(id, { last_name, first_name, subject, phone });
+      window.App.closeModal();
+      window.App.showToast('O‘qituvchi yangilandi!', 'success');
       this.loadTabContent();
     } catch (err) {
       window.App.showToast(err.message, 'error');
@@ -637,9 +688,16 @@ export const AdminView = {
     }
   },
 
-  // 5. LESSONS
+  // 5. LESSONS (DARS JADVALINI KIRITISH VA O'ZGARTIRISH)
   async renderLessons(container) {
-    const classes = await Api.getClasses(window.App.currentSchoolCode);
+    const [classes, subjects, teachers] = await Promise.all([
+      Api.getClasses(window.App.currentSchoolCode),
+      Api.getSubjects(window.App.currentSchoolCode).catch(() => []),
+      Api.getTeachers(window.App.currentSchoolCode).catch(() => [])
+    ]);
+
+    this.cachedSubjects = subjects || [];
+    this.cachedTeachers = teachers || [];
 
     if (classes.length === 0) {
       container.innerHTML = `<div class="state-box"><div class="state-title">Avval sinflar qo‘shing</div></div>`;
@@ -653,16 +711,21 @@ export const AdminView = {
     const weekly = scheduleData.weekly || {};
 
     let html = `
-      <div class="form-group">
-        <label class="form-label">Sinfni tanlang:</label>
-        <select class="custom-select" id="admin-class-select" onchange="window.AdminView.adminSelectedClassId = Number(this.value); window.AdminView.loadTabContent();">
-          ${classes.map(c => `<option value="${c.id}" ${c.id === selectedClassId ? 'selected' : ''}>${c.name}</option>`).join('')}
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px;">
+        <label class="form-label" style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:6px;display:block;">Sinf dars jadvalini tanlang:</label>
+        <select class="custom-select" id="admin-class-select" onchange="window.AdminView.adminSelectedClassId = Number(this.value); window.AdminView.loadTabContent();" style="font-weight:700;font-size:14px;">
+          ${classes.map(c => `<option value="${c.id}" ${c.id === selectedClassId ? 'selected' : ''}>🏫 ${c.name} (${c.lessons_count || 0} ta dars)</option>`).join('')}
         </select>
       </div>
 
-      <button class="admin-action-btn" onclick="window.AdminView.openAddLessonModal(${selectedClassId})" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
-        ${Icons.plus} Dars Qo‘shish
-      </button>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+        <button class="admin-action-btn" onclick="window.AdminView.openAddLessonModal(${selectedClassId})" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:1;min-width:160px;margin-top:0;">
+          ${Icons.plus} Yangi Dars Qo‘shish
+        </button>
+        <button class="btn-sm" style="background:var(--bg-card);border:1px solid var(--border);padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer;" onclick="window.AdminView.switchTab('import')">
+          ${Icons.upload} Ommaviy Import
+        </button>
+      </div>
     `;
 
     const dayNames = { 1: 'Dushanba', 2: 'Seshanba', 3: 'Chorshanba', 4: 'Payshanba', 5: 'Juma', 6: 'Shanba' };
@@ -670,23 +733,37 @@ export const AdminView = {
     for (let day = 1; day <= 6; day++) {
       const dayLessons = weekly[day]?.lessons || [];
       html += `
-        <div style="margin-top:16px;">
-          <div class="section-title" style="margin-bottom:8px;font-size:14px;color:var(--primary);">${dayNames[day]}</div>
+        <div style="margin-top:14px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px;">
+            <div style="font-size:14px;font-weight:800;color:var(--primary);display:flex;align-items:center;gap:6px;">
+              <span>🗓</span> ${dayNames[day]} <span style="font-size:11px;font-weight:600;color:var(--text-muted);">(${dayLessons.length} ta dars)</span>
+            </div>
+            <button class="btn-sm" style="background:var(--primary-subtle);color:var(--primary);border:none;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;" onclick="window.AdminView.openAddLessonModal(${selectedClassId}, ${day})">
+              + Dars qo‘shish
+            </button>
+          </div>
           <div class="lessons-list">
       `;
 
       if (dayLessons.length === 0) {
-        html += `<div style="padding:10px;color:var(--text-muted);font-size:12px;background:var(--bg-card);border-radius:8px;">Darslar yo‘q</div>`;
+        html += `<div style="padding:10px;color:var(--text-muted);font-size:12px;text-align:center;">Ushbu kunga darslar kiritilmagan</div>`;
       } else {
         dayLessons.forEach((l, idx) => {
+          const safeSubj = (l.subject || '').replace(/'/g, "\\'");
+          const safeTeacher = (l.teacher || '').replace(/'/g, "\\'");
+          const safeRoom = (l.room || '').replace(/'/g, "\\'");
+
           html += `
-            <div class="admin-list-item">
+            <div class="admin-list-item" style="border-left:3px solid var(--primary);border-radius:8px;margin-bottom:6px;padding:8px 10px;">
               <div>
-                <div class="admin-item-title">${idx + 1}. ${l.subject}</div>
-                <div class="admin-item-subtitle">${l.start_time} - ${l.end_time} ${l.teacher ? `| ${l.teacher}` : ''} ${l.room ? `| ${l.room}-xona` : ''}</div>
+                <div class="admin-item-title" style="font-weight:800;font-size:13.5px;">${idx + 1}. ${l.subject}</div>
+                <div class="admin-item-subtitle" style="font-size:11.5px;margin-top:2px;">
+                  ⏰ <b>${l.start_time} - ${l.end_time}</b> ${l.teacher ? ` | 👨‍🏫 ${l.teacher}` : ''} ${l.room ? ` | 🏫 ${l.room}-xona` : ''}
+                </div>
               </div>
               <div class="admin-btn-group">
-                <button class="btn-icon-action danger" onclick="window.AdminView.deleteLesson(${l.id})">${Icons.trash}</button>
+                <button class="btn-icon-action" onclick="window.AdminView.openEditLessonModal(${l.id}, ${selectedClassId}, ${l.day_of_week || day}, '${l.start_time}', '${l.end_time}', '${safeSubj}', '${safeTeacher}', '${safeRoom}')" title="Tahrirlash">${Icons.edit}</button>
+                <button class="btn-icon-action danger" onclick="window.AdminView.deleteLesson(${l.id})" title="O‘chirish">${Icons.trash}</button>
               </div>
             </div>
           `;
@@ -698,42 +775,72 @@ export const AdminView = {
     container.innerHTML = html;
   },
 
-  openAddLessonModal(groupId) {
+  applyLessonTimePreset(startId, endId, startTime, endTime) {
+    const sInput = document.getElementById(startId);
+    const eInput = document.getElementById(endId);
+    if (sInput) sInput.value = startTime;
+    if (eInput) eInput.value = endTime;
+  },
+
+  openAddLessonModal(groupId, defaultDay = 1) {
+    const subjects = this.cachedSubjects || [];
+    const teachers = this.cachedTeachers || [];
+
     const bodyHtml = `
       <div class="form-group">
         <label class="form-label">Hafta kuni:</label>
         <select id="add-l-day" class="custom-select">
-          <option value="1">Dushanba</option>
-          <option value="2">Seshanba</option>
-          <option value="3">Chorshanba</option>
-          <option value="4">Payshanba</option>
-          <option value="5">Juma</option>
-          <option value="6">Shanba</option>
+          <option value="1" ${defaultDay === 1 ? 'selected' : ''}>Dushanba</option>
+          <option value="2" ${defaultDay === 2 ? 'selected' : ''}>Seshanba</option>
+          <option value="3" ${defaultDay === 3 ? 'selected' : ''}>Chorshanba</option>
+          <option value="4" ${defaultDay === 4 ? 'selected' : ''}>Payshanba</option>
+          <option value="5" ${defaultDay === 5 ? 'selected' : ''}>Juma</option>
+          <option value="6" ${defaultDay === 6 ? 'selected' : ''}>Shanba</option>
         </select>
       </div>
+
       <div class="form-group">
-        <label class="form-label">Dars vaqti:</label>
-        <div style="display:flex;gap:8px;">
-          <input type="time" id="add-l-start" class="form-control" value="08:30">
-          <span style="align-self:center;">—</span>
-          <input type="time" id="add-l-end" class="form-control" value="09:15">
+        <label class="form-label">Tezkor dars soati:</label>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+          <button type="button" class="btn-sm" style="font-size:10.5px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);cursor:pointer;" onclick="window.AdminView.applyLessonTimePreset('add-l-start','add-l-end','08:00','08:45')">1-soat</button>
+          <button type="button" class="btn-sm" style="font-size:10.5px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);cursor:pointer;" onclick="window.AdminView.applyLessonTimePreset('add-l-start','add-l-end','08:50','09:35')">2-soat</button>
+          <button type="button" class="btn-sm" style="font-size:10.5px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);cursor:pointer;" onclick="window.AdminView.applyLessonTimePreset('add-l-start','add-l-end','09:40','10:25')">3-soat</button>
+          <button type="button" class="btn-sm" style="font-size:10.5px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);cursor:pointer;" onclick="window.AdminView.applyLessonTimePreset('add-l-start','add-l-end','10:30','11:15')">4-soat</button>
+          <button type="button" class="btn-sm" style="font-size:10.5px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);cursor:pointer;" onclick="window.AdminView.applyLessonTimePreset('add-l-start','add-l-end','11:20','12:05')">5-soat</button>
+          <button type="button" class="btn-sm" style="font-size:10.5px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);cursor:pointer;" onclick="window.AdminView.applyLessonTimePreset('add-l-start','add-l-end','12:10','12:55')">6-soat</button>
+          <button type="button" class="btn-sm" style="font-size:10.5px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);cursor:pointer;" onclick="window.AdminView.applyLessonTimePreset('add-l-start','add-l-end','13:00','13:45')">7-soat</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="time" id="add-l-start" class="form-control" value="08:00" style="flex:1;">
+          <span>—</span>
+          <input type="time" id="add-l-end" class="form-control" value="08:45" style="flex:1;">
         </div>
       </div>
+
       <div class="form-group">
         <label class="form-label">Fan nomi:</label>
-        <input type="text" id="add-l-subj" class="form-control" placeholder="Masalan: Matematika">
+        <input type="text" id="add-l-subj" list="admin-subjects-datalist" class="form-control" placeholder="Masalan: Matematika">
+        <datalist id="admin-subjects-datalist">
+          ${subjects.map(s => `<option value="${s.name}">`).join('')}
+        </datalist>
       </div>
+
       <div class="form-group">
-        <label class="form-label">O‘qituvchi (Ixtiyoriy):</label>
-        <input type="text" id="add-l-teacher" class="form-control" placeholder="Masalan: Rustam aka">
+        <label class="form-label">O‘qituvchi (Ustoz):</label>
+        <input type="text" id="add-l-teacher" list="admin-teachers-datalist" class="form-control" placeholder="Masalan: Aliyev Rustam">
+        <datalist id="admin-teachers-datalist">
+          ${teachers.map(t => `<option value="${t.last_name} ${t.first_name}">`).join('')}
+        </datalist>
       </div>
+
       <div class="form-group">
         <label class="form-label">Xona (Ixtiyoriy):</label>
         <input type="text" id="add-l-room" class="form-control" placeholder="Masalan: 204">
       </div>
+
       <button class="admin-action-btn" onclick="window.AdminView.submitAddLesson(${groupId})">Darsni Saqlash</button>
     `;
-    window.App.showCustomModal('Dars Qo‘shish', bodyHtml);
+    window.App.showCustomModal('Yangi Dars Qo‘shish', bodyHtml);
   },
 
   async submitAddLesson(groupId) {
@@ -758,7 +865,95 @@ export const AdminView = {
         room
       });
       window.App.closeModal();
-      window.App.showToast('Dars qo‘shildi', 'success');
+      window.App.showToast('Dars muvaffaqiyatli saqlandi!', 'success');
+      this.loadTabContent();
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
+    }
+  },
+
+  openEditLessonModal(lessonId, groupId, currentDay, currentStart, currentEnd, currentSubj, currentTeacher, currentRoom) {
+    const subjects = this.cachedSubjects || [];
+    const teachers = this.cachedTeachers || [];
+
+    const bodyHtml = `
+      <div class="form-group">
+        <label class="form-label">Hafta kuni:</label>
+        <select id="edit-l-day" class="custom-select">
+          <option value="1" ${Number(currentDay) === 1 ? 'selected' : ''}>Dushanba</option>
+          <option value="2" ${Number(currentDay) === 2 ? 'selected' : ''}>Seshanba</option>
+          <option value="3" ${Number(currentDay) === 3 ? 'selected' : ''}>Chorshanba</option>
+          <option value="4" ${Number(currentDay) === 4 ? 'selected' : ''}>Payshanba</option>
+          <option value="5" ${Number(currentDay) === 5 ? 'selected' : ''}>Juma</option>
+          <option value="6" ${Number(currentDay) === 6 ? 'selected' : ''}>Shanba</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Tezkor dars soati:</label>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+          <button type="button" class="btn-sm" style="font-size:10.5px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);cursor:pointer;" onclick="window.AdminView.applyLessonTimePreset('edit-l-start','edit-l-end','08:00','08:45')">1-soat</button>
+          <button type="button" class="btn-sm" style="font-size:10.5px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);cursor:pointer;" onclick="window.AdminView.applyLessonTimePreset('edit-l-start','edit-l-end','08:50','09:35')">2-soat</button>
+          <button type="button" class="btn-sm" style="font-size:10.5px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);cursor:pointer;" onclick="window.AdminView.applyLessonTimePreset('edit-l-start','edit-l-end','09:40','10:25')">3-soat</button>
+          <button type="button" class="btn-sm" style="font-size:10.5px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);cursor:pointer;" onclick="window.AdminView.applyLessonTimePreset('edit-l-start','edit-l-end','10:30','11:15')">4-soat</button>
+          <button type="button" class="btn-sm" style="font-size:10.5px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);cursor:pointer;" onclick="window.AdminView.applyLessonTimePreset('edit-l-start','edit-l-end','11:20','12:05')">5-soat</button>
+          <button type="button" class="btn-sm" style="font-size:10.5px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);cursor:pointer;" onclick="window.AdminView.applyLessonTimePreset('edit-l-start','edit-l-end','12:10','12:55')">6-soat</button>
+          <button type="button" class="btn-sm" style="font-size:10.5px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg-body);cursor:pointer;" onclick="window.AdminView.applyLessonTimePreset('edit-l-start','edit-l-end','13:00','13:45')">7-soat</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="time" id="edit-l-start" class="form-control" value="${currentStart}" style="flex:1;">
+          <span>—</span>
+          <input type="time" id="edit-l-end" class="form-control" value="${currentEnd}" style="flex:1;">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Fan nomi:</label>
+        <input type="text" id="edit-l-subj" list="admin-subjects-datalist-edit" class="form-control" value="${currentSubj}">
+        <datalist id="admin-subjects-datalist-edit">
+          ${subjects.map(s => `<option value="${s.name}">`).join('')}
+        </datalist>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">O‘qituvchi (Ustoz):</label>
+        <input type="text" id="edit-l-teacher" list="admin-teachers-datalist-edit" class="form-control" value="${currentTeacher}">
+        <datalist id="admin-teachers-datalist-edit">
+          ${teachers.map(t => `<option value="${t.last_name} ${t.first_name}">`).join('')}
+        </datalist>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Xona (Ixtiyoriy):</label>
+        <input type="text" id="edit-l-room" class="form-control" value="${currentRoom}">
+      </div>
+
+      <button class="admin-action-btn" onclick="window.AdminView.submitEditLesson(${lessonId})">O‘zgarishlarni Saqlash</button>
+    `;
+    window.App.showCustomModal('Darsni Tahrirlash', bodyHtml);
+  },
+
+  async submitEditLesson(lessonId) {
+    const day_of_week = document.getElementById('edit-l-day')?.value;
+    const start_time = document.getElementById('edit-l-start')?.value;
+    const end_time = document.getElementById('edit-l-end')?.value;
+    const subject = document.getElementById('edit-l-subj')?.value?.trim();
+    const teacher = document.getElementById('edit-l-teacher')?.value?.trim();
+    const room = document.getElementById('edit-l-room')?.value?.trim();
+
+    if (!subject) return window.App.showToast('Fan nomini kiriting', 'error');
+
+    try {
+      await Api.updateLesson(lessonId, {
+        day_of_week: Number(day_of_week),
+        start_time,
+        end_time,
+        subject,
+        teacher,
+        room
+      });
+      window.App.closeModal();
+      window.App.showToast('Dars yangilandi!', 'success');
       this.loadTabContent();
     } catch (err) {
       window.App.showToast(err.message, 'error');
