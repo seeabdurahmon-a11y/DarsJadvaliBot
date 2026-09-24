@@ -364,3 +364,118 @@ adminRouter.post('/broadcast', async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+/**
+ * GET /api/admin/conflicts
+ * Returns all active teacher clashes/conflicts in the school
+ */
+adminRouter.get('/conflicts', (req, res) => {
+  try {
+    const schoolId = getEffectiveSchoolId(req);
+    const conflicts = lessonsRepo.detectTeacherConflicts(schoolId);
+    res.json({
+      success: true,
+      count: conflicts.length,
+      conflicts
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/admin/check-conflicts
+ * Checks proposed lessons for clashes before saving
+ */
+adminRouter.post('/check-conflicts', (req, res) => {
+  try {
+    const schoolId = getEffectiveSchoolId(req);
+    const { classId, lessons } = req.body;
+
+    if (!Array.isArray(lessons)) {
+      return res.status(400).json({ success: false, error: 'Darslar massivi yuborilishi kerak' });
+    }
+
+    // Get all other lessons in school except this class
+    const allWeekly = lessonsRepo.getWeeklyLessons(null, schoolId);
+    const otherLessons = classId ? allWeekly.filter(l => Number(l.group_id) !== Number(classId)) : allWeekly;
+    const combined = [...otherLessons, ...lessons.map(l => ({ ...l, group_id: classId, school_id: schoolId }))];
+
+    const conflicts = lessonsRepo.detectTeacherConflicts(schoolId, combined);
+    res.json({
+      success: true,
+      hasConflicts: conflicts.length > 0,
+      count: conflicts.length,
+      conflicts
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/admin/save-class-timetable
+ * Saves complete weekly schedule for a single class with conflict checking
+ */
+adminRouter.post('/save-class-timetable', (req, res) => {
+  try {
+    const schoolId = getEffectiveSchoolId(req);
+    const { classId, lessons, force } = req.body;
+
+    if (!classId) {
+      return res.status(400).json({ success: false, error: 'Sinf tanlanmagan' });
+    }
+
+    const group = groupsRepo.getGroupById(classId);
+    if (!group) {
+      return res.status(404).json({ success: false, error: 'Sinf topilmadi' });
+    }
+
+    const validLessons = (Array.isArray(lessons) ? lessons : []).filter(l => l.subject && l.day_of_week && l.start_time && l.end_time);
+
+    // Conflict detection
+    if (!force) {
+      const allWeekly = lessonsRepo.getWeeklyLessons(null, schoolId);
+      const otherLessons = allWeekly.filter(l => Number(l.group_id) !== Number(classId));
+      const combined = [...otherLessons, ...validLessons.map(l => ({ ...l, group_id: classId, group_name: group.name, school_id: schoolId }))];
+      const conflicts = lessonsRepo.detectTeacherConflicts(schoolId, combined);
+
+      if (conflicts.length > 0) {
+        return res.status(409).json({
+          success: false,
+          hasConflicts: true,
+          count: conflicts.length,
+          conflicts,
+          error: `Diqqat: ${conflicts.length} ta ustozda dars to‘qnashuvi aniqlandi!`
+        });
+      }
+    }
+
+    // Delete existing lessons for this group
+    lessonsRepo.deleteLessonsByGroupId(classId);
+
+    // Insert all new lessons
+    let inserted = 0;
+    for (const l of validLessons) {
+      lessonsRepo.addLesson({
+        school_id: schoolId,
+        group_id: Number(classId),
+        day_of_week: Number(l.day_of_week),
+        start_time: l.start_time,
+        end_time: l.end_time,
+        subject: l.subject,
+        teacher: l.teacher || null,
+        room: l.room || null
+      });
+      inserted++;
+    }
+
+    res.json({
+      success: true,
+      message: `${group.name} sinfining ${inserted} ta darsi muvaffaqiyatli saqlandi!`,
+      inserted
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});

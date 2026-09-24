@@ -113,6 +113,11 @@ export const lessonsRepo = {
     return db.prepare(`DELETE FROM lessons WHERE id = ?`).run(id);
   },
 
+  deleteLessonsByGroupId(groupId) {
+    const db = getDatabase();
+    return db.prepare(`DELETE FROM lessons WHERE group_id = ?`).run(groupId);
+  },
+
   getAllLessons(groupId = null, schoolId = null) {
     const db = getDatabase();
     let query = `
@@ -142,5 +147,56 @@ export const lessonsRepo = {
     }
     const res = db.prepare(`SELECT COUNT(*) as count FROM lessons`).get();
     return res ? res.count : 0;
+  },
+
+  detectTeacherConflicts(schoolId = 1, customLessons = null) {
+    const allLessons = customLessons || this.getWeeklyLessons(null, schoolId);
+    const dayNames = { 1: 'Dushanba', 2: 'Seshanba', 3: 'Chorshanba', 4: 'Payshanba', 5: 'Juma', 6: 'Shanba' };
+
+    const conflicts = [];
+    const map = new Map();
+
+    for (const l of allLessons) {
+      if (!l.teacher || !l.teacher.trim() || l.teacher.trim().length < 2) continue;
+      const normTeacher = l.teacher.trim().toLowerCase().replace(/\s+/g, ' ');
+      const key = `${l.day_of_week}_${(l.start_time || '').trim()}_${normTeacher}`;
+
+      if (!map.has(key)) {
+        map.set(key, [l]);
+      } else {
+        const existingList = map.get(key);
+        const isDuplicateGroup = existingList.some(item => (item.group_id && item.group_id === l.group_id) || (item.group_name && item.group_name === l.group_name));
+        if (!isDuplicateGroup) {
+          existingList.push(l);
+        }
+      }
+    }
+
+    for (const [key, list] of map.entries()) {
+      if (list.length > 1) {
+        const first = list[0];
+        const groupNames = list.map(item => item.group_name || `Sinf #${item.group_id}`);
+        const dayName = dayNames[first.day_of_week] || `Kun #${first.day_of_week}`;
+        conflicts.push({
+          teacher: first.teacher,
+          dayOfWeek: Number(first.day_of_week),
+          day_of_week: Number(first.day_of_week),
+          dayName,
+          startTime: first.start_time,
+          endTime: first.end_time,
+          time: `${first.start_time} - ${first.end_time}`,
+          groups: groupNames,
+          classes: list.map(item => ({
+            group_id: item.group_id,
+            name: item.group_name || `Sinf #${item.group_id}`,
+            subject: item.subject
+          })),
+          lessonIds: list.map(i => i.id).filter(Boolean),
+          message: `Ustoz "${first.teacher}" ga ${dayName} kuni (${first.start_time}—${first.end_time}) bir vaqtning o‘zida ${list.length} ta sinfda (${groupNames.join(', ')}) dars qo‘yilgan!`
+        });
+      }
+    }
+
+    return conflicts;
   }
 };

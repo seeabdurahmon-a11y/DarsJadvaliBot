@@ -2,9 +2,45 @@ import { Api } from './api.js';
 import { TelegramApp } from './telegram.js';
 import { Icons } from './icons.js';
 
+const DEFAULT_PERIODS = [
+  { period: 1, start_time: '08:00', end_time: '08:45', label: '1-soat' },
+  { period: 2, start_time: '08:50', end_time: '09:35', label: '2-soat' },
+  { period: 3, start_time: '09:40', end_time: '10:25', label: '3-soat' },
+  { period: 4, start_time: '10:30', end_time: '11:15', label: '4-soat' },
+  { period: 5, start_time: '11:20', end_time: '12:05', label: '5-soat' },
+  { period: 6, start_time: '12:10', end_time: '12:55', label: '6-soat' },
+  { period: 7, start_time: '13:00', end_time: '13:45', label: '7-soat' }
+];
+
+const DAY_NAMES = {
+  1: 'Dushanba',
+  2: 'Seshanba',
+  3: 'Chorshanba',
+  4: 'Payshanba',
+  5: 'Juma',
+  6: 'Shanba'
+};
+
+const COMMON_SUBJECTS = [
+  'Ona tili', 'Adabiyot', 'Matematika', 'Algebra', 'Geometriya',
+  'Ingliz tili', 'Rus tili', 'Tarix', 'Fizika', 'Kimyo',
+  'Biologiya', 'Geografiya', 'Informatika', 'Jismoniy tarbiya',
+  'Musiqa', 'Tasviriy san\'at', 'Texnologiya', 'Tarbiya', 'Huquq'
+];
+
 export const AdminView = {
-  currentTab: 'stats', // 'stats' | 'classes' | 'teachers' | 'subjects' | 'lessons' | 'import' | 'broadcast'
+  currentTab: 'excel', // 'excel' | 'stats' | 'classes' | 'teachers' | 'subjects' | 'lessons' | 'conflicts' | 'import' | 'broadcast'
   authMode: 'login', // 'login' | 'register'
+  excelSelectedClassId: null,
+  excelActiveDay: 1,
+  excelLessonsMap: {},
+  otherSchoolLessons: [],
+  cachedClasses: [],
+  cachedSubjects: [],
+  cachedTeachers: [],
+  excelConflicts: [],
+  excelScheduleLoaded: false,
+  lastLoadedClassId: null,
 
   async render(container) {
     const token = localStorage.getItem('maktab_school_token');
@@ -46,12 +82,14 @@ export const AdminView = {
         </div>
       </div>
 
-      <div class="tab-pills" id="admin-pills" style="overflow-x:auto;white-space:nowrap;margin-bottom:14px;">
-        <button class="tab-pill active" onclick="window.AdminView.switchTab('stats')">Statistika</button>
+      <div class="tab-pills" id="admin-pills" style="overflow-x:auto;white-space:nowrap;margin-bottom:14px;display:flex;gap:6px;">
+        <button class="tab-pill active" onclick="window.AdminView.switchTab('excel')" style="background:#0284c7;color:#fff;font-weight:800;">📊 Dars jadvalini yangilash (Excel)</button>
+        <button class="tab-pill" onclick="window.AdminView.switchTab('stats')">Statistika</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('classes')">Sinflar</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('teachers')">Ustozlar</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('subjects')">Fanlar</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('lessons')">Dars jadvali</button>
+        <button class="tab-pill" onclick="window.AdminView.switchTab('lessons')">Darslar</button>
+        <button class="tab-pill" onclick="window.AdminView.switchTab('conflicts')">⚠️ To‘qnashuvlar</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('import')">Jadval yuklash</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('broadcast')">Hozir yuborish</button>
       </div>
@@ -322,7 +360,9 @@ export const AdminView = {
     if (!body) return;
 
     try {
-      if (this.currentTab === 'stats') {
+      if (this.currentTab === 'excel') {
+        await this.renderExcelTimetable(body);
+      } else if (this.currentTab === 'stats') {
         await this.renderStats(body);
       } else if (this.currentTab === 'classes') {
         await this.renderClasses(body);
@@ -332,6 +372,8 @@ export const AdminView = {
         await this.renderSubjects(body);
       } else if (this.currentTab === 'lessons') {
         await this.renderLessons(body);
+      } else if (this.currentTab === 'conflicts') {
+        await this.renderConflictsTab(body);
       } else if (this.currentTab === 'import') {
         await this.renderImport(body);
       } else if (this.currentTab === 'broadcast') {
@@ -345,6 +387,812 @@ export const AdminView = {
         </div>
       `;
     }
+  },
+
+  // =========================================================
+  // 0. EXCEL TIMETABLE EDITOR & CLASH DETECTION
+  // =========================================================
+
+  getDayFilledCount(day) {
+    let count = 0;
+    for (let p = 1; p <= 7; p++) {
+      const key = `${day}_${p}`;
+      const item = this.excelLessonsMap[key];
+      if (item && item.subject && item.subject.trim()) {
+        count++;
+      }
+    }
+    return count;
+  },
+
+  async changeExcelClass(classId) {
+    this.excelSelectedClassId = Number(classId);
+    this.excelScheduleLoaded = false;
+    await this.loadTabContent();
+  },
+
+  setExcelDay(day) {
+    TelegramApp.haptic('light');
+    this.excelActiveDay = day;
+    const body = document.getElementById('admin-tab-body');
+    if (body) {
+      this.renderExcelTimetable(body);
+    }
+  },
+
+  calculateExcelConflicts() {
+    const conflicts = [];
+    const normalize = (str) => (str ? str.toLowerCase().replace(/[^a-zа-яё0-9]/gi, '').trim() : '');
+    const timesOverlap = (s1, e1, s2, e2) => {
+      if (!s1 || !e1 || !s2 || !e2) return false;
+      return s1 < e2 && e1 > s2;
+    };
+
+    for (let day = 1; day <= 6; day++) {
+      for (let p = 1; p <= 7; p++) {
+        const key = `${day}_${p}`;
+        const lesson = this.excelLessonsMap[key];
+        if (!lesson || !lesson.subject || !lesson.teacher || !lesson.teacher.trim()) continue;
+
+        const teacherNorm = normalize(lesson.teacher);
+        if (!teacherNorm) continue;
+
+        // 1. Check against other classes in school
+        for (const other of this.otherSchoolLessons) {
+          if (Number(other.day_of_week) !== day) continue;
+          if (!other.teacher) continue;
+          const otherNorm = normalize(other.teacher);
+          if (otherNorm === teacherNorm) {
+            if (timesOverlap(lesson.start_time, lesson.end_time, other.start_time, other.end_time)) {
+              conflicts.push({
+                key,
+                day,
+                period: p,
+                teacher: lesson.teacher.trim(),
+                subject: lesson.subject.trim(),
+                otherClass: other.group_name || 'Boshqa sinf',
+                otherTime: `${other.start_time} - ${other.end_time}`,
+                message: `⚠️ OGOHLANTIRISH: Ustoz ${lesson.teacher.trim()} ayni vaqtda (${other.start_time}-${other.end_time}) "${other.group_name || 'Boshqa sinf'}"da darsda!`
+              });
+            }
+          }
+        }
+
+        // 2. Check within current class if duplicate teacher at same period
+        for (let p2 = p + 1; p2 <= 7; p2++) {
+          const key2 = `${day}_${p2}`;
+          const lesson2 = this.excelLessonsMap[key2];
+          if (lesson2 && lesson2.teacher && normalize(lesson2.teacher) === teacherNorm) {
+            if (timesOverlap(lesson.start_time, lesson.end_time, lesson2.start_time, lesson2.end_time)) {
+              conflicts.push({
+                key,
+                day,
+                period: p,
+                teacher: lesson.teacher.trim(),
+                subject: lesson.subject.trim(),
+                otherClass: 'Ayni sinfda (boshqa darsda)',
+                otherTime: `${lesson2.start_time} - ${lesson2.end_time}`,
+                message: `⚠️ OGOHLANTIRISH: Ustoz ${lesson.teacher.trim()} ushbu kunda ayni vaqtda 2 marta kiritilgan!`
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return conflicts;
+  },
+
+  async renderExcelTimetable(container) {
+    // 1. Fetch classes, teachers, subjects, and all lessons
+    const [classes, subjects, teachers, allLessons] = await Promise.all([
+      Api.getClasses(window.App.currentSchoolCode),
+      Api.getSubjects(window.App.currentSchoolCode).catch(() => []),
+      Api.getTeachers(window.App.currentSchoolCode).catch(() => []),
+      Api.getAdminLessons().catch(() => [])
+    ]);
+
+    this.cachedClasses = classes || [];
+    this.cachedSubjects = subjects || [];
+    this.cachedTeachers = teachers || [];
+
+    if (this.cachedClasses.length === 0) {
+      container.innerHTML = `
+        <div class="state-box">
+          <div class="state-title">Maktabda hozircha sinflar yo‘q</div>
+          <div class="state-desc">Dars jadvalini kiritishdan oldin "Sinflar" bo‘limida kamida 1 ta sinf qo‘shing.</div>
+          <button class="admin-action-btn" onclick="window.AdminView.switchTab('classes')" style="margin-top:12px;">Sinf Qo‘shish</button>
+        </div>
+      `;
+      return;
+    }
+
+    if (!this.excelSelectedClassId || !this.cachedClasses.find(c => c.id === this.excelSelectedClassId)) {
+      this.excelSelectedClassId = this.cachedClasses[0].id;
+      this.excelScheduleLoaded = false;
+    }
+
+    const currentClass = this.cachedClasses.find(c => c.id === this.excelSelectedClassId) || this.cachedClasses[0];
+
+    // Load schedule for selected class if needed
+    if (!this.excelScheduleLoaded || this.lastLoadedClassId !== this.excelSelectedClassId) {
+      const scheduleData = await Api.getClassSchedule(this.excelSelectedClassId);
+      const weekly = scheduleData.weekly || {};
+      
+      this.excelLessonsMap = {};
+      for (let day = 1; day <= 6; day++) {
+        const dayLessons = weekly[day]?.lessons || [];
+        for (let pIdx = 0; pIdx < DEFAULT_PERIODS.length; pIdx++) {
+          const pDef = DEFAULT_PERIODS[pIdx];
+          const found = dayLessons[pIdx] || dayLessons.find(l => l.start_time === pDef.start_time);
+          const key = `${day}_${pDef.period}`;
+          this.excelLessonsMap[key] = {
+            day_of_week: day,
+            period: pDef.period,
+            start_time: found?.start_time || pDef.start_time,
+            end_time: found?.end_time || pDef.end_time,
+            subject: found?.subject || '',
+            teacher: found?.teacher || '',
+            room: found?.room || ''
+          };
+        }
+      }
+      this.excelScheduleLoaded = true;
+      this.lastLoadedClassId = this.excelSelectedClassId;
+    }
+
+    // Filter other lessons in school (excluding this class)
+    this.otherSchoolLessons = (allLessons || []).filter(l => Number(l.group_id) !== Number(this.excelSelectedClassId));
+
+    // Calculate real-time conflicts
+    const conflicts = this.calculateExcelConflicts();
+    this.excelConflicts = conflicts;
+    const conflictsCount = conflicts.length;
+    const isMatrix = this.excelActiveDay === 'matrix';
+
+    let html = `
+      <div class="excel-editor-container">
+        <!-- Top Toolbar Card -->
+        <div class="excel-top-bar">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <div>
+              <div style="font-size:11px;font-weight:800;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;">
+                📊 Excel Dars Jadvali Muharriri
+              </div>
+              <div style="font-size:18px;font-weight:800;color:var(--text-main);margin-top:2px;">
+                ${currentClass.name} jadvalini yangilash
+              </div>
+            </div>
+
+            <div style="display:flex;gap:8px;align-items:center;">
+              <select class="custom-select" id="excel-class-select" onchange="window.AdminView.changeExcelClass(Number(this.value))" style="font-weight:800;font-size:14px;padding:8px 12px;border:2px solid #0284c7;border-radius:10px;">
+                ${this.cachedClasses.map(c => `<option value="${c.id}" ${c.id === this.excelSelectedClassId ? 'selected' : ''}>🏫 ${c.name}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+
+          <!-- Status / Conflict Banner -->
+          <div class="excel-status-banner ${conflictsCount > 0 ? 'danger' : 'success'}" id="excel-status-banner">
+            <span style="font-size:20px;">${conflictsCount > 0 ? '🚨' : '✅'}</span>
+            <div style="flex:1;">
+              ${conflictsCount > 0 
+                ? `<b>DIQQAT: ${conflictsCount} ta ustozda dars to‘qnashuvi aniqlandi!</b><br><span style="font-size:11.5px;font-weight:500;">Bitta ustoz bir vaqtda 2 ta sinfda dars o‘ta olmaydi. Qizil rangdagi katakchalarni tekshiring.</span>` 
+                : `<b>Ustozlar dars to‘qnashuvi yo‘q!</b> Barcha fanlar va ustozlar taqsimoti to‘g‘ri.`
+              }
+            </div>
+            ${conflictsCount > 0 ? `<button class="btn-sm" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;" onclick="window.AdminView.showConflictDetailsModal()">Tafsilotlar</button>` : ''}
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div class="excel-action-bar" style="margin-top:12px;">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="excel-tool-btn" onclick="window.AdminView.fillStandardExcelTemplate()">
+                📋 Standart vaqtlarni to‘ldirish
+              </button>
+              <button class="excel-tool-btn" onclick="window.AdminView.openCopyFromClassModal()">
+                📑 Boshqa sinfdan nusxalash
+              </button>
+              <button class="excel-tool-btn" style="color:#ef4444;" onclick="window.AdminView.clearCurrentExcelDay()">
+                🗑 Tozalash
+              </button>
+            </div>
+
+            <button class="excel-save-btn" id="excel-save-main-btn" onclick="window.AdminView.saveExcelTimetable()">
+              💾 Saqlash va Botda yangilash
+            </button>
+          </div>
+        </div>
+
+        <!-- Datalists for Autocomplete -->
+        <datalist id="excel-subjects-datalist">
+          ${this.cachedSubjects.map(s => `<option value="${s.name}">`).join('')}
+          ${COMMON_SUBJECTS.map(s => `<option value="${s}">`).join('')}
+        </datalist>
+        <datalist id="excel-teachers-datalist">
+          ${this.cachedTeachers.map(t => `<option value="${t.last_name} ${t.first_name}">`).join('')}
+        </datalist>
+
+        <!-- Day Selector Tabs / Matrix Toggle -->
+        <div class="excel-day-tabs">
+          ${[1, 2, 3, 4, 5, 6].map(d => {
+            const count = this.getDayFilledCount(d);
+            const hasClash = conflicts.some(c => Number(c.day) === d);
+            return `
+              <button class="excel-day-btn ${this.excelActiveDay === d ? 'active' : ''}" onclick="window.AdminView.setExcelDay(${d})">
+                ${hasClash ? '🚨' : '🗓'} ${DAY_NAMES[d]}
+                <span style="font-size:11px;opacity:0.85;background:rgba(0,0,0,0.1);padding:1px 6px;border-radius:10px;">${count} ta</span>
+              </button>
+            `;
+          }).join('')}
+          <button class="excel-day-btn ${this.excelActiveDay === 'matrix' ? 'active' : ''}" onclick="window.AdminView.setExcelDay('matrix')" style="background:${this.excelActiveDay === 'matrix' ? '#0f766e' : 'var(--bg-card)'};color:${this.excelActiveDay === 'matrix' ? '#fff' : 'var(--text-main)'};border-color:#0f766e;">
+            📊 21.09 JADVAL (To‘liq Hafta)
+          </button>
+        </div>
+    `;
+
+    if (isMatrix) {
+      html += this.renderExcelMatrixHtml(conflicts);
+    } else {
+      html += this.renderExcelDayRowsHtml(this.excelActiveDay, conflicts);
+    }
+
+    html += `</div>`;
+    container.innerHTML = html;
+  },
+
+  renderExcelDayRowsHtml(day, conflicts) {
+    let html = `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px;box-shadow:var(--shadow-sm);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">
+          <div style="font-weight:800;font-size:15px;color:var(--primary);display:flex;align-items:center;gap:6px;">
+            <span>🗓</span> ${DAY_NAMES[day]} dars jadvali
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);font-weight:600;">
+            1-soatdan 7-soatgacha darslarni kiriting
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px;">
+    `;
+
+    for (let pIdx = 0; pIdx < DEFAULT_PERIODS.length; pIdx++) {
+      const pDef = DEFAULT_PERIODS[pIdx];
+      const period = pDef.period;
+      const key = `${day}_${period}`;
+      const item = this.excelLessonsMap[key] || {
+        day_of_week: day,
+        period,
+        start_time: pDef.start_time,
+        end_time: pDef.end_time,
+        subject: '',
+        teacher: '',
+        room: ''
+      };
+
+      const conflict = conflicts.find(c => c.key === key);
+      const isConflict = Boolean(conflict);
+
+      html += `
+        <div id="row-${key}" class="excel-row-card" style="background:${isConflict ? '#fff5f5' : 'var(--bg-body)'};border:1.5px solid ${isConflict ? '#ef4444' : 'var(--border)'};border-radius:10px;padding:10px 12px;transition:all 0.2s ease;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-weight:800;font-size:13px;background:var(--primary);color:#fff;padding:2px 8px;border-radius:6px;">
+                ${period}-soat
+              </span>
+              <div style="display:flex;gap:4px;align-items:center;">
+                <input type="time" class="excel-cell-input" style="width:85px;padding:4px 6px;font-size:12px;" value="${item.start_time || pDef.start_time}" onchange="window.AdminView.onExcelCellInput(${day}, ${period}, 'start_time', this.value)">
+                <span style="color:var(--text-muted);font-size:12px;">—</span>
+                <input type="time" class="excel-cell-input" style="width:85px;padding:4px 6px;font-size:12px;" value="${item.end_time || pDef.end_time}" onchange="window.AdminView.onExcelCellInput(${day}, ${period}, 'end_time', this.value)">
+              </div>
+            </div>
+
+            <button type="button" class="btn-icon-action" style="padding:2px 6px;font-size:11px;color:var(--text-muted);" onclick="window.AdminView.clearExcelPeriodRow(${day}, ${period})" title="Ushbu soatni tozalash">
+              ✕
+            </button>
+          </div>
+
+          <div style="display:grid;grid-template-columns: 1.4fr 1.2fr 0.6fr;gap:8px;align-items:flex-start;">
+            <!-- Subject (Fan) -->
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:2px;">Fan:</label>
+              <input type="text" id="subj-${key}" list="excel-subjects-datalist" class="excel-cell-input" placeholder="Masalan: Matematika" value="${item.subject || ''}" oninput="window.AdminView.onExcelCellInput(${day}, ${period}, 'subject', this.value)">
+              
+              <!-- Quick Subject Chips -->
+              <div class="excel-quick-chips">
+                <button type="button" class="excel-chip" onclick="window.AdminView.applyQuickSubject(${day}, ${period}, 'Matematika')">Matem</button>
+                <button type="button" class="excel-chip" onclick="window.AdminView.applyQuickSubject(${day}, ${period}, 'Ona tili')">Ona tili</button>
+                <button type="button" class="excel-chip" onclick="window.AdminView.applyQuickSubject(${day}, ${period}, 'Ingliz tili')">Ingliz</button>
+                <button type="button" class="excel-chip" onclick="window.AdminView.applyQuickSubject(${day}, ${period}, 'Tarix')">Tarix</button>
+                <button type="button" class="excel-chip" onclick="window.AdminView.applyQuickSubject(${day}, ${period}, 'Fizika')">Fizika</button>
+                <button type="button" class="excel-chip" onclick="window.AdminView.applyQuickSubject(${day}, ${period}, 'Kimyo')">Kimyo</button>
+                <button type="button" class="excel-chip" onclick="window.AdminView.applyQuickSubject(${day}, ${period}, 'Informatika')">Inform</button>
+                <button type="button" class="excel-chip" onclick="window.AdminView.applyQuickSubject(${day}, ${period}, 'Jismoniy tarbiya')">Jismoniy</button>
+              </div>
+            </div>
+
+            <!-- Teacher (Ustoz) -->
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:2px;">Ustoz (O‘qituvchi):</label>
+              <input type="text" id="teacher-${key}" list="excel-teachers-datalist" class="excel-cell-input ${isConflict ? 'conflict-highlight' : ''}" placeholder="Ustoz ismi" value="${item.teacher || ''}" oninput="window.AdminView.onExcelCellInput(${day}, ${period}, 'teacher', this.value)">
+              
+              <div id="badge-${key}">
+                ${isConflict ? `<div class="excel-conflict-badge">🚨 ${conflict.teacher} ayni paytda "${conflict.otherClass}"da darsda!</div>` : ''}
+              </div>
+            </div>
+
+            <!-- Room (Xona) -->
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:2px;">Xona:</label>
+              <input type="text" id="room-${key}" class="excel-cell-input" placeholder="Xona" value="${item.room || ''}" oninput="window.AdminView.onExcelCellInput(${day}, ${period}, 'room', this.value)">
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    html += `</div></div>`;
+    return html;
+  },
+
+  renderExcelMatrixHtml(conflicts) {
+    let html = `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px;overflow-x:auto;box-shadow:var(--shadow-sm);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div>
+            <div style="font-weight:800;font-size:16px;color:#0f766e;">
+              📋 21.09 JADVAL — Haftalik To‘liq Excel Jadvali
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);">
+              Barcha 6 kunlik darslarni bir varaqda ko‘rish va to‘g‘ridan-to‘g‘ri tahrirlash
+            </div>
+          </div>
+          <button class="btn-sm" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-weight:700;cursor:pointer;" onclick="window.print()">
+            🖨 Chop etish (Print)
+          </button>
+        </div>
+
+        <table class="excel-grid-table">
+          <thead>
+            <tr>
+              <th style="width:75px;">Soat</th>
+              ${[1, 2, 3, 4, 5, 6].map(d => `<th>🗓 ${DAY_NAMES[d]}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    for (let pIdx = 0; pIdx < DEFAULT_PERIODS.length; pIdx++) {
+      const pDef = DEFAULT_PERIODS[pIdx];
+      const period = pDef.period;
+
+      html += `
+        <tr>
+          <td style="font-weight:800;font-size:12px;background:var(--bg-subtle);text-align:center;">
+            <b>${period}-soat</b><br>
+            <span style="font-size:10px;color:var(--text-muted);font-weight:500;">${pDef.start_time}</span>
+          </td>
+      `;
+
+      for (let day = 1; day <= 6; day++) {
+        const key = `${day}_${period}`;
+        const item = this.excelLessonsMap[key] || { subject: '', teacher: '', room: '' };
+        const conflict = conflicts.find(c => c.key === key);
+        const isConflict = Boolean(conflict);
+
+        html += `
+          <td class="${isConflict ? 'excel-row-conflict' : ''}" style="min-width:140px;padding:6px;">
+            <input type="text" list="excel-subjects-datalist" class="excel-cell-input" style="font-weight:700;font-size:12px;margin-bottom:3px;" placeholder="Fan" value="${item.subject || ''}" oninput="window.AdminView.onExcelCellInput(${day}, ${period}, 'subject', this.value)">
+            <input type="text" list="excel-teachers-datalist" class="excel-cell-input ${isConflict ? 'conflict-highlight' : ''}" style="font-size:11.5px;" placeholder="Ustoz" value="${item.teacher || ''}" oninput="window.AdminView.onExcelCellInput(${day}, ${period}, 'teacher', this.value)">
+            ${isConflict ? `<div class="excel-conflict-badge" style="font-size:10px;padding:2px 4px;">🚨 ${conflict.otherClass}da band!</div>` : ''}
+          </td>
+        `;
+      }
+
+      html += `</tr>`;
+    }
+
+    html += `
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    return html;
+  },
+
+  onExcelCellInput(day, period, field, value) {
+    const key = `${day}_${period}`;
+    if (!this.excelLessonsMap[key]) {
+      const pDef = DEFAULT_PERIODS.find(p => p.period === period) || DEFAULT_PERIODS[0];
+      this.excelLessonsMap[key] = {
+        day_of_week: day,
+        period,
+        start_time: pDef.start_time,
+        end_time: pDef.end_time,
+        subject: '',
+        teacher: '',
+        room: ''
+      };
+    }
+
+    this.excelLessonsMap[key][field] = value;
+
+    // Recalculate conflicts in real-time
+    const conflicts = this.calculateExcelConflicts();
+    this.excelConflicts = conflicts;
+
+    // Update banner
+    const banner = document.getElementById('excel-status-banner');
+    if (banner) {
+      if (conflicts.length > 0) {
+        banner.className = 'excel-status-banner danger';
+        banner.innerHTML = `
+          <span style="font-size:20px;">🚨</span>
+          <div style="flex:1;">
+            <b>DIQQAT: ${conflicts.length} ta ustozda dars to‘qnashuvi aniqlandi!</b><br>
+            <span style="font-size:11.5px;font-weight:500;">Bitta ustoz bir vaqtda 2 ta sinfda dars o‘ta olmaydi. Qizil rangdagi katakchalarni tekshiring.</span>
+          </div>
+          <button class="btn-sm" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;" onclick="window.AdminView.showConflictDetailsModal()">Tafsilotlar</button>
+        `;
+      } else {
+        banner.className = 'excel-status-banner success';
+        banner.innerHTML = `
+          <span style="font-size:20px;">✅</span>
+          <div style="flex:1;">
+            <b>Ustozlar dars to‘qnashuvi yo‘q!</b> Barcha fanlar va ustozlar taqsimoti to‘g‘ri.
+          </div>
+        `;
+      }
+    }
+
+    // Update this specific row DOM if in day view
+    const teacherInput = document.getElementById(`teacher-${key}`);
+    const badgeDiv = document.getElementById(`badge-${key}`);
+    const rowCard = document.getElementById(`row-${key}`);
+    const conflict = conflicts.find(c => c.key === key);
+
+    if (teacherInput) {
+      if (conflict) {
+        teacherInput.classList.add('conflict-highlight');
+        if (badgeDiv) {
+          badgeDiv.innerHTML = `<div class="excel-conflict-badge">🚨 ${conflict.teacher} ayni paytda "${conflict.otherClass}"da darsda!</div>`;
+        }
+        if (rowCard) {
+          rowCard.style.borderColor = '#ef4444';
+          rowCard.style.background = '#fff5f5';
+        }
+      } else {
+        teacherInput.classList.remove('conflict-highlight');
+        if (badgeDiv) badgeDiv.innerHTML = '';
+        if (rowCard) {
+          rowCard.style.borderColor = 'var(--border)';
+          rowCard.style.background = 'var(--bg-body)';
+        }
+      }
+    }
+  },
+
+  applyQuickSubject(day, period, subjectName) {
+    const key = `${day}_${period}`;
+    const subjInput = document.getElementById(`subj-${key}`);
+    if (subjInput) subjInput.value = subjectName;
+
+    this.onExcelCellInput(day, period, 'subject', subjectName);
+
+    // If a teacher exists for this subject in cachedTeachers, auto-suggest
+    const matchedTeacher = this.cachedTeachers.find(t => t.subject && t.subject.toLowerCase() === subjectName.toLowerCase());
+    if (matchedTeacher) {
+      const tName = `${matchedTeacher.last_name} ${matchedTeacher.first_name}`;
+      const teacherInput = document.getElementById(`teacher-${key}`);
+      if (teacherInput && !teacherInput.value) {
+        teacherInput.value = tName;
+        this.onExcelCellInput(day, period, 'teacher', tName);
+      }
+    }
+  },
+
+  clearExcelPeriodRow(day, period) {
+    const key = `${day}_${period}`;
+    const pDef = DEFAULT_PERIODS.find(p => p.period === period) || DEFAULT_PERIODS[0];
+    this.excelLessonsMap[key] = {
+      day_of_week: day,
+      period,
+      start_time: pDef.start_time,
+      end_time: pDef.end_time,
+      subject: '',
+      teacher: '',
+      room: ''
+    };
+    const body = document.getElementById('admin-tab-body');
+    if (body) this.renderExcelTimetable(body);
+  },
+
+  fillStandardExcelTemplate() {
+    for (let day = 1; day <= 6; day++) {
+      for (let pIdx = 0; pIdx < DEFAULT_PERIODS.length; pIdx++) {
+        const pDef = DEFAULT_PERIODS[pIdx];
+        const key = `${day}_${pDef.period}`;
+        if (!this.excelLessonsMap[key]) {
+          this.excelLessonsMap[key] = {
+            day_of_week: day,
+            period: pDef.period,
+            start_time: pDef.start_time,
+            end_time: pDef.end_time,
+            subject: '',
+            teacher: '',
+            room: ''
+          };
+        } else {
+          this.excelLessonsMap[key].start_time = pDef.start_time;
+          this.excelLessonsMap[key].end_time = pDef.end_time;
+        }
+      }
+    }
+    window.App.showToast('Standart dars vaqtlari (1-7 soatlar) to‘ldirildi', 'info');
+    const body = document.getElementById('admin-tab-body');
+    if (body) this.renderExcelTimetable(body);
+  },
+
+  clearCurrentExcelDay() {
+    if (this.excelActiveDay === 'matrix') {
+      if (confirm('Barcha hafta kunlaridagi darslarni tozalamoqchimisiz?')) {
+        this.excelLessonsMap = {};
+        this.fillStandardExcelTemplate();
+      }
+      return;
+    }
+
+    if (confirm(`${DAY_NAMES[this.excelActiveDay]} kunidagi darslarni tozalamoqchimisiz?`)) {
+      for (let p = 1; p <= 7; p++) {
+        const key = `${this.excelActiveDay}_${p}`;
+        const pDef = DEFAULT_PERIODS.find(pd => pd.period === p) || DEFAULT_PERIODS[0];
+        this.excelLessonsMap[key] = {
+          day_of_week: this.excelActiveDay,
+          period: p,
+          start_time: pDef.start_time,
+          end_time: pDef.end_time,
+          subject: '',
+          teacher: '',
+          room: ''
+        };
+      }
+      const body = document.getElementById('admin-tab-body');
+      if (body) this.renderExcelTimetable(body);
+    }
+  },
+
+  openCopyFromClassModal() {
+    const otherClasses = this.cachedClasses.filter(c => c.id !== this.excelSelectedClassId);
+    if (otherClasses.length === 0) {
+      return window.App.showToast('Boshqa sinflar mavjud emas', 'error');
+    }
+
+    const bodyHtml = `
+      <div class="form-group">
+        <label class="form-label">Qaysi sinf dars jadvalini nusxalamoqchisiz?</label>
+        <select id="copy-source-class-select" class="custom-select" style="font-size:14px;font-weight:700;">
+          ${otherClasses.map(c => `<option value="${c.id}">🏫 ${c.name}</option>`).join('')}
+        </select>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">
+        Tanlangan sinfning barcha haftalik dars jadvali ushbu sinfga ko‘chirib o‘tkaziladi. Saqlashdan oldin tahrirlashingiz mumkin.
+      </p>
+      <button class="admin-action-btn" onclick="window.AdminView.submitCopyFromClass()">Nusxani Ko‘chirish</button>
+    `;
+    window.App.showCustomModal('Boshqa Sinfdan Nusxalash', bodyHtml);
+  },
+
+  async submitCopyFromClass() {
+    const sourceId = document.getElementById('copy-source-class-select')?.value;
+    if (!sourceId) return;
+
+    try {
+      window.App.showToast('Jadval ko‘chirilmoqda...', 'info');
+      const scheduleData = await Api.getClassSchedule(sourceId);
+      const weekly = scheduleData.weekly || {};
+
+      this.excelLessonsMap = {};
+      for (let day = 1; day <= 6; day++) {
+        const dayLessons = weekly[day]?.lessons || [];
+        for (let pIdx = 0; pIdx < DEFAULT_PERIODS.length; pIdx++) {
+          const pDef = DEFAULT_PERIODS[pIdx];
+          const found = dayLessons[pIdx] || dayLessons.find(l => l.start_time === pDef.start_time);
+          const key = `${day}_${pDef.period}`;
+          this.excelLessonsMap[key] = {
+            day_of_week: day,
+            period: pDef.period,
+            start_time: found?.start_time || pDef.start_time,
+            end_time: found?.end_time || pDef.end_time,
+            subject: found?.subject || '',
+            teacher: found?.teacher || '',
+            room: found?.room || ''
+          };
+        }
+      }
+
+      window.App.closeModal();
+      window.App.showToast('Jadval ko‘chirildi! Saqlashni unutmang.', 'success');
+      const body = document.getElementById('admin-tab-body');
+      if (body) this.renderExcelTimetable(body);
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
+    }
+  },
+
+  showConflictDetailsModal() {
+    const conflicts = this.excelConflicts || [];
+    if (conflicts.length === 0) {
+      return window.App.showToast('To‘qnashuvlar yo‘q', 'info');
+    }
+
+    const bodyHtml = `
+      <div style="margin-bottom:12px;font-size:13px;color:#991b1b;background:#fee2e2;border:1px solid #fca5a5;padding:10px 12px;border-radius:8px;">
+        <b>🚨 Jami ${conflicts.length} ta dars to‘qnashuvi aniqlandi:</b>
+      </div>
+      <div style="max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;">
+        ${conflicts.map((c, i) => `
+          <div style="background:var(--bg-body);border-left:4px solid #ef4444;border-radius:6px;padding:8px 10px;font-size:12.5px;">
+            <div style="font-weight:800;color:var(--text-main);">${i + 1}. 👨‍🏫 ${c.teacher}</div>
+            <div style="color:var(--text-muted);font-size:11.5px;margin-top:2px;">
+              🗓 <b>${DAY_NAMES[c.day]}</b>, ⏰ ${c.period}-soat (${c.otherTime})
+            </div>
+            <div style="color:#dc2626;font-weight:700;font-size:11.5px;margin-top:2px;">
+              🏫 Band bo‘lgan sinf: <b>${c.otherClass}</b> (${c.subject})
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="margin-top:14px;text-align:right;">
+        <button class="btn-sm" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:700;cursor:pointer;" onclick="window.App.closeModal()">
+          Tushunarli, to‘g‘rilayman
+        </button>
+      </div>
+    `;
+
+    window.App.showCustomModal('⚠️ Ustozlar To‘qnashuvi Tafsilotlari', bodyHtml);
+  },
+
+  async saveExcelTimetable(force = false) {
+    if (!this.excelSelectedClassId) {
+      return window.App.showToast('Sinf tanlanmagan', 'error');
+    }
+
+    // Gather valid lessons
+    const validLessons = [];
+    for (let day = 1; day <= 6; day++) {
+      for (let p = 1; p <= 7; p++) {
+        const key = `${day}_${p}`;
+        const item = this.excelLessonsMap[key];
+        if (item && item.subject && item.subject.trim()) {
+          validLessons.push({
+            day_of_week: day,
+            start_time: item.start_time || '08:00',
+            end_time: item.end_time || '08:45',
+            subject: item.subject.trim(),
+            teacher: item.teacher ? item.teacher.trim() : null,
+            room: item.room ? item.room.trim() : null
+          });
+        }
+      }
+    }
+
+    // Check conflicts
+    const conflicts = this.calculateExcelConflicts();
+    if (conflicts.length > 0 && !force) {
+      const confirmHtml = `
+        <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:12px;margin-bottom:14px;color:#991b1b;">
+          <div style="font-weight:800;font-size:14px;margin-bottom:4px;">⚠️ DIQQAT: ${conflicts.length} ta ustozda dars to‘qnashuvi bor!</div>
+          <div style="font-size:12px;">Ustoz bir vaqtning o‘zida 2 ta sinfda dars bera olmaydi.</div>
+        </div>
+
+        <div style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
+          ${conflicts.slice(0, 5).map(c => `
+            <div style="font-size:12px;background:var(--bg-body);padding:6px 10px;border-radius:6px;border-left:3px solid #ef4444;">
+              👨‍🏫 <b>${c.teacher}</b> — ${DAY_NAMES[c.day]} (${c.otherClass} da band)
+            </div>
+          `).join('')}
+          ${conflicts.length > 5 ? `<div style="font-size:11px;color:var(--text-muted);text-align:center;">...va yana ${conflicts.length - 5} ta to‘qnashuv</div>` : ''}
+        </div>
+
+        <div style="display:flex;gap:8px;">
+          <button class="btn-sm" style="flex:1;background:var(--bg-subtle);color:var(--text-main);border:1px solid var(--border);border-radius:8px;padding:10px;font-weight:700;cursor:pointer;" onclick="window.App.closeModal()">
+            Bekor qilish va to‘g‘rilash
+          </button>
+          <button class="btn-sm" style="flex:1;background:#dc2626;color:#fff;border:none;border-radius:8px;padding:10px;font-weight:700;cursor:pointer;" onclick="window.AdminView.saveExcelTimetable(true)">
+            Baribir Saqlash
+          </button>
+        </div>
+      `;
+      return window.App.showCustomModal('⚠️ To‘qnashuv haqida ogohlantirish', confirmHtml);
+    }
+
+    try {
+      window.App.showToast('Jadval saqlanmoqda...', 'info');
+      const res = await Api.saveClassTimetable({
+        classId: this.excelSelectedClassId,
+        lessons: validLessons,
+        force
+      });
+
+      window.App.closeModal();
+      window.App.showToast(`🎉 ${res.message || 'Dars jadvali muvaffaqiyatli saqlandi!'}`, 'success');
+      
+      // Reload in place
+      this.excelScheduleLoaded = false;
+      const body = document.getElementById('admin-tab-body');
+      if (body) this.renderExcelTimetable(body);
+    } catch (err) {
+      window.App.showToast(`Xatolik: ${err.message}`, 'error');
+    }
+  },
+
+  // =========================================================
+  // TO‘QNASHUVLAR TAHLILI (CONFLICTS TAB)
+  // =========================================================
+  async renderConflictsTab(container) {
+    const res = await Api.getTeacherConflicts();
+    const conflicts = res.conflicts || [];
+
+    let html = `
+      <div class="welcome-card" style="margin-bottom:16px;">
+        <div class="welcome-title">Maktab Dars To‘qnashuvlari Tahlili</div>
+        <div class="welcome-subtitle">Bir vaqtning o‘zida 2 ta sinfda darsi qo‘yilgan ustozlar monitoringi</div>
+      </div>
+    `;
+
+    if (conflicts.length === 0) {
+      html += `
+        <div class="state-box" style="background:#ecfdf5;border:1px solid #a7f3d0;">
+          <div style="font-size:36px;margin-bottom:8px;">🎉</div>
+          <div class="state-title" style="color:#065f46;">To‘qnashuvlar topilmadi!</div>
+          <div class="state-desc" style="color:#047857;">Maktabingizdagi barcha sinflar va ustozlar dars taqsimoti 100% to‘g‘ri tuzilgan.</div>
+          <button class="admin-action-btn" style="background:#059669;margin-top:14px;" onclick="window.AdminView.switchTab('excel')">
+            📊 Excel Jadvaliga o‘tish
+          </button>
+        </div>
+      `;
+    } else {
+      html += `
+        <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:12px;padding:12px 14px;margin-bottom:14px;color:#991b1b;">
+          <div style="font-weight:800;font-size:15px;">🚨 Jami ${conflicts.length} ta to‘qnashuv mavjud!</div>
+          <div style="font-size:12px;margin-top:2px;">Quyidagi ustozlar bir vaqtda bir nechta sinfga biriktirilgan:</div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;">
+      `;
+
+      conflicts.forEach((c, idx) => {
+        html += `
+          <div style="background:var(--bg-card);border:1px solid var(--border);border-left:4px solid #ef4444;border-radius:10px;padding:12px;box-shadow:var(--shadow-sm);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <div style="font-weight:800;font-size:15px;color:var(--text-main);">
+                  ${idx + 1}. 👨‍🏫 ${c.teacher}
+                </div>
+                <div style="font-size:12.5px;color:var(--text-muted);margin-top:3px;">
+                  🗓 <b>${DAY_NAMES[c.day_of_week] || c.day_of_week}</b> | ⏰ <b>${c.time}</b>
+                </div>
+                <div style="font-size:12.5px;color:#dc2626;font-weight:700;margin-top:4px;">
+                  To‘qnashgan sinflar: ${c.classes.map(cl => `<span style="background:#fee2e2;padding:2px 6px;border-radius:4px;margin-right:4px;">🏫 ${cl.name} (${cl.subject})</span>`).join('')}
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+              ${c.classes.map(cl => `
+                <button class="btn-sm" style="background:var(--primary-subtle);color:var(--primary);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;" onclick="window.AdminView.excelSelectedClassId = ${cl.group_id}; window.AdminView.excelScheduleLoaded = false; window.AdminView.excelActiveDay = ${c.day_of_week}; window.AdminView.switchTab('excel');">
+                  ✏️ ${cl.name} jadvalini ochish
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+    }
+
+    container.innerHTML = html;
   },
 
   // 1. STATS
@@ -719,8 +1567,11 @@ export const AdminView = {
       </div>
 
       <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
-        <button class="admin-action-btn" onclick="window.AdminView.openAddLessonModal(${selectedClassId})" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:1;min-width:160px;margin-top:0;">
-          ${Icons.plus} Yangi Dars Qo‘shish
+        <button class="admin-action-btn" onclick="window.AdminView.switchTab('excel')" style="background:#0284c7;color:#fff;display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:1.2;min-width:180px;margin-top:0;">
+          📊 Dars jadvalini yangilash (Excel)
+        </button>
+        <button class="btn-sm" onclick="window.AdminView.openAddLessonModal(${selectedClassId})" style="background:var(--bg-card);border:1px solid var(--border);padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+          ${Icons.plus} 1 ta dars qo‘shish
         </button>
         <button class="btn-sm" style="background:var(--bg-card);border:1px solid var(--border);padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer;" onclick="window.AdminView.switchTab('import')">
           ${Icons.upload} Ommaviy Import

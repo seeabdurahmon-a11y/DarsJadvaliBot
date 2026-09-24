@@ -252,5 +252,23 @@ export const Api = {
       method: 'POST',
       body: JSON.stringify({ send_time, classId })
     });
+  },
+
+  // Teacher Conflicts & Excel Grid Save
+  getTeacherConflicts() {
+    return this.request('/admin/conflicts');
+  },
+  checkScheduleConflicts(payload) {
+    return this.request('/admin/check-conflicts', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+  saveClassTimetable(payload) {
+    return this.request('/admin/save-class-timetable', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
   }
 };
+
