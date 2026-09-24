@@ -63,3 +63,12 @@ export function isValidTimeFormat(timeStr) {
   if (!timeStr || typeof timeStr !== 'string') return false;
   return /^([01]\d|2[0-3]):([0-5]\d)$/.test(timeStr.trim());
 }
+
+/**
+ * Sana formati to'g'riligini tekshiradi (YYYY-MM-DD)
+ */
+export function isValidDateFormat(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return false;
+  const dt = DateTime.fromFormat(dateStr.trim(), 'yyyy-MM-dd');
+  return dt.isValid;
+}
