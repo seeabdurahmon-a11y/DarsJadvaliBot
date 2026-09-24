@@ -8,7 +8,7 @@ export const App = {
   currentView: 'home', // 'home' | 'schedule' | 'week' | 'teacher' | 'profile' | 'admin'
   currentSchoolId: 1,
   currentSchoolCode: 'M-01',
-  currentSchoolName: '1-maktab',
+  currentSchoolName: '32-maktab',
   currentClassId: null,
   currentClassName: null,
   currentUser: null,

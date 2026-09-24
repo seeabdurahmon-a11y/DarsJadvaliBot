@@ -211,17 +211,19 @@ function initSchema(db) {
   // Ensure default school #1 exists with test email & password
   db.prepare(`
     INSERT OR IGNORE INTO schools (id, code, name, admin_name, admin_email, region, admin_password, default_send_time, is_active)
-    VALUES (1, 'M-01', '1-umumiy o‘rta ta’lim maktabi', 'Bosh Zavuch / Admin', 'test@darsjadvali.uz', 'Toshkent shahar', 'darsjadvoli0751', '06:00', 1)
+    VALUES (1, 'M-01', '32-maktab', 'Bosh Zavuch / Admin', 'test@darsjadvali.uz', 'Toshkent shahar', 'darsjadvoli0751', '06:00', 1)
   `).run();
 
-  // Update existing school #1 with email & password if already inserted
+  // Update existing school #1 with 32-maktab and remove M-02 if present
   try {
     db.prepare(`
       UPDATE schools 
-      SET admin_email = CASE WHEN admin_email IS NULL OR admin_email = '' THEN 'test@darsjadvali.uz' ELSE admin_email END,
+      SET name = '32-maktab',
+          admin_email = CASE WHEN admin_email IS NULL OR admin_email = '' THEN 'test@darsjadvali.uz' ELSE admin_email END,
           admin_password = CASE WHEN admin_password = 'admin' OR admin_password = 'admin123' THEN 'darsjadvoli0751' ELSE admin_password END
       WHERE id = 1
     `).run();
+    db.prepare(`DELETE FROM schools WHERE code = 'M-02' OR id = 2;`).run();
   } catch (e) {}
 
   // Standart sozlamalarni kiritish
