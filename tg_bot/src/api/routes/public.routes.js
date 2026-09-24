@@ -322,13 +322,118 @@ publicRouter.get('/classes/:id/schedule', (req, res) => {
 });
 
 /**
+ * GET /api/schedule/today
+ */
+publicRouter.get('/schedule/today', (req, res) => {
+  try {
+    const classId = req.query.classId || req.query.groupId;
+    const groupId = classId ? parseInt(classId, 10) : null;
+    const result = scheduleService.getTodaySchedule(groupId);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/schedule/tomorrow
+ */
+publicRouter.get('/schedule/tomorrow', (req, res) => {
+  try {
+    const classId = req.query.classId || req.query.groupId;
+    const groupId = classId ? parseInt(classId, 10) : null;
+    const result = scheduleService.getTomorrowSchedule(groupId);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/schedule/week
+ */
+publicRouter.get('/schedule/week', (req, res) => {
+  try {
+    const classId = req.query.classId || req.query.groupId;
+    const groupId = classId ? parseInt(classId, 10) : null;
+    const weeklyLessons = lessonsRepo.getWeeklyLessons(groupId);
+    const dayNames = { 1: 'Dushanba', 2: 'Seshanba', 3: 'Chorshanba', 4: 'Payshanba', 5: 'Juma', 6: 'Shanba' };
+    const days = [1, 2, 3, 4, 5, 6].map(d => ({
+      dayOfWeek: d,
+      dayName: dayNames[d],
+      lessons: weeklyLessons.filter(l => l.day_of_week === d)
+    }));
+    res.json({ success: true, data: { groupId, days, lessons: weeklyLessons } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/schedule/current
+ */
+publicRouter.get('/schedule/current', (req, res) => {
+  try {
+    const classId = req.query.classId || req.query.groupId;
+    const groupId = classId ? parseInt(classId, 10) : null;
+    const result = scheduleService.getCurrentLesson(groupId);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * GET /api/schedule/now
  */
 publicRouter.get('/schedule/now', (req, res) => {
   try {
-    const groupId = req.query.groupId ? parseInt(req.query.groupId, 10) : null;
+    const groupId = req.query.groupId || req.query.classId ? parseInt(req.query.groupId || req.query.classId, 10) : null;
     const result = scheduleService.getCurrentLesson(groupId);
     res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/teachers/:id/schedule
+ */
+publicRouter.get('/teachers/:id/schedule', (req, res) => {
+  try {
+    const teacherId = parseInt(req.params.id, 10);
+    const teacher = teachersRepo.getTeacherById(teacherId);
+    if (!teacher) {
+      return res.status(404).json({ success: false, error: 'O‘qituvchi topilmadi' });
+    }
+    const weeklyLessons = teachersRepo.getTeacherWeeklyLessons(teacherId);
+    const dayNames = { 1: 'Dushanba', 2: 'Seshanba', 3: 'Chorshanba', 4: 'Payshanba', 5: 'Juma', 6: 'Shanba' };
+    const week = [1, 2, 3, 4, 5, 6].map(d => ({
+      dayOfWeek: d,
+      dayName: dayNames[d],
+      lessons: weeklyLessons.filter(l => l.day_of_week === d)
+    }));
+    res.json({
+      success: true,
+      data: {
+        teacher,
+        week,
+        lessons: weeklyLessons
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/user/profile
+ */
+publicRouter.get('/user/profile', (req, res) => {
+  try {
+    const telegramId = req.query.telegramId || req.telegramUser?.id;
+    const user = telegramId ? usersRepo.getUserByTelegramId(telegramId) : null;
+    res.json({ success: true, data: user || {} });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
