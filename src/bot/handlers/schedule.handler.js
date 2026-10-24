@@ -6,7 +6,7 @@ import { teachersRepo } from '../../database/teachers.repo.js';
 import { usersRepo } from '../../database/users.repo.js';
 import { getClassesGridInlineKeyboard, getRoleSelectionInlineKeyboard, getStudentMainMenuKeyboard, getTeacherMainMenuKeyboard } from '../keyboards/user.keyboard.js';
 import { adminAuthService } from '../../services/admin-auth.service.js';
-import { replySafely } from '../../utils/telegram-sender.util.js';
+import { replySafely, editOrReplySafely } from '../../utils/telegram-sender.util.js';
 import { escapeHtml } from '../../utils/formatter.js';
 
 export function registerScheduleHandlers(bot) {
@@ -412,7 +412,8 @@ export function registerScheduleHandlers(bot) {
     }
 
     const user = usersRepo.getUserByTelegramId(ctx.from.id);
-    if (user?.is_role_locked && user?.role === 'student' && user?.selected_group_id && user.selected_group_id !== groupId) {
+    const existingGroup = user?.selected_group_id ? groupsRepo.getGroupById(user.selected_group_id) : null;
+    if (user?.is_role_locked && user?.role === 'student' && existingGroup && user.selected_group_id !== groupId) {
       return ctx.answerCallbackQuery({
         text: 'Siz allaqachon boshqa sinfga biriktirilgansiz va uni o‘zgartira olmaysiz!',
         show_alert: true
@@ -505,6 +506,87 @@ export function registerScheduleHandlers(bot) {
       `Ro‘yxatdan kerakli sinfni tanlang:`,
       { parse_mode: 'HTML', reply_markup: keyboard }
     );
+  });
+
+  // ==========================================
+  // 🔍 SINF KO‘RISH VA QIDIRISH
+  // ==========================================
+
+  bot.hears(['🔍 Boshqa sinflar', 'Boshqa sinflar', '🔍 Sinf qidirish', 'Sinf qidirish', 'sinf qidirish', '🔍 Sinf ko‘rish', 'Sinf ko‘rish'], async (ctx) => {
+    if (ctx.chat.type !== 'private') return;
+    const { schoolId } = getUserContext(ctx.from?.id);
+    const groups = groupsRepo.getAllGroups(true, schoolId);
+    const keyboard = getClassesGridInlineKeyboard(groups, 'user_today_grp_', true);
+
+    return ctx.reply(
+      `🔍 <b>Sinf dars jadvalini ko‘rish:</b>\n\n` +
+      `Sinf nomini to‘g‘ridan-to‘g‘ri yozib yuborishingiz mumkin (masalan: <b>11-D</b>, <b>5-A</b>, <b>7-B</b>) yoki quyidagi ro‘yxatdan tanlang:`,
+      { parse_mode: 'HTML', reply_markup: keyboard }
+    );
+  });
+
+  bot.command(['sinf', 'qidirish', 'class'], async (ctx) => {
+    if (ctx.chat.type !== 'private') return;
+    const { schoolId } = getUserContext(ctx.from?.id);
+    const query = ctx.match?.trim();
+
+    if (!query) {
+      const groups = groupsRepo.getAllGroups(true, schoolId);
+      const keyboard = getClassesGridInlineKeyboard(groups, 'user_today_grp_', true);
+      return ctx.reply(
+        `🔍 <b>Sinf dars jadvalini ko‘rish:</b>\n\n` +
+        `Quyidagi ro‘yxatdan sinfni tanlang yoki sinf nomini yozing (masalan: <code>/sinf 11-D</code>):`,
+        { parse_mode: 'HTML', reply_markup: keyboard }
+      );
+    }
+
+    const group = groupsRepo.getGroupByName(query, schoolId);
+    if (!group) {
+      const groups = groupsRepo.getAllGroups(true, schoolId);
+      const keyboard = getClassesGridInlineKeyboard(groups, 'user_today_grp_', true);
+      return ctx.reply(
+        `⚠️ <b>"${escapeHtml(query)}"</b> sinfi topilmadi.\n\n` +
+        `Iltimos, quyidagi mavjud sinflardan birini tanlang:`,
+        { parse_mode: 'HTML', reply_markup: keyboard }
+      );
+    }
+
+    const keyboard = new InlineKeyboard()
+      .text('📅 Bugungi jadval', `user_today_grp_${group.id}`)
+      .text('🔔 Hozirgi dars', `user_now_grp_${group.id}`)
+      .row()
+      .text('📆 Ertangi jadval', `user_tmr_grp_${group.id}`)
+      .text('📚 Haftalik jadval', `user_week_grp_${group.id}`)
+      .row()
+      .text('📌 Shu sinfga biriktirish', `user_bind_sinf_${group.id}`);
+
+    const { formattedText } = scheduleService.getTodaySchedule(group.id);
+    return replySafely(ctx, `🏫 <b>${escapeHtml(group.name)} dars jadvali:</b>\n\n${formattedText}`, {
+      reply_markup: keyboard
+    });
+  });
+
+  // To'g'ridan-to'g'ri sinf nomi yozilganda (masalan: 11-D, 5A, 7-B, 9 V, 10-A sinf)
+  bot.hears(/^(\d{1,2})\s*[-_ ]?\s*([a-zA-Zа-яА-ЯёЁўқғҳЎҚҒҲ])(\s*sinf)?$/i, async (ctx) => {
+    if (ctx.chat.type !== 'private') return;
+    const { schoolId } = getUserContext(ctx.from?.id);
+    const rawMatch = ctx.match[0];
+    const group = groupsRepo.getGroupByName(rawMatch, schoolId);
+    if (!group) return;
+
+    const keyboard = new InlineKeyboard()
+      .text('📅 Bugungi jadval', `user_today_grp_${group.id}`)
+      .text('🔔 Hozirgi dars', `user_now_grp_${group.id}`)
+      .row()
+      .text('📆 Ertangi jadval', `user_tmr_grp_${group.id}`)
+      .text('📚 Haftalik jadval', `user_week_grp_${group.id}`)
+      .row()
+      .text('📌 Shu sinfga biriktirish', `user_bind_sinf_${group.id}`);
+
+    const { formattedText } = scheduleService.getTodaySchedule(group.id);
+    return replySafely(ctx, `🏫 <b>${escapeHtml(group.name)} dars jadvali:</b>\n\n${formattedText}`, {
+      reply_markup: keyboard
+    });
   });
 
   // ==========================================

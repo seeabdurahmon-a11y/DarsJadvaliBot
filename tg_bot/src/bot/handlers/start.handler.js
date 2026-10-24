@@ -197,9 +197,9 @@ export function registerStartHandlers(bot) {
     }
 
     // Agar foydalanuvchi allaqachon o'quvchi sifatida qulflangan bo'lsa
-    if (user?.is_role_locked && user?.role === 'student' && user?.selected_group_id) {
+    if (user?.is_role_locked && user?.role === 'student' && user?.selected_group_id && user?.selected_group_name) {
       return ctx.reply(
-        `⚠️ <b>Siz allaqachon biriktirilgansiz: ${escapeHtml(user.selected_group_name || 'Sinf')}</b>\n\n` +
+        `⚠️ <b>Siz allaqachon biriktirilgansiz: ${escapeHtml(user.selected_group_name)}</b>\n\n` +
         `Sinf yoki maktabni almashtirish uchun /reset buyrug‘idan foydalaning.`,
         { parse_mode: 'HTML', reply_markup: getStudentMainMenuKeyboard() }
       );

@@ -53,7 +53,7 @@ export function getStudentMainMenuKeyboard() {
     .row()
     .text('🔔 5 daqiqa oldin eslatma').text('🏫 Mening sinfim')
     .row()
-    .text('ℹ️ Bot haqida')
+    .text('🔍 Boshqa sinflar').text('ℹ️ Bot haqida')
     .resized();
 
   return keyboard;

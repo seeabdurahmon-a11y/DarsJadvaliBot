@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
+import Database from 'better-sqlite3';
 
 function generateFullHtml() {
-  const db = new DatabaseSync('data/bot.sqlite');
+  const db = new Database('data/bot.sqlite');
 
   // Subjects emoji map
   const subjectsRows = db.prepare('SELECT name, emoji FROM subjects').all();

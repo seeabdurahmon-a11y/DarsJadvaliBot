@@ -159,9 +159,9 @@ export const usersRepo = {
     } else {
       db.prepare(`
         UPDATE users
-        SET role = 'student',
+        SET role = CASE WHEN is_admin = 1 OR role IN ('admin', 'zavuch') THEN role ELSE 'student' END,
             selected_group_id = ?,
-            is_role_locked = ?,
+            is_role_locked = CASE WHEN is_admin = 1 OR role IN ('admin', 'zavuch') THEN 0 ELSE ? END,
             selected_school_id = COALESCE(?, selected_school_id)
         WHERE telegram_id = ?
       `).run(groupId ? Number(groupId) : null, lock ? 1 : 0, effectiveSchoolId ? Number(effectiveSchoolId) : null, String(telegramId));

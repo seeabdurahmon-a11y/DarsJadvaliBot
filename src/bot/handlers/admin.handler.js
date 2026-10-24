@@ -66,6 +66,84 @@ export function registerAdminHandlers(bot) {
   });
 
   // ==========================================
+  // 📢 USTOZLARGA NAZORAT ISHI QO'LLANMASINI YUBORISH
+  // ==========================================
+  bot.command(['ustozlargaxabar', 'nazorathabari', 'broadcastguide'], async (ctx) => {
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) {
+      return ctx.reply(BOT_TEXTS.NOT_AUTHORIZED);
+    }
+
+    const waitMsg = await ctx.reply('⏳ <i>Ustozlarga nazorat ishi qo‘llanmasi yuborilmoqda...</i>', { parse_mode: 'HTML' });
+    const user = usersRepo.getUserByTelegramId(ctx.from?.id);
+    const schoolId = user?.selected_school_id || null;
+
+    const res = await adminService.broadcastExamGuideToTeachers(bot, { schoolId, includeAllUsers: true });
+
+    return ctx.api.editMessageText(
+      ctx.chat.id,
+      waitMsg.message_id,
+      `✅ <b>Nazorat ishi qo‘llanmasi yuborildi!</b>\n\n` +
+      `📊 <b>Natijalar:</b>\n` +
+      `• Jami qabul qiluvchilar: <b>${res.total}</b> ta\n` +
+      `• Muvaffaqiyatli yetkazildi: <b>${res.sent}</b> ta\n` +
+      `• Yetkazib bo‘lmadi: <b>${res.failed}</b> ta`,
+      { parse_mode: 'HTML' }
+    );
+  });
+
+  bot.callbackQuery('admin_send_teacher_guide', async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => {});
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) {
+      return ctx.editMessageText(BOT_TEXTS.NOT_AUTHORIZED);
+    }
+
+    const confirmKb = new InlineKeyboard()
+      .text('✅ Ha, barcha ustozlarga yuborilsin', 'admin_confirm_send_teacher_guide')
+      .row()
+      .text('⬅️ Orqaga', 'admin_main');
+
+    return editOrReplySafely(
+      ctx,
+      `📢 <b>Ustozlarga Nazorat ishi qo‘llanmasini yuborish</b>\n\n` +
+      `Ushbu amal barcha ro‘yxatdan o‘tgan ustozlarga va foydalanuvchilarga Nazorat ishlari (BSB, CHSB) tizimidan qanday foydalanish bo‘yicha batafsil qo‘llanma va tezkor tugmalarni yuboradi.\n\n` +
+      `Haqiqatan ham yuborishni xohlaysizmi?`,
+      {
+        parse_mode: 'HTML',
+        reply_markup: confirmKb
+      }
+    );
+  });
+
+  bot.callbackQuery('admin_confirm_send_teacher_guide', async (ctx) => {
+    await ctx.answerCallbackQuery({ text: 'Yuborilmoqda...' }).catch(() => {});
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) {
+      return ctx.editMessageText(BOT_TEXTS.NOT_AUTHORIZED);
+    }
+
+    await editOrReplySafely(ctx, `⏳ <i>Ustozlarga nazorat ishi qo‘llanmasi yuborilmoqda...</i>`, { parse_mode: 'HTML' });
+
+    const user = usersRepo.getUserByTelegramId(ctx.from?.id);
+    const schoolId = user?.selected_school_id || null;
+
+    const res = await adminService.broadcastExamGuideToTeachers(bot, { schoolId, includeAllUsers: true });
+
+    const backKb = new InlineKeyboard().text('⬅️ Admin Bosh menyu', 'admin_main');
+
+    return editOrReplySafely(
+      ctx,
+      `✅ <b>Nazorat ishi qo‘llanmasi muvaffaqiyatli yuborildi!</b>\n\n` +
+      `📊 <b>Natijalar:</b>\n` +
+      `• Jami qabul qiluvchilar: <b>${res.total}</b> ta\n` +
+      `• Muvaffaqiyatli yetkazildi: <b>${res.sent}</b> ta\n` +
+      `• Yetkazib bo‘lmadi: <b>${res.failed}</b> ta`,
+      {
+        parse_mode: 'HTML',
+        reply_markup: backKb
+      }
+    );
+  });
+
+  // ==========================================
   // 🔓 /adminchiqarish BUYRUG'I
   // ==========================================
   bot.command(['adminchiqarish', 'chiqarish', 'releaseuser', 'resetrole'], async (ctx) => {

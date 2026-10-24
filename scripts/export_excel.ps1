@@ -1,6 +1,9 @@
-$excelPath = "C:\Users\Pro\Downloads\Telegram Desktop\21.09 ADVAL.xlsx"
+param(
+  [string]$excelPath = "C:\Users\Pro\Downloads\Telegram Desktop\19.10.26.xlsx"
+)
 if (-not (Test-Path $excelPath)) {
-  $excelPath = "C:\Users\Pro\Downloads\Telegram Desktop\dars jadvali 1-chorak.xlsx"
+  Write-Error "Excel file not found: $excelPath"
+  exit 1
 }
 Write-Output "Extracting from: $excelPath"
 

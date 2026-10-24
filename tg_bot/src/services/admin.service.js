@@ -1,3 +1,4 @@
+import { InlineKeyboard } from 'grammy';
 import { usersRepo } from '../database/users.repo.js';
 import { groupsRepo } from '../database/groups.repo.js';
 import { lessonsRepo } from '../database/lessons.repo.js';
@@ -142,6 +143,126 @@ export const adminService = {
         results.failed++;
       }
       results.details.push({ group: group.name, result: res });
+    }
+
+    return results;
+  },
+
+  /**
+   * Barcha ustozlarga (va ma'murlarga) Nazorat ishi qo'llanmasini tarqatish
+   */
+  async broadcastExamGuideToTeachers(bot, { schoolId = null, includeAllUsers = true } = {}) {
+    const text = `📢 <b>HURMATLI USTOZLAR DIQQATIGA!</b> 👨‍🏫👩‍🏫\n\n` +
+      `Maktabimiz Telegram botida <b>Nazorat ishlari (BSB, CHSB va joriy nazoratlar)</b> tizimi ishga tushirildi!\n\n` +
+      `✨ <b>Ushbu tizim orqali nimalar qilish mumkin?</b>\n` +
+      `1️⃣ <b>Sinf tanlash:</b> Qaysi sinfda nazorat ishi o‘tkazmoqchi bo‘lsangiz, ro‘yxatdan tanlaysiz.\n` +
+      `2️⃣ <b>Sana va dars soati:</b> Nazorat ishi qaysi kuni va nechanchi darsda bo‘lishini belgilaysiz.\n` +
+      `3️⃣ <b>Nazorat turi:</b> BSB, CHSB, Yozma ish yoki test turini kiritasiz.\n` +
+      `4️⃣ <b>O‘quvchilarni ogohlantirish:</b> Siz kiritgan nazorat ishi avtomatik ravishda o‘quvchilar jadvaliga yoziladi va ularga eslatma yuboriladi.\n\n` +
+      `📝 <b>Qanday boshlash mumkin?</b>\n` +
+      `Quyidagi <b>«➕ Yangi nazorat ishi belgilash»</b> tugmasini bosing yoki bot menyusidagi <b>«📝 Nazorat ishi»</b> bo‘limiga kiring.\n\n` +
+      `<i>(Agar rolingiz biriktirilmagan bo‘lsa, /start buyrug‘ini bosib o‘zingizni ustoz sifatida tanlang)</i>`;
+
+    const keyboard = new InlineKeyboard()
+      .text('➕ Yangi nazorat ishi belgilash', 'teacher_exam_new')
+      .row()
+      .text('📋 Mening nazorat ishlarim', 'teacher_exam_list');
+
+    // Foydalanuvchilarni yig'ish
+    const teachers = usersRepo.getActiveTeacherUsers(schoolId);
+    let targetUsers = [...teachers];
+
+    if (includeAllUsers || targetUsers.length === 0) {
+      const allUsers = usersRepo.getAllUsers(schoolId);
+      const seenIds = new Set(targetUsers.map(u => String(u.telegram_id)));
+      for (const u of allUsers) {
+        if (u.telegram_id && !seenIds.has(String(u.telegram_id)) && String(u.telegram_id) !== '1087968824') {
+          targetUsers.push(u);
+          seenIds.add(String(u.telegram_id));
+        }
+      }
+    }
+
+    const results = {
+      total: targetUsers.length,
+      sent: 0,
+      failed: 0,
+      details: []
+    };
+
+    for (const u of targetUsers) {
+      try {
+        await bot.api.sendMessage(u.telegram_id, text, {
+          parse_mode: 'HTML',
+          reply_markup: keyboard
+        });
+        results.sent++;
+        results.details.push({ telegram_id: u.telegram_id, name: u.first_name || u.username, success: true });
+        logger.info(`[BROADCAST] Nazorat ishi qo'llanmasi ${u.telegram_id} (${u.first_name || u.username}) ga muvaffaqiyatli yuborildi.`);
+        await new Promise(res => setTimeout(res, 50));
+      } catch (err) {
+        results.failed++;
+        results.details.push({ telegram_id: u.telegram_id, name: u.first_name || u.username, success: false, error: err.message });
+        logger.warn(`[BROADCAST] ${u.telegram_id} ga xabar yuborishda xatolik:`, err.message);
+      }
+    }
+
+    return results;
+  },
+
+  /**
+   * Dars jadvali yangilangani haqida barcha foydalanuvchilarga xabar yuborish
+   */
+  async broadcastScheduleUpdateNotification(bot, { schoolId = null, customText = null } = {}) {
+    const text = customText || (
+      `🔔 <b>DIQQAT: MAKTAB DARS JADVALI YANGILANDI!</b> 📅\n\n` +
+      `Hurmatli ustozlar, o‘quvchilar va ota-onalar!\n\n` +
+      `Maktabimizda <b>yangi dars jadvali (19.10.2026 holatiga ko‘ra)</b> tizimga to‘liq yuklandi va amaliyotga tatbiq etildi.\n\n` +
+      `✨ <b>Asosiy o‘zgarishlar:</b>\n` +
+      `• Barcha 40 ta sinf (1-A dan 11-G gacha) dars jadvallari yangilandi.\n` +
+      `• Ayrim fanlar va dars soatlari o‘zaro optimallashtirildi.\n` +
+      `• O‘qituvchilar dars vaqtlari qayta muvofiqlashtirildi.\n\n` +
+      `📌 <i>O‘zingizning sinfingiz yoki dars jadvalingizni quyidagi tugma orqali tekshirib olishingiz mumkin.</i>`
+    );
+
+    const keyboard = new InlineKeyboard()
+      .text('📅 Mening sinfim jadvali', 'user_my_class_menu')
+      .row()
+      .text('🔄 Maktab / Sinfni almashtirish', 'user_reset_profile_prompt');
+
+    const allUsers = usersRepo.getAllUsers(schoolId);
+    const targetUsers = [];
+    const seenIds = new Set();
+
+    for (const u of allUsers) {
+      if (u.telegram_id && !seenIds.has(String(u.telegram_id)) && String(u.telegram_id) !== '1087968824') {
+        targetUsers.push(u);
+        seenIds.add(String(u.telegram_id));
+      }
+    }
+
+    const results = {
+      total: targetUsers.length,
+      sent: 0,
+      failed: 0,
+      details: []
+    };
+
+    for (const u of targetUsers) {
+      try {
+        await bot.api.sendMessage(u.telegram_id, text, {
+          parse_mode: 'HTML',
+          reply_markup: keyboard
+        });
+        results.sent++;
+        results.details.push({ telegram_id: u.telegram_id, name: u.first_name || u.username, success: true });
+        logger.info(`[BROADCAST-SCHEDULE] ${u.telegram_id} (${u.first_name || u.username}) ga jadval yangilanish xabari yuborildi.`);
+        await new Promise(res => setTimeout(res, 50));
+      } catch (err) {
+        results.failed++;
+        results.details.push({ telegram_id: u.telegram_id, name: u.first_name || u.username, success: false, error: err.message });
+        logger.warn(`[BROADCAST-SCHEDULE] ${u.telegram_id} ga xabar yuborishda xatolik:`, err.message);
+      }
     }
 
     return results;

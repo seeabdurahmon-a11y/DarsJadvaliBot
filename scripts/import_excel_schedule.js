@@ -74,14 +74,8 @@ function normalizeSubject(raw) {
 }
 
 export function importOfficialSchedule(dbPath = null, schoolId = 1) {
-  console.log(`🔄 Maktab (ID: ${schoolId}) bazasi tozalanmoqda va yangi dars jadvali to‘liq yuklanmoqda...`);
+  console.log(`🔄 Maktab (ID: ${schoolId}) bazasi yangilanmoqda va yangi dars jadvali yuklanmoqda... [DB: ${dbPath || 'data/bot.sqlite'}]`);
   const db = getDatabase(dbPath);
-
-  // Eski darslar, sinflar, o'qituvchilar va fanlarni tozalash (faqat ko'rsatilgan maktab uchun)
-  db.prepare('DELETE FROM lessons WHERE school_id = ?').run(schoolId);
-  db.prepare('DELETE FROM teachers WHERE school_id = ?').run(schoolId);
-  db.prepare('DELETE FROM subjects WHERE school_id = ?').run(schoolId);
-  db.prepare('DELETE FROM groups WHERE school_id = ?').run(schoolId);
 
   // Standart shablon sozlamalari
   settingsRepo.set('schedule_template', DEFAULT_TEMPLATE);
@@ -99,7 +93,25 @@ export function importOfficialSchedule(dbPath = null, schoolId = 1) {
   const sheet = Array.isArray(data) ? data[0] : data;
   const rows = sheet.Rows;
 
-  // 2. Sinflar ustunlarini aniqlash (R3)
+  // 2. Mavjud o'qituvchilar xaritasi (group_name + subject -> teacher)
+  const teacherMap = new Map();
+  try {
+    const existingLessons = db.prepare(`
+      SELECT g.name as group_name, l.subject, l.teacher 
+      FROM lessons l 
+      JOIN groups g ON g.id = l.group_id 
+      WHERE l.teacher IS NOT NULL AND l.teacher != '' AND (l.school_id = ? OR g.school_id = ?)
+    `).all(schoolId, schoolId);
+    existingLessons.forEach(r => teacherMap.set(`${r.group_name}|||${r.subject}`, r.teacher));
+  } catch (e) {
+    console.warn('Mavjud darslar o‘qituvchi xaritasini olishda ogohlantirish:', e.message);
+  }
+
+  // 3. Mavjud sinflarni aniqlash yoki yangilarini qo'shish (ID larni saqlab qolgan holda)
+  const existingGroups = db.prepare('SELECT * FROM groups WHERE school_id = ?').all(schoolId);
+  const existingGroupByName = new Map();
+  existingGroups.forEach(g => existingGroupByName.set(g.name.toLowerCase().trim(), g));
+
   const headerRow = rows[2];
   const classMap = new Map(); // colIndex -> group object
 
@@ -109,18 +121,25 @@ export function importOfficialSchedule(dbPath = null, schoolId = 1) {
       const match = rawClass.match(/^(\d+)\s*([A-ZА-Яa-zа-я])$/i);
       const formattedName = match ? `${match[1]}-${match[2].toUpperCase()} sinf` : `${rawClass} sinf`;
 
-      const group = groupsRepo.addGroup({
-        school_id: schoolId,
-        name: formattedName,
-        send_time: '06:00'
-      });
+      let group = existingGroupByName.get(formattedName.toLowerCase().trim());
+      if (!group) {
+        group = groupsRepo.addGroup({
+          school_id: schoolId,
+          name: formattedName,
+          send_time: '06:00'
+        });
+        existingGroupByName.set(formattedName.toLowerCase().trim(), group);
+      }
       classMap.set(c, group);
     }
   }
 
-  console.log(`✅ ${classMap.size} ta sinf bazaga kiritildi.`);
+  console.log(`✅ ${classMap.size} ta sinf aniqlandi.`);
 
-  // 3. Darslar va O'qituvchilarni parsing qilish
+  // 4. Eski darslarni tozalash (faqat ko'rsatilgan maktab darslari)
+  db.prepare('DELETE FROM lessons WHERE school_id = ?').run(schoolId);
+
+  // 5. Yangi darslarni parsing qilish va kiritish
   let currentDay = 1;
   let insertedLessons = 0;
   const teacherNames = new Set();
@@ -144,8 +163,15 @@ export function importOfficialSchedule(dbPath = null, schoolId = 1) {
         const rawSubject = subjectRow[colIndex] ? subjectRow[colIndex].trim() : '';
         if (rawSubject && rawSubject !== '-' && rawSubject !== '') {
           const subject = normalizeSubject(rawSubject);
-          const rawTeacher = teacherRow && teacherRow[colIndex] ? teacherRow[colIndex].trim() : null;
-          const teacher = rawTeacher && rawTeacher !== '-' ? rawTeacher : null;
+          let teacher = null;
+          if (teacherRow && teacherRow[colIndex]) {
+            const rawTeacher = teacherRow[colIndex].trim();
+            if (rawTeacher && rawTeacher !== '-') teacher = rawTeacher;
+          }
+          if (!teacher) {
+            teacher = teacherMap.get(`${group.name}|||${subject}`) || null;
+          }
+
           const time = LESSON_TIMES[lessonNum] || { start: '08:30', end: '09:15' };
 
           lessonsRepo.addLesson({
@@ -174,29 +200,51 @@ export function importOfficialSchedule(dbPath = null, schoolId = 1) {
     }
   }
 
-  // 4. Fanlarni kiritish
+  // 6. Fanlarni kiritish (takrorlanmasdan)
+  const existingSubjects = db.prepare('SELECT name FROM subjects WHERE school_id = ?').all(schoolId);
+  const existingSubjectNames = new Set(existingSubjects.map(s => s.name.toLowerCase().trim()));
   subjectNames.forEach(subName => {
-    subjectsRepo.addSubject({ school_id: schoolId, name: subName });
+    if (!existingSubjectNames.has(subName.toLowerCase().trim())) {
+      subjectsRepo.addSubject({ school_id: schoolId, name: subName });
+      existingSubjectNames.add(subName.toLowerCase().trim());
+    }
   });
 
-  // 5. O'qituvchilarni kiritish
+  // 7. O'qituvchilarni kiritish (takrorlanmasdan)
+  const existingTeachers = db.prepare('SELECT first_name, last_name FROM teachers WHERE school_id = ?').all(schoolId);
+  const existingTeacherKeys = new Set(existingTeachers.map(t => `${t.last_name} ${t.first_name}`.toLowerCase().trim()));
   teacherNames.forEach(tName => {
     const parts = tName.split(/\s+/);
     const lastName = parts[0] || 'O‘qituvchi';
     const firstName = parts.slice(1).join(' ') || '';
-    teachersRepo.addTeacher({
-      school_id: schoolId,
-      first_name: firstName || lastName,
-      last_name: lastName,
-      subject: null
-    });
+    const key = `${lastName} ${firstName}`.toLowerCase().trim();
+    if (!existingTeacherKeys.has(key)) {
+      teachersRepo.addTeacher({
+        school_id: schoolId,
+        first_name: firstName || lastName,
+        last_name: lastName,
+        subject: null
+      });
+      existingTeacherKeys.add(key);
+    }
   });
 
-  console.log(`✅ ${insertedLessons} ta dars jadvali, ${subjectNames.size} ta fan va ${teacherNames.size} ta o‘qituvchi muvaffaqiyatli kiritildi!`);
+  console.log(`✅ ${insertedLessons} ta dars jadvali kiritildi!`);
   return { classesCount: classMap.size, lessonsCount: insertedLessons, subjectsCount: subjectNames.size, teachersCount: teacherNames.size };
 }
 
 if (process.argv[1]?.endsWith('import_excel_schedule.js')) {
   importOfficialSchedule();
   closeDatabase();
+
+  if (fs.existsSync('tg_bot/data/bot.sqlite')) {
+    console.log('🔄 tg_bot/data/bot.sqlite ham yangilanmoqda...');
+    importOfficialSchedule('tg_bot/data/bot.sqlite');
+    closeDatabase();
+  }
+
+  if (fs.existsSync('tg_bot/data')) {
+    fs.copyFileSync('data/excel_dump.json', 'tg_bot/data/excel_dump.json');
+    console.log('✅ tg_bot/data/excel_dump.json nusxalandi.');
+  }
 }

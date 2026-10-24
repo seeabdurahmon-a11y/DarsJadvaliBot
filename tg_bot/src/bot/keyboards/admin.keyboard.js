@@ -18,10 +18,11 @@ export function getAdminMainMenuKeyboard() {
     .text('⏰ Yuborish vaqtini sozlash', 'admin_set_time')
     .text('📤 Hozir yuborish', 'admin_broadcast_now')
     .row()
+    .text('📢 Ustozlarga qo‘llanma', 'admin_send_teacher_guide')
     .text('📊 Statistika', 'admin_stats')
-    .text('🔑 Parolni o‘zgartirish', 'admin_change_password')
     .row()
-    .text('🚪 Admin paneldan chiqish', 'admin_logout');
+    .text('🔑 Parolni o‘zgartirish', 'admin_change_password')
+    .text('🚪 Chiqish', 'admin_logout');
 }
 
 /**

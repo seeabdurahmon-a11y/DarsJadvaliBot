@@ -1,7 +1,5 @@
 $files = @(
-  "C:\Users\Pro\Downloads\Telegram Desktop\dars jadvali 1-chorak.xlsx",
-  "C:\Users\Pro\Downloads\Telegram Desktop\dushanba seshanba dars jadvali.xlsx",
-  "C:\Users\Pro\Downloads\Telegram Desktop\jadval 1-haftaxlsx.xlsx"
+  "C:\Users\Pro\Downloads\Telegram Desktop\19.10.26.xlsx"
 )
 
 $excel = New-Object -ComObject Excel.Application

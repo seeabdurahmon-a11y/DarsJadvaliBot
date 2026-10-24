@@ -86,7 +86,6 @@ export const ScheduleView = {
               <div class="hero-subject">${currentLesson.subject}</div>
               <div class="hero-meta">
                 ${currentLesson.teacher ? `<span>${currentLesson.teacher}</span>` : ''}
-                ${currentLesson.room ? `<span class="hero-room-pill">${currentLesson.room}-xona</span>` : ''}
                 ${nextLesson ? `<span style="margin-left:auto;opacity:0.9;">Keyingi: ${nextLesson.subject} (${nextLesson.start_time})</span>` : '<span style="margin-left:auto;opacity:0.9;">Oxirgi dars</span>'}
               </div>
             </div>
@@ -102,7 +101,6 @@ export const ScheduleView = {
               <div class="hero-meta">
                 <span>Boshlanishi: ${nextLesson.start_time} — ${nextLesson.end_time}</span>
                 ${nextLesson.teacher ? `<span>${nextLesson.teacher}</span>` : ''}
-                ${nextLesson.room ? `<span class="hero-room-pill">${nextLesson.room}-xona</span>` : ''}
               </div>
             </div>
           `;
@@ -141,11 +139,6 @@ export const ScheduleView = {
                     <div class="lesson-meta-item">
                       <span class="icon-inline">${Icons.teacher}</span>
                       <span>${lesson.teacher}</span>
-                    </div>
-                  ` : ''}
-                  ${lesson.room ? `
-                    <div class="lesson-meta-item">
-                      <span class="lesson-room-pill">${lesson.room}-xona</span>
                     </div>
                   ` : ''}
                 </div>
@@ -267,11 +260,6 @@ export const ScheduleView = {
                   <span>${lesson.teacher}</span>
                 </div>
               ` : ''}
-              ${lesson.room ? `
-                <div class="lesson-meta-item">
-                  <span class="lesson-room-pill">${lesson.room}-xona</span>
-                </div>
-              ` : ''}
             </div>
           </div>
         </div>
@@ -380,7 +368,6 @@ export const ScheduleView = {
                   <strong>${l.group_name || 'Sinf'}</strong> — 
                   ${l.subject}
                 </div>
-                ${l.room ? `<span class="lesson-room-pill">xona: ${l.room}</span>` : ''}
               </div>
             `;
           });

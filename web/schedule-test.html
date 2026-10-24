@@ -575,15 +575,10 @@
         <datalist id="modal-subjects-datalist"></datalist>
       </div>
 
-      <div style="margin-bottom:12px;">
+      <div style="margin-bottom:18px;">
         <label style="font-size:12px;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">Ustoz (O‘qituvchi):</label>
         <input type="text" id="modal-teacher-input" list="modal-teachers-datalist" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;box-sizing:border-box;">
         <datalist id="modal-teachers-datalist"></datalist>
-      </div>
-
-      <div style="margin-bottom:18px;">
-        <label style="font-size:12px;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">Xona (Ixtiyoriy):</label>
-        <input type="text" id="modal-room-input" placeholder="Masalan: 12 yoki Kimyo lab" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;box-sizing:border-box;">
       </div>
 
       <div style="display:flex;gap:8px;justify-content:flex-end;">
@@ -819,13 +814,12 @@
                     ` : ''}
 
                     <div class="card-meta-bar">
-                      <span class="card-room-badge">${lesson.room ? lesson.room + '-xona' : 'Xona: —'}</span>
-                      <div style="display:flex;gap:4px;">
+                      <div style="display:flex;gap:4px;width:100%;justify-content:flex-end;">
                         <button class="card-swap-btn" onclick="MasterApp.onClickSwap(${cls.id}, ${period})" title="O‘rnini almashtirish">
                           🔀 Almash
                         </button>
                         <button class="card-swap-btn" style="background:#f1f5f9;color:#475569;border-color:#cbd5e1;" onclick="MasterApp.openEditModal(${cls.id}, ${period})" title="Tahrirlash">
-                          ✏️
+                          ✏️ Tahrir
                         </button>
                       </div>
                     </div>
