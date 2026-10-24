@@ -2,6 +2,7 @@ import { InlineKeyboard } from 'grammy';
 import { schoolsRepo } from '../../database/schools.repo.js';
 import { groupsRepo } from '../../database/groups.repo.js';
 import { usersRepo } from '../../database/users.repo.js';
+import { settingsRepo } from '../../database/settings.repo.js';
 import { scheduleService } from '../../services/schedule.service.js';
 import { adminService } from '../../services/admin.service.js';
 import { isValidTimeFormat } from '../../utils/date.util.js';
@@ -9,6 +10,7 @@ import { getClassesGridInlineKeyboard } from '../keyboards/user.keyboard.js';
 import { escapeHtml } from '../../utils/formatter.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../utils/logger.js';
+import { isAdvertisementMessage } from '../../utils/anti-ad.util.js';
 
 async function canManageGroup(ctx) {
   if (ctx.isAdmin) return true;
@@ -22,6 +24,102 @@ async function canManageGroup(ctx) {
 }
 
 export function registerGroupHandlers(bot) {
+  // ==========================================
+  // 🛡️ ANTI-REKLAMA & ANTI-SPAM TIZIMI
+  // ==========================================
+
+  // 1. Guruhdagi tizim xabarlarini tozalash (A'zo qo'shildi / chiqib ketdi)
+  bot.on(['message:new_chat_members', 'message:left_chat_member'], async (ctx) => {
+    if (ctx.chat.type === 'private') return;
+    try {
+      await ctx.deleteMessage();
+    } catch (e) {}
+  });
+
+  // 2. /antireklama [on/off] buyrug'i (Guruh adminlari uchun)
+  bot.command(['antireklama', 'antispam'], async (ctx) => {
+    if (ctx.chat.type === 'private') {
+      return ctx.reply('ℹ️ Anti-reklama sozlamasi faqat guruhlar ichida ishlaydi.');
+    }
+
+    const allowed = await canManageGroup(ctx);
+    if (!allowed) {
+      return ctx.reply('⛔ Faqat guruh adminlari ushbu sozlamani o‘zgartirishi mumkin.');
+    }
+
+    const arg = ctx.match?.trim().toLowerCase();
+    const settingKey = `antireklama_${ctx.chat.id}`;
+
+    if (arg === 'off' || arg === 'ochir' || arg === '0') {
+      settingsRepo.set(settingKey, '0');
+      return ctx.reply('🛡️ <b>Anti-reklama filtri o‘chirildi.</b>', { parse_mode: 'HTML' });
+    }
+
+    if (arg === 'on' || arg === 'yoq' || arg === '1') {
+      settingsRepo.set(settingKey, '1');
+      return ctx.reply('🛡️ <b>Anti-reklama filtri muvaffaqiyatli yoqildi!</b>\n\nEndi guruhda havola va spamlar avtomatik o‘chiriladi.', { parse_mode: 'HTML' });
+    }
+
+    const currentStatus = settingsRepo.get(settingKey, '1') !== '0' ? '🟢 YOQILGAN' : '🔴 O‘CHIRILGAN';
+    return ctx.reply(
+      `🛡️ <b>Guruh Anti-Reklama Himoyasi:</b> ${currentStatus}\n\n` +
+      `Foydalanish:\n` +
+      `• <code>/antireklama on</code> — Himoyani yoqish\n` +
+      `• <code>/antireklama off</code> — Himoyani o‘chirish`,
+      { parse_mode: 'HTML' }
+    );
+  });
+
+  // 3. Guruhdagi barcha xabarlardan reklama/havola/spamni aniqlab o'chirish
+  bot.on('message', async (ctx, next) => {
+    if (ctx.chat.type === 'private') return next();
+
+    // Agar bot buyrug'i bo'lsa, keyingi buyruq handlerlariga o'tkazamiz
+    if (ctx.message?.text?.trim().startsWith('/')) {
+      return next();
+    }
+
+    // Guruhda antireklama o'chirilgan bo'lsa
+    const isAntiAdEnabled = settingsRepo.get(`antireklama_${ctx.chat.id}`, '1') !== '0';
+    if (!isAntiAdEnabled) {
+      return next();
+    }
+
+    // Guruh adminlari va bot adminlari yuborgan xabarlar tekshirilmaydi
+    const isAdmin = await canManageGroup(ctx);
+    if (isAdmin) {
+      return next();
+    }
+
+    // Reklama yoki spam borligini tekshiramiz
+    const adCheck = isAdvertisementMessage(ctx.message);
+    if (adCheck.isAd) {
+      try {
+        await ctx.deleteMessage();
+        logger.info(`[ANTI-REKLAMA] ${ctx.chat.title || 'Guruh'} (${ctx.chat.id}) da ${ctx.from?.id} ning reklamasi o'chirildi (${adCheck.reason})`);
+
+        const userName = ctx.from?.first_name ? escapeHtml(ctx.from.first_name) : 'Foydalanuvchi';
+        const warnMsg = await ctx.reply(
+          `⚠️ <b>${userName}</b>, guruhda reklama, havola va kanallarni tarqatish taqiqlangan!`,
+          { parse_mode: 'HTML' }
+        ).catch(() => null);
+
+        if (warnMsg) {
+          setTimeout(async () => {
+            try {
+              await ctx.api.deleteMessage(ctx.chat.id, warnMsg.message_id);
+            } catch (e) {}
+          }, 5000);
+        }
+        return; // Xabar o'chirildi, keyingi middleware/handlerlarga o'tmaydi
+      } catch (delErr) {
+        logger.warn(`[ANTI-REKLAMA] Xabarni o'chirish imkoni bo'lmadi (Bot guruhda admin emas bo'lishi mumkin):`, delErr.message);
+      }
+    }
+
+    return next();
+  });
+
   // Bot guruhga qo'shilganda maktab/sinfni so'rash
   bot.on('my_chat_member', async (ctx) => {
     const status = ctx.myChatMember.new_chat_member.status;
