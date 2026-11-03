@@ -73,6 +73,31 @@ export const ScheduleView = {
         </div>
       `;
 
+      // Agar ta'til bo'lsa
+      if (scheduleData.isVacation) {
+        const vInfo = scheduleData.vacation || {};
+        html += `
+          <div style="background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);border:1.5px solid #f59e0b;border-radius:14px;padding:16px;margin-bottom:14px;color:#92400e;box-shadow:0 4px 12px rgba(245,158,11,0.15);">
+            <div style="font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px;">
+              🏖️ Maktab Ta'tilda! (${vInfo.title || "Ta'til"})
+            </div>
+            <div style="font-size:13px;font-weight:600;margin-top:6px;line-height:1.4;">
+              Hurmatli o‘quvchilar va ota-onalar! Hozirda maktabda ta'til davri davom etmoqda.
+            </div>
+            ${vInfo.startDate && vInfo.endDate ? `
+              <div style="margin-top:8px;font-size:12px;background:rgba(255,255,255,0.7);padding:6px 10px;border-radius:8px;display:inline-block;font-weight:700;">
+                📅 Muddat: <b>${vInfo.startDate} — ${vInfo.endDate}</b>
+              </div>
+            ` : ''}
+            <div style="margin-top:10px;font-size:12px;font-weight:700;color:#78350f;">
+              🎉 Maroqli hordiq tilaymiz!
+            </div>
+          </div>
+        `;
+        container.innerHTML = html;
+        return;
+      }
+
       // Hozirgi dars holati banneri
       if (mode === 'today' && lessons.length > 0) {
         if (currentLesson) {

@@ -4,6 +4,7 @@ import { lessonsRepo } from '../database/lessons.repo.js';
 import { usersRepo } from '../database/users.repo.js';
 import { settingsRepo } from '../database/settings.repo.js';
 import { examsRepo } from '../database/exams.repo.js';
+import { vacationService } from './vacation.service.js';
 import { getNowInTashkent } from '../utils/date.util.js';
 import { getSubjectEmoji, getLessonNumber, escapeHtml } from '../utils/formatter.js';
 import { logger } from '../utils/logger.js';
@@ -45,6 +46,11 @@ export const teacherReminderService = {
 
     for (const u of teacherUsers) {
       try {
+        const schoolId = u.selected_school_id || 1;
+        if (vacationService.isVacationActive(schoolId, scheduleDate)) {
+          continue;
+        }
+
         const todayLessons = teachersRepo.getTeacherLessonsByDay(u.selected_teacher_id, dayOfWeek, u.selected_school_id);
         if (!todayLessons || todayLessons.length === 0) continue;
 
@@ -110,6 +116,11 @@ export const teacherReminderService = {
 
     for (const u of studentUsers) {
       try {
+        const schoolId = u.selected_school_id || 1;
+        if (vacationService.isVacationActive(schoolId, scheduleDate)) {
+          continue;
+        }
+
         const todayLessons = lessonsRepo.getLessonsByDay(dayOfWeek, u.selected_group_id);
         if (!todayLessons || todayLessons.length === 0) continue;
 

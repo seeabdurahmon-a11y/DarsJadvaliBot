@@ -8,6 +8,7 @@ import { subjectsRepo } from '../../database/subjects.repo.js';
 import { usersRepo } from '../../database/users.repo.js';
 import { settingsRepo } from '../../database/settings.repo.js';
 import { adminService } from '../../services/admin.service.js';
+import { vacationService } from '../../services/vacation.service.js';
 import { templateUtil } from '../../utils/template.util.js';
 import { getTodayInfo } from '../../utils/date.util.js';
 
@@ -552,6 +553,91 @@ adminRouter.post('/bulk-save-timetable', (req, res) => {
       message: `Jami ${savedClassesCount} ta sinf va ${totalLessonsCount} ta dars muvaffaqiyatli saqlandi!`,
       savedClassesCount,
       totalLessonsCount
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/admin/vacation
+ * Save or toggle school vacation settings
+ */
+adminRouter.post('/vacation', (req, res) => {
+  try {
+    const schoolId = getEffectiveSchoolId(req);
+    const { isActive, startDate, endDate, title, message } = req.body;
+
+    const updated = vacationService.setVacation(schoolId, {
+      isActive,
+      startDate,
+      endDate,
+      title,
+      message
+    });
+
+    res.json({
+      success: true,
+      message: 'Ta‘til sozlamalari muvaffaqiyatli saqlandi!',
+      data: updated
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/admin/substitute-lesson
+ * Quick lesson substitution (changing subject, teacher, room for a lesson)
+ */
+adminRouter.post('/substitute-lesson', async (req, res) => {
+  try {
+    const schoolId = getEffectiveSchoolId(req);
+    const { lessonId, subject, teacher, room, notifyGroup } = req.body;
+
+    if (!lessonId) {
+      return res.status(400).json({ success: false, error: 'Dars ID si ko‘rsatilishi shart' });
+    }
+
+    const currentLesson = lessonsRepo.getLessonById(lessonId);
+    if (!currentLesson) {
+      return res.status(404).json({ success: false, error: 'Dars topilmadi' });
+    }
+
+    const updated = lessonsRepo.updateLesson(lessonId, {
+      subject: subject || currentLesson.subject,
+      teacher: typeof teacher !== 'undefined' ? teacher : currentLesson.teacher,
+      room: typeof room !== 'undefined' ? room : currentLesson.room
+    });
+
+    // Agar Telegram guruhiga bildirishnoma yuborish so'ralsa
+    let notificationSent = false;
+    if (notifyGroup) {
+      const group = groupsRepo.getGroupById(currentLesson.group_id);
+      if (group && group.telegram_chat_id && req.app.get('bot')) {
+        const bot = req.app.get('bot');
+        const alertText = `⚡ <b>DIQQAT: Dars jadvalida o‘zgarish!</b>\n\n` +
+          `👥 <b>Sinf:</b> <b>${group.name}</b>\n` +
+          `⏰ <b>Dars vaqti:</b> <code>${updated.start_time} — ${updated.end_time}</code>\n` +
+          `📚 <b>Yangi fan:</b> <b>${updated.subject}</b>\n` +
+          (updated.teacher ? `👨‍🏫 <b>O‘qituvchi:</b> ${updated.teacher}\n` : '') +
+          (updated.room ? `🚪 <b>Xona:</b> ${updated.room}-xona\n` : '') +
+          `\n<i>O‘quvchilar va ustozlar diqqatiga yetkaziladi.</i>`;
+
+        try {
+          await bot.api.sendMessage(group.telegram_chat_id, alertText, { parse_mode: 'HTML' });
+          notificationSent = true;
+        } catch (e) {
+          console.warn('Guruhga o‘zgarish bildirishnomasini yuborishda xatolik:', e.message);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Dars muvaffaqiyatli almashtirildi!',
+      notificationSent,
+      data: updated
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

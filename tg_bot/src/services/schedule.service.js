@@ -3,6 +3,7 @@ import { groupsRepo } from '../database/groups.repo.js';
 import { teachersRepo } from '../database/teachers.repo.js';
 import { schoolsRepo } from '../database/schools.repo.js';
 import { examsRepo } from '../database/exams.repo.js';
+import { vacationService } from './vacation.service.js';
 import { getTodayInfo, getTomorrowInfo, getDayName } from '../utils/date.util.js';
 import { formatDailySchedule, formatWeeklySchedule, getSubjectEmoji, getLessonNumber, escapeHtml } from '../utils/formatter.js';
 
@@ -10,17 +11,38 @@ export const scheduleService = {
   /**
    * Bugungi dars jadvalini olish va formatlash (Sinf uchun)
    */
-  getTodaySchedule(groupId = null) {
+  getTodaySchedule(groupId = null, schoolId = null) {
     const today = getTodayInfo();
-    const lessons = lessonsRepo.getLessonsByDay(today.dayOfWeek, groupId);
-
+    let effectiveSchoolId = schoolId;
     let groupName = null;
     let exams = [];
+
     if (groupId) {
       const grp = groupsRepo.getGroupById(groupId);
-      if (grp) groupName = grp.name;
+      if (grp) {
+        groupName = grp.name;
+        if (!effectiveSchoolId) effectiveSchoolId = grp.school_id;
+      }
       exams = examsRepo.getExamsByDate(today.dateStr, groupId);
     }
+    effectiveSchoolId = effectiveSchoolId || 1;
+
+    const isVacation = vacationService.isVacationActive(effectiveSchoolId, today.dateStr);
+    const vacationInfo = vacationService.getVacationInfo(effectiveSchoolId);
+
+    if (isVacation) {
+      return {
+        today,
+        lessons: [],
+        exams: [],
+        groupName,
+        isVacation: true,
+        vacation: vacationInfo,
+        formattedText: vacationService.formatVacationText(effectiveSchoolId, today.dateStr)
+      };
+    }
+
+    const lessons = lessonsRepo.getLessonsByDay(today.dayOfWeek, groupId);
 
     let formattedText = formatDailySchedule({
       title: '🏫 MAKTAB DARS JADVALI',
@@ -50,15 +72,31 @@ export const scheduleService = {
   /**
    * Hozir qaysi dars ketayotganini aniqlash va formatlash (Sinf uchun)
    */
-  getCurrentLesson(groupId = null) {
+  getCurrentLesson(groupId = null, schoolId = null) {
     const today = getTodayInfo();
-    const lessons = lessonsRepo.getLessonsByDay(today.dayOfWeek, groupId);
-
+    let effectiveSchoolId = schoolId;
     let groupName = null;
     if (groupId) {
       const grp = groupsRepo.getGroupById(groupId);
-      if (grp) groupName = grp.name;
+      if (grp) {
+        groupName = grp.name;
+        if (!effectiveSchoolId) effectiveSchoolId = grp.school_id;
+      }
     }
+    effectiveSchoolId = effectiveSchoolId || 1;
+
+    if (vacationService.isVacationActive(effectiveSchoolId, today.dateStr)) {
+      return {
+        status: 'vacation',
+        isVacation: true,
+        groupName,
+        today,
+        vacation: vacationService.getVacationInfo(effectiveSchoolId),
+        formattedText: vacationService.formatVacationText(effectiveSchoolId, today.dateStr)
+      };
+    }
+
+    const lessons = lessonsRepo.getLessonsByDay(today.dayOfWeek, groupId);
 
     const nowStr = today.timeStr; // e.g. "11:25"
 
@@ -172,17 +210,38 @@ export const scheduleService = {
   /**
    * Ertangi dars jadvalini olish va formatlash (Sinf uchun)
    */
-  getTomorrowSchedule(groupId = null) {
+  getTomorrowSchedule(groupId = null, schoolId = null) {
     const tomorrow = getTomorrowInfo();
-    const lessons = lessonsRepo.getLessonsByDay(tomorrow.dayOfWeek, groupId);
-
+    let effectiveSchoolId = schoolId;
     let groupName = null;
     let exams = [];
+
     if (groupId) {
       const grp = groupsRepo.getGroupById(groupId);
-      if (grp) groupName = grp.name;
+      if (grp) {
+        groupName = grp.name;
+        if (!effectiveSchoolId) effectiveSchoolId = grp.school_id;
+      }
       exams = examsRepo.getExamsByDate(tomorrow.dateStr, groupId);
     }
+    effectiveSchoolId = effectiveSchoolId || 1;
+
+    const isVacation = vacationService.isVacationActive(effectiveSchoolId, tomorrow.dateStr);
+    const vacationInfo = vacationService.getVacationInfo(effectiveSchoolId);
+
+    if (isVacation) {
+      return {
+        tomorrow,
+        lessons: [],
+        exams: [],
+        groupName,
+        isVacation: true,
+        vacation: vacationInfo,
+        formattedText: vacationService.formatVacationText(effectiveSchoolId, tomorrow.dateStr)
+      };
+    }
+
+    const lessons = lessonsRepo.getLessonsByDay(tomorrow.dayOfWeek, groupId);
 
     let formattedText = formatDailySchedule({
       title: '🏫 MAKTAB DARS JADVALI',
@@ -242,6 +301,20 @@ export const scheduleService = {
    */
   getTeacherTodaySchedule(teacherIdOrName, schoolId = null) {
     const today = getTodayInfo();
+    const effectiveSchoolId = schoolId || 1;
+
+    if (vacationService.isVacationActive(effectiveSchoolId, today.dateStr)) {
+      return {
+        today,
+        teacher: null,
+        lessons: [],
+        exams: [],
+        isVacation: true,
+        vacation: vacationService.getVacationInfo(effectiveSchoolId),
+        formattedText: vacationService.formatVacationText(effectiveSchoolId, today.dateStr)
+      };
+    }
+
     const teacher = (typeof teacherIdOrName === 'number' || (!isNaN(teacherIdOrName) && Number(teacherIdOrName) > 0))
       ? teachersRepo.getTeacherById(Number(teacherIdOrName))
       : null;
@@ -297,6 +370,20 @@ export const scheduleService = {
    */
   getTeacherTomorrowSchedule(teacherIdOrName, schoolId = null) {
     const tomorrow = getTomorrowInfo();
+    const effectiveSchoolId = schoolId || 1;
+
+    if (vacationService.isVacationActive(effectiveSchoolId, tomorrow.dateStr)) {
+      return {
+        tomorrow,
+        teacher: null,
+        lessons: [],
+        exams: [],
+        isVacation: true,
+        vacation: vacationService.getVacationInfo(effectiveSchoolId),
+        formattedText: vacationService.formatVacationText(effectiveSchoolId, tomorrow.dateStr)
+      };
+    }
+
     const teacher = (typeof teacherIdOrName === 'number' || (!isNaN(teacherIdOrName) && Number(teacherIdOrName) > 0))
       ? teachersRepo.getTeacherById(Number(teacherIdOrName))
       : null;
@@ -400,6 +487,18 @@ export const scheduleService = {
    */
   getTeacherCurrentLesson(teacherIdOrName, schoolId = null) {
     const today = getTodayInfo();
+    const effectiveSchoolId = schoolId || 1;
+
+    if (vacationService.isVacationActive(effectiveSchoolId, today.dateStr)) {
+      return {
+        status: 'vacation',
+        isVacation: true,
+        today,
+        vacation: vacationService.getVacationInfo(effectiveSchoolId),
+        formattedText: vacationService.formatVacationText(effectiveSchoolId, today.dateStr)
+      };
+    }
+
     const teacher = (typeof teacherIdOrName === 'number' || (!isNaN(teacherIdOrName) && Number(teacherIdOrName) > 0))
       ? teachersRepo.getTeacherById(Number(teacherIdOrName))
       : null;

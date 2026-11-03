@@ -12,17 +12,39 @@ export function getAdminMainMenuKeyboard() {
     .text('✏️ Darsni o‘zgartirish', 'admin_edit_lesson')
     .text('🗑 Darsni o‘chirish', 'admin_delete_lesson')
     .row()
+    .text('🏖️ Ta\'tillar (Каникулы)', 'admin_vacation_menu')
     .text('👥 Guruhlar', 'admin_list_groups')
+    .row()
     .text('📩 Xabar shabloni', 'admin_template_menu')
-    .row()
     .text('⏰ Yuborish vaqtini sozlash', 'admin_set_time')
+    .row()
     .text('📤 Hozir yuborish', 'admin_broadcast_now')
-    .row()
     .text('📢 Ustozlarga qo‘llanma', 'admin_send_teacher_guide')
-    .text('📊 Statistika', 'admin_stats')
     .row()
-    .text('🔑 Parolni o‘zgartirish', 'admin_change_password')
+    .text('📊 Statistika', 'admin_stats')
+    .text('🔑 Parol', 'admin_change_password')
+    .row()
     .text('🚪 Chiqish', 'admin_logout');
+}
+
+/**
+ * Ta'tillar (Kanikullar) boshqaruv menyusi (Inline Keyboard)
+ */
+export function getVacationMenuKeyboard(vacationInfo) {
+  const keyboard = new InlineKeyboard();
+  if (vacationInfo && vacationInfo.isActive) {
+    keyboard.text('🔴 Ta\'tilni O‘CHIRISH (Darslarni tiklash)', 'admin_vacation_toggle_off').row();
+  } else {
+    keyboard.text('🟢 Ta\'tilni YOQISH (Botni to‘xtatish)', 'admin_vacation_toggle_on').row();
+  }
+  keyboard
+    .text('📅 Sana kiritish (Masalan: 04.11-10.11)', 'admin_vacation_set_dates')
+    .row()
+    .text('🍁 Kuzgi ta\'til (04.11 - 10.11)', 'admin_vacation_preset_autumn')
+    .text('❄️ Qishki ta\'til (28.12 - 10.01)', 'admin_vacation_preset_winter')
+    .row()
+    .text('⬅️ Orqaga', 'admin_main');
+  return keyboard;
 }
 
 /**

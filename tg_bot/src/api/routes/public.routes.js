@@ -6,6 +6,7 @@ import { teachersRepo } from '../../database/teachers.repo.js';
 import { subjectsRepo } from '../../database/subjects.repo.js';
 import { usersRepo } from '../../database/users.repo.js';
 import { scheduleService } from '../../services/schedule.service.js';
+import { vacationService } from '../../services/vacation.service.js';
 import { getTodayInfo, getTomorrowInfo } from '../../utils/date.util.js';
 import { DAYS_LIST } from '../../config/constants.js';
 import { config } from '../../config/index.js';
@@ -322,13 +323,27 @@ publicRouter.get('/classes/:id/schedule', (req, res) => {
 });
 
 /**
+ * GET /api/vacation
+ * Get vacation info for current school
+ */
+publicRouter.get('/vacation', (req, res) => {
+  try {
+    const schoolId = req.schoolId || 1;
+    const info = vacationService.getVacationInfo(schoolId);
+    res.json({ success: true, data: info });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * GET /api/schedule/today
  */
 publicRouter.get('/schedule/today', (req, res) => {
   try {
     const classId = req.query.classId || req.query.groupId;
     const groupId = classId ? parseInt(classId, 10) : null;
-    const result = scheduleService.getTodaySchedule(groupId);
+    const result = scheduleService.getTodaySchedule(groupId, req.schoolId);
     res.json({ success: true, data: result });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -342,7 +357,7 @@ publicRouter.get('/schedule/tomorrow', (req, res) => {
   try {
     const classId = req.query.classId || req.query.groupId;
     const groupId = classId ? parseInt(classId, 10) : null;
-    const result = scheduleService.getTomorrowSchedule(groupId);
+    const result = scheduleService.getTomorrowSchedule(groupId, req.schoolId);
     res.json({ success: true, data: result });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

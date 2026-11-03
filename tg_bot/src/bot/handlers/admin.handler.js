@@ -5,6 +5,7 @@ import { usersRepo } from '../../database/users.repo.js';
 import { adminService } from '../../services/admin.service.js';
 import { adminAuthService } from '../../services/admin-auth.service.js';
 import { scheduleService } from '../../services/schedule.service.js';
+import { vacationService } from '../../services/vacation.service.js';
 import { formatStats, escapeHtml } from '../../utils/formatter.js';
 import { isValidTimeFormat, getDayName } from '../../utils/date.util.js';
 import {
@@ -31,7 +32,8 @@ import {
   getLessonsListKeyboard,
   getTemplateMenuKeyboard,
   getTemplatePreviewKeyboard,
-  getTemplateResetConfirmKeyboard
+  getTemplateResetConfirmKeyboard,
+  getVacationMenuKeyboard
 } from '../keyboards/admin.keyboard.js';
 import { getRoleSelectionInlineKeyboard, getTeachersGridInlineKeyboard } from '../keyboards/user.keyboard.js';
 import { InlineKeyboard } from 'grammy';
@@ -63,6 +65,213 @@ export function registerAdminHandlers(bot) {
       parse_mode: 'HTML',
       reply_markup: getAdminMainMenuKeyboard()
     });
+  });
+
+  // ==========================================
+  // 🏖️ TA'TILLAR (KANIKULLAR) BOSHQARUVI
+  // ==========================================
+
+  function renderVacationAdminText(vacationInfo, schoolName = 'Maktab') {
+    const statusBadge = vacationInfo.isActive
+      ? '🔴 <b>FAOL (Bot to‘xtatilgan, tonggi jadval va eslatmalar yuborilmaydi)</b>'
+      : '🟢 <b>O‘chirilgan (Darslar davom etmoqda, bot faol)</b>';
+
+    let msg = `🏖️ <b>MAKTAB TA'TILLARINI BOSHQARISH</b>\n\n` +
+      `🏫 <b>Maktab:</b> ${escapeHtml(schoolName || 'Maktab')}\n` +
+      `📊 <b>Ta'til holati:</b> ${statusBadge}\n` +
+      `🏖️ <b>Ta'til nomi:</b> <b>${escapeHtml(vacationInfo.title || "Ta'til")}</b>\n`;
+
+    if (vacationInfo.startDate && vacationInfo.endDate) {
+      msg += `📅 <b>Muddati:</b> <code>${vacationInfo.startDate} — ${vacationInfo.endDate}</code>\n`;
+    } else {
+      msg += `📅 <b>Muddati:</b> Belgilanmagan (qo‘lda boshqaruv)\n`;
+    }
+
+    msg += `\n<i>Ta'til vaqtida:</i>\n` +
+      `• Guruhlarga 06:00 da tonggi dars jadvali yuborilmaydi\n` +
+      `• Ustozlarga darsdan 5 daqiqa oldin eslatma jo‘natilmaydi\n` +
+      `• Foydalanuvchilarga ta'til haqida xabar ko‘rsatiladi\n\n` +
+      `Tezkor buyruqlar:\n` +
+      `• <code>/tatil on</code> — Ta'tilni hoziroq yoqish\n` +
+      `• <code>/tatil off</code> — Ta'tilni o‘chirish (darslarni tiklash)\n` +
+      `• <code>/tatil 04.11-10.11 Kuzgi ta'til</code> — Sanalar bo‘yicha rejalashtirish`;
+
+    return msg;
+  }
+
+  bot.command(['tatil', 'kanikul', 'vacation', 'holiday'], async (ctx) => {
+    if (ctx.chat.type !== 'private') return;
+
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) {
+      return ctx.reply(BOT_TEXTS.NOT_AUTHORIZED);
+    }
+
+    const user = usersRepo.getUserByTelegramId(ctx.from?.id);
+    const schoolId = user?.selected_school_id || 1;
+    const schoolName = user?.selected_school_name || 'Maktab';
+    const arg = ctx.match?.trim();
+
+    if (arg) {
+      const lower = arg.toLowerCase();
+      if (lower === 'on' || lower === 'yoq' || lower === '1') {
+        const updated = vacationService.setVacation(schoolId, { isActive: true });
+        return ctx.reply(
+          `🏖️ <b>Ta'til rejimi muvaffaqiyatli YOQILDI!</b>\n\n` +
+          `Tonggi 06:00 dars jadvali va ustozlar eslatmalari to‘xtatildi. Bot dam olish rejimiga o‘tdi.`,
+          { parse_mode: 'HTML', reply_markup: getVacationMenuKeyboard(updated) }
+        );
+      }
+
+      if (lower === 'off' || lower === 'ochir' || lower === '0') {
+        const updated = vacationService.setVacation(schoolId, { isActive: false });
+        return ctx.reply(
+          `✅ <b>Ta'til rejimi O‘CHIRILDI!</b>\n\n` +
+          `Bot odatiy ish tartibiga qaytdi. Dars jadvallari va eslatmalar qayta faollashdi.`,
+          { parse_mode: 'HTML', reply_markup: getVacationMenuKeyboard(updated) }
+        );
+      }
+
+      const parsed = vacationService.parseDateRange(arg);
+      if (parsed) {
+        const updated = vacationService.setVacation(schoolId, {
+          startDate: parsed.startDate,
+          endDate: parsed.endDate,
+          title: parsed.title,
+          isActive: 'auto'
+        });
+        return ctx.reply(
+          `✅ <b>Ta'til muvaffaqiyatli rejalashtirildi!</b>\n\n` +
+          `🏖️ <b>Nomi:</b> ${escapeHtml(parsed.title)}\n` +
+          `📅 <b>Muddati:</b> <code>${parsed.startDate} — ${parsed.endDate}</code>\n\n` +
+          `Tizim ushbu davrda avtomatik ravishda to‘xtatiladi va <code>${parsed.endDate}</code> sanasidan so‘ng o‘zi darslarni qayta tiklaydi.`,
+          { parse_mode: 'HTML', reply_markup: getVacationMenuKeyboard(updated) }
+        );
+      }
+
+      return ctx.reply(
+        `⚠️ <b>Sana formati tushunarsiz!</b>\n\n` +
+        `Iltimos, quyidagi namunalardan biridek kiriting:\n` +
+        `• <code>/tatil 04.11-10.11 Kuzgi ta'til</code>\n` +
+        `• <code>/tatil 2026-11-04 2026-11-10 Qishki ta'til</code>\n` +
+        `• <code>/tatil on</code> (qo‘lda yoqish)\n` +
+        `• <code>/tatil off</code> (qo‘lda o‘chirish)`,
+        { parse_mode: 'HTML' }
+      );
+    }
+
+    const vacationInfo = vacationService.getVacationInfo(schoolId);
+    return ctx.reply(renderVacationAdminText(vacationInfo, schoolName), {
+      parse_mode: 'HTML',
+      reply_markup: getVacationMenuKeyboard(vacationInfo)
+    });
+  });
+
+  bot.callbackQuery('admin_vacation_menu', async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => {});
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) {
+      return ctx.editMessageText(BOT_TEXTS.NOT_AUTHORIZED);
+    }
+    const user = usersRepo.getUserByTelegramId(ctx.from?.id);
+    const schoolId = user?.selected_school_id || 1;
+    const vacationInfo = vacationService.getVacationInfo(schoolId);
+
+    return editOrReplySafely(ctx, renderVacationAdminText(vacationInfo, user?.selected_school_name), {
+      parse_mode: 'HTML',
+      reply_markup: getVacationMenuKeyboard(vacationInfo)
+    });
+  });
+
+  bot.callbackQuery('admin_vacation_toggle_on', async (ctx) => {
+    await ctx.answerCallbackQuery({ text: "Ta'til yoqildi!" }).catch(() => {});
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) {
+      return ctx.editMessageText(BOT_TEXTS.NOT_AUTHORIZED);
+    }
+    const user = usersRepo.getUserByTelegramId(ctx.from?.id);
+    const schoolId = user?.selected_school_id || 1;
+    const updated = vacationService.setVacation(schoolId, { isActive: true });
+
+    return editOrReplySafely(ctx, renderVacationAdminText(updated, user?.selected_school_name), {
+      parse_mode: 'HTML',
+      reply_markup: getVacationMenuKeyboard(updated)
+    });
+  });
+
+  bot.callbackQuery('admin_vacation_toggle_off', async (ctx) => {
+    await ctx.answerCallbackQuery({ text: "Ta'til o‘chirildi!" }).catch(() => {});
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) {
+      return ctx.editMessageText(BOT_TEXTS.NOT_AUTHORIZED);
+    }
+    const user = usersRepo.getUserByTelegramId(ctx.from?.id);
+    const schoolId = user?.selected_school_id || 1;
+    const updated = vacationService.setVacation(schoolId, { isActive: false });
+
+    return editOrReplySafely(ctx, renderVacationAdminText(updated, user?.selected_school_name), {
+      parse_mode: 'HTML',
+      reply_markup: getVacationMenuKeyboard(updated)
+    });
+  });
+
+  bot.callbackQuery('admin_vacation_preset_autumn', async (ctx) => {
+    await ctx.answerCallbackQuery({ text: "Kuzgi ta'til saqlandi" }).catch(() => {});
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) {
+      return ctx.editMessageText(BOT_TEXTS.NOT_AUTHORIZED);
+    }
+    const user = usersRepo.getUserByTelegramId(ctx.from?.id);
+    const schoolId = user?.selected_school_id || 1;
+    const currentYear = getTodayInfo().dateTime.year;
+    const updated = vacationService.setVacation(schoolId, {
+      startDate: `${currentYear}-11-04`,
+      endDate: `${currentYear}-11-10`,
+      title: "Kuzgi ta'til",
+      isActive: 'auto'
+    });
+
+    return editOrReplySafely(ctx, renderVacationAdminText(updated, user?.selected_school_name), {
+      parse_mode: 'HTML',
+      reply_markup: getVacationMenuKeyboard(updated)
+    });
+  });
+
+  bot.callbackQuery('admin_vacation_preset_winter', async (ctx) => {
+    await ctx.answerCallbackQuery({ text: "Qishki ta'til saqlandi" }).catch(() => {});
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) {
+      return ctx.editMessageText(BOT_TEXTS.NOT_AUTHORIZED);
+    }
+    const user = usersRepo.getUserByTelegramId(ctx.from?.id);
+    const schoolId = user?.selected_school_id || 1;
+    const currentYear = getTodayInfo().dateTime.year;
+    const updated = vacationService.setVacation(schoolId, {
+      startDate: `${currentYear}-12-28`,
+      endDate: `${currentYear + 1}-01-10`,
+      title: "Qishki ta'til",
+      isActive: 'auto'
+    });
+
+    return editOrReplySafely(ctx, renderVacationAdminText(updated, user?.selected_school_name), {
+      parse_mode: 'HTML',
+      reply_markup: getVacationMenuKeyboard(updated)
+    });
+  });
+
+  bot.callbackQuery('admin_vacation_set_dates', async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => {});
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) {
+      return ctx.editMessageText(BOT_TEXTS.NOT_AUTHORIZED);
+    }
+
+    adminService.setSession(ctx.from.id, { action: 'AWAITING_VACATION_DATES' });
+
+    const cancelKb = new InlineKeyboard().text('❌ Bekor qilish', 'admin_vacation_menu');
+    return editOrReplySafely(
+      ctx,
+      `📅 <b>Ta'til sanalarini kiritish</b>\n\n` +
+      `Iltimos, ta'til sanalarini va nomini xabar sifatida yozib yuboring.\n\n` +
+      `Namuna:\n` +
+      `• <code>04.11-10.11 Kuzgi ta'til</code>\n` +
+      `• <code>2026-11-04 2026-11-10 Qishki ta'til</code>\n` +
+      `• <code>21.03-27.03 Bahorgi ta'til</code>`,
+      { parse_mode: 'HTML', reply_markup: cancelKb }
+    );
   });
 
   // ==========================================
@@ -1068,6 +1277,39 @@ export function registerAdminHandlers(bot) {
     }
 
     const text = ctx.message.text.trim();
+
+    // 0.00. TA'TIL SANALARINI KIRITISH (AWAITING_VACATION_DATES)
+    if (session.action === 'AWAITING_VACATION_DATES') {
+      const parsed = vacationService.parseDateRange(text);
+      const user = usersRepo.getUserByTelegramId(ctx.from.id);
+      const schoolId = user?.selected_school_id || 1;
+
+      if (parsed) {
+        adminService.clearSession(ctx.from.id);
+        const updated = vacationService.setVacation(schoolId, {
+          startDate: parsed.startDate,
+          endDate: parsed.endDate,
+          title: parsed.title,
+          isActive: 'auto'
+        });
+
+        return ctx.reply(
+          `✅ <b>Ta'til sanalari muvaffaqiyatli saqlandi!</b>\n\n` +
+          `🏖️ <b>Nomi:</b> ${escapeHtml(parsed.title)}\n` +
+          `📅 <b>Muddati:</b> <code>${parsed.startDate} — ${parsed.endDate}</code>\n\n` +
+          `Ushbu muddat davomida bot to‘xtatiladi va <code>${parsed.endDate}</code> sanasidan so‘ng avtomatik darslarni tiklaydi.`,
+          { parse_mode: 'HTML', reply_markup: getVacationMenuKeyboard(updated) }
+        );
+      } else {
+        return ctx.reply(
+          `⚠️ <b>Sana formati noto‘g‘ri!</b>\n\n` +
+          `Iltimos, qaytadan kiriting. Namuna:\n` +
+          `• <code>04.11-10.11 Kuzgi ta'til</code>\n` +
+          `• <code>2026-11-04 2026-11-10 Qishki ta'til</code>`,
+          { parse_mode: 'HTML' }
+        );
+      }
+    }
 
     // 0.0. ZAVUCH KODINI TEKSHIRISH (AWAITING_ZAVUCH_CODE)
     if (session.action === 'AWAITING_ZAVUCH_CODE') {

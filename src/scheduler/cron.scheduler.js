@@ -3,6 +3,7 @@ import { groupsRepo } from '../database/groups.repo.js';
 import { settingsRepo } from '../database/settings.repo.js';
 import { adminService } from '../services/admin.service.js';
 import { teacherReminderService } from '../services/teacher-reminder.service.js';
+import { vacationService } from '../services/vacation.service.js';
 import { getTodayInfo } from '../utils/date.util.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
@@ -47,6 +48,12 @@ export const scheduler = {
     if (!groups || groups.length === 0) return;
 
     for (const group of groups) {
+      const schoolId = group.school_id || 1;
+      // Agar maktabda ta'til bo'lsa, guruhga tonggi jadval yuborilmaydi (bot dam olish rejimida)
+      if (vacationService.isVacationActive(schoolId, today.dateStr)) {
+        continue;
+      }
+
       const groupSendTime = (group.send_time || config.DEFAULT_SEND_TIME).trim();
 
       // Agar hozirgi vaqt guruhning yuborish vaqtiga to'g'ri kelsa

@@ -281,6 +281,23 @@ export const Api = {
       method: 'POST',
       body: JSON.stringify(payload)
     });
+  },
+
+  // Vacation & Substitutions
+  getVacation() {
+    return this.request('/vacation');
+  },
+  saveVacation(payload) {
+    return this.request('/admin/vacation', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+  substituteLesson(payload) {
+    return this.request('/admin/substitute-lesson', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
   }
 };
 

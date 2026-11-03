@@ -87,7 +87,8 @@ export const AdminView = {
 
       <div class="tab-pills" id="admin-pills" style="overflow-x:auto;white-space:nowrap;margin-bottom:14px;display:flex;gap:6px;">
         <button class="tab-pill active" onclick="window.AdminView.switchTab('excel')" style="background:#0284c7;color:#fff;font-weight:800;">📊 Dars jadvalini yangilash (Excel)</button>
-        <a href="schedule-test.html" target="_blank" class="tab-pill" style="background:#0f766e;color:#fff;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">🔀 Barcha Sinflar (Almashtirish)</a>
+        <button class="tab-pill" onclick="window.AdminView.switchTab('master')" style="background:#0f766e;color:#fff;font-weight:800;">🔀 Master jadval va almashtirish</button>
+        <button class="tab-pill" onclick="window.AdminView.switchTab('vacation')" style="background:#d97706;color:#fff;font-weight:800;">🏖️ Ta'tillar (Каникулы)</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('stats')">Statistika</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('classes')">Sinflar</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('teachers')">Ustozlar</button>
@@ -366,6 +367,10 @@ export const AdminView = {
     try {
       if (this.currentTab === 'excel') {
         await this.renderExcelTimetable(body);
+      } else if (this.currentTab === 'master') {
+        await this.renderMasterTimetableTab(body);
+      } else if (this.currentTab === 'vacation') {
+        await this.renderVacationTab(body);
       } else if (this.currentTab === 'stats') {
         await this.renderStats(body);
       } else if (this.currentTab === 'classes') {
@@ -1904,6 +1909,568 @@ export const AdminView = {
       } catch (err) {
         window.App.showToast(err.message, 'error');
       }
+    }
+  },
+
+  // ==========================================
+  // 🏖️ TA'TILLAR (KANIKULLAR) TAB
+  // ==========================================
+  async renderVacationTab(container) {
+    container.innerHTML = `<div class="state-box"><div class="skeleton" style="height:160px;margin-bottom:12px;"></div></div>`;
+
+    try {
+      const vacation = await Api.getVacation();
+      const isActive = Boolean(vacation?.isActive);
+      const start = vacation?.startDate || '';
+      const end = vacation?.endDate || '';
+      const title = vacation?.title || "Ta'til";
+      const message = vacation?.message || '';
+
+      const statusBg = isActive ? '#fef2f2' : '#f0fdf4';
+      const statusBorder = isActive ? '#f87171' : '#86efac';
+      const statusColor = isActive ? '#b91c1c' : '#15803d';
+      const statusTitle = isActive ? '🏖️ Ta‘til rejimi FAOL (Yoqilgan)' : '🟢 Ta‘til rejimi O‘chirilgan (Darslar davom etmoqda)';
+      const statusDesc = isActive
+        ? 'Telegram bot dam olish rejimida: tonggi 06:00 dars jadvali jo‘natilmaydi, ustozlarga eslatmalar to‘xtatilgan.'
+        : 'Telegram bot to‘liq faol rejimda: har kuni tonggi jadval yuboriladi va ustozlarga dars eslatmalari jo‘natiladi.';
+
+      container.innerHTML = `
+        <div style="background:${statusBg};border:1.5px solid ${statusBorder};border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.03);">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
+            <div>
+              <div style="font-size:16px;font-weight:800;color:${statusColor};display:flex;align-items:center;gap:6px;">
+                ${statusTitle}
+              </div>
+              <div style="font-size:13px;color:var(--text-muted);font-weight:600;margin-top:4px;line-height:1.4;">
+                ${statusDesc}
+              </div>
+              ${start && end ? `
+                <div style="margin-top:8px;font-size:12px;background:rgba(255,255,255,0.7);padding:5px 10px;border-radius:6px;font-weight:700;color:var(--text-primary);display:inline-block;">
+                  📅 Belgilangan muddat: <b>${start} — ${end}</b> (${title})
+                </div>
+              ` : ''}
+            </div>
+
+            <button class="btn-sm" style="background:${isActive ? '#15803d' : '#b91c1c'};color:#fff;border:none;border-radius:8px;padding:10px 16px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(0,0,0,0.15);" onclick="window.AdminView.toggleVacation(${!isActive})">
+              ${isActive ? '🟢 Ta‘tilni O‘chirish (Darslarni tiklash)' : '🔴 Ta‘tilni Yoqish (Botni to‘xtatish)'}
+            </button>
+          </div>
+        </div>
+
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;">
+          <div style="font-size:15px;font-weight:800;color:var(--text-primary);margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+            📅 Ta‘til Sanalarini Belgilash (Avtomatik rejalashtirish)
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">
+            Ushbu sanalar davomida bot avtomatik to‘xtatiladi va tugash sanasidan so‘ng o‘zi darslarni qayta davom ettiradi.
+          </div>
+
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+            <div style="flex:1;min-width:140px;">
+              <label class="form-label" style="font-size:11px;">Boshlanish sanasi</label>
+              <input type="date" id="vacation-start-input" class="auth-input-control" value="${start}" style="padding:8px 12px;font-size:13px;">
+            </div>
+            <div style="flex:1;min-width:140px;">
+              <label class="form-label" style="font-size:11px;">Tugash sanasi (Darslar ertasi kuni boshlanadi)</label>
+              <input type="date" id="vacation-end-input" class="auth-input-control" value="${end}" style="padding:8px 12px;font-size:13px;">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:14px;">
+            <label class="form-label" style="font-size:11px;">Ta‘til nomi</label>
+            <input type="text" id="vacation-title-input" class="auth-input-control" value="${title}" placeholder="Masalan: Kuzgi ta‘til" style="padding:8px 12px;font-size:13px;">
+          </div>
+
+          <div class="form-group" style="margin-bottom:16px;">
+            <label class="form-label" style="font-size:11px;">Maxsus xabar (O‘quvchi va ustozlarga ko‘rsatiladi)</label>
+            <textarea id="vacation-message-input" class="auth-input-control" rows="2" placeholder="Masalan: Darslar 11-noyabr Dushanba kunidan boshlanadi..." style="padding:8px 12px;font-size:13px;resize:vertical;">${message}</textarea>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <button class="admin-action-btn" onclick="window.AdminView.saveVacationForm()" style="margin-top:0;display:inline-flex;align-items:center;gap:6px;width:auto;padding:10px 20px;">
+              ${Icons.save} Saqlash va Rejalashtirish
+            </button>
+
+            <button class="btn-sm" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:700;" onclick="window.AdminView.clearVacationDates()">
+              Sanani tozalash
+            </button>
+          </div>
+        </div>
+
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px;">
+          <div style="font-size:13px;font-weight:800;color:var(--text-primary);margin-bottom:8px;">
+            ⚡ Tezkor Ta‘til Andozalari (1-klikda to‘ldirish):
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-sm" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer;" onclick="window.AdminView.applyVacationPreset('autumn')">
+              🍁 Kuzgi ta‘til (4 - 10 noyabr)
+            </button>
+            <button class="btn-sm" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer;" onclick="window.AdminView.applyVacationPreset('winter')">
+              ❄️ Qishki ta‘til (28 dekabr - 10 yanvar)
+            </button>
+            <button class="btn-sm" style="background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer;" onclick="window.AdminView.applyVacationPreset('spring')">
+              🌱 Bahorgi ta‘til (21 - 27 mart)
+            </button>
+            <button class="btn-sm" style="background:#ffedd5;color:#c2410c;border:1px solid #fed7aa;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer;" onclick="window.AdminView.applyVacationPreset('summer')">
+              ☀️ Yozgi ta‘til (25 may - 1 sentabr)
+            </button>
+          </div>
+        </div>
+      `;
+    } catch (err) {
+      container.innerHTML = `<div class="state-box"><div class="state-title">Yuklashda xatolik</div><div class="state-desc">${err.message}</div></div>`;
+    }
+  },
+
+  async toggleVacation(newActive) {
+    try {
+      window.App.showToast('Yangilanmoqda...', 'info');
+      await Api.saveVacation({ isActive: newActive });
+      window.App.showToast(newActive ? 'Ta‘til rejimi yoqildi (Bot to‘xtatildi)' : 'Ta‘til rejimi o‘chirildi (Bot faollashdi)', 'success');
+      this.switchTab('vacation');
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
+    }
+  },
+
+  async saveVacationForm() {
+    const startDate = document.getElementById('vacation-start-input')?.value;
+    const endDate = document.getElementById('vacation-end-input')?.value;
+    const title = document.getElementById('vacation-title-input')?.value?.trim();
+    const message = document.getElementById('vacation-message-input')?.value?.trim();
+
+    try {
+      window.App.showToast('Saqlanmoqda...', 'info');
+      await Api.saveVacation({
+        startDate,
+        endDate,
+        title,
+        message,
+        isActive: 'auto'
+      });
+      window.App.showToast('Ta‘til sozlamalari muvaffaqiyatli saqlandi!', 'success');
+      this.switchTab('vacation');
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
+    }
+  },
+
+  async clearVacationDates() {
+    if (!confirm('Ta‘til sanalari tozalansinmi?')) return;
+    try {
+      await Api.saveVacation({ startDate: '', endDate: '', title: "Ta'til", message: '', isActive: false });
+      window.App.showToast('Sanalari tozalandi!', 'success');
+      this.switchTab('vacation');
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
+    }
+  },
+
+  applyVacationPreset(type) {
+    const year = new Date().getFullYear();
+    const startInput = document.getElementById('vacation-start-input');
+    const endInput = document.getElementById('vacation-end-input');
+    const titleInput = document.getElementById('vacation-title-input');
+
+    if (!startInput || !endInput || !titleInput) return;
+
+    if (type === 'autumn') {
+      startInput.value = `${year}-11-04`;
+      endInput.value = `${year}-11-10`;
+      titleInput.value = "Kuzgi ta'til";
+    } else if (type === 'winter') {
+      startInput.value = `${year}-12-28`;
+      endInput.value = `${year + 1}-01-10`;
+      titleInput.value = "Qishki ta'til";
+    } else if (type === 'spring') {
+      startInput.value = `${year}-03-21`;
+      endInput.value = `${year}-03-27`;
+      titleInput.value = "Bahorgi ta'til";
+    } else if (type === 'summer') {
+      startInput.value = `${year}-05-25`;
+      endInput.value = `${year}-09-01`;
+      titleInput.value = "Yozgi ta'til";
+    }
+    window.App.showToast('Andoza kiritildi, "Saqlash" tugmasini bosing!', 'info');
+  },
+
+  // ==========================================
+  // 🔀 MASTER JADVAL VA ALMASHTIRISH (TIMETABLE SWAPPER & SUBSTITUTION)
+  // ==========================================
+  masterActiveDay: 1,
+  masterClasses: [],
+  masterLessons: [],
+  masterSelectedCell: null,
+  masterFilterClass: '',
+
+  async renderMasterTimetableTab(container) {
+    container.innerHTML = `<div class="state-box"><div class="skeleton" style="height:200px;"></div></div>`;
+
+    try {
+      if (!this.masterClasses || this.masterClasses.length === 0) {
+        this.masterClasses = await Api.getClasses(window.App.currentSchoolCode);
+      }
+
+      // Sinflar darslarini yuklash (agar yuklanmagan bo'lsa)
+      if (!this.masterLessons || this.masterLessons.length === 0) {
+        const allLessons = [];
+        for (const cls of this.masterClasses) {
+          try {
+            const sched = await Api.getClassSchedule(cls.id);
+            if (sched && Array.isArray(sched.lessons)) {
+              sched.lessons.forEach(l => {
+                allLessons.push({
+                  ...l,
+                  group_id: cls.id,
+                  group_name: cls.name
+                });
+              });
+            }
+          } catch (e) {}
+        }
+        this.masterLessons = allLessons;
+      }
+
+      const days = [
+        { id: 1, name: 'Dushanba' },
+        { id: 2, name: 'Seshanba' },
+        { id: 3, name: 'Chorshanba' },
+        { id: 4, name: 'Payshanba' },
+        { id: 5, name: 'Juma' },
+        { id: 6, name: 'Shanba' }
+      ];
+
+      // To'qnashuvlarni aniqlash
+      const dayLessons = this.masterLessons.filter(l => Number(l.day_of_week) === Number(this.masterActiveDay));
+      const teacherSlots = {};
+      const conflicts = [];
+
+      dayLessons.forEach(l => {
+        if (!l.teacher || !l.teacher.trim()) return;
+        const key = `${l.teacher.trim().toLowerCase()}_${l.start_time}`;
+        if (!teacherSlots[key]) {
+          teacherSlots[key] = [];
+        }
+        teacherSlots[key].push(l);
+      });
+
+      Object.entries(teacherSlots).forEach(([key, list]) => {
+        if (list.length > 1) {
+          conflicts.push({
+            teacher: list[0].teacher,
+            time: list[0].start_time,
+            classes: list.map(x => x.group_name).join(', ')
+          });
+        }
+      });
+
+      const filteredClasses = this.masterFilterClass
+        ? this.masterClasses.filter(c => c.name.toLowerCase().includes(this.masterFilterClass.toLowerCase()))
+        : this.masterClasses;
+
+      container.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <div>
+              <div style="font-size:16px;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                🔀 Master Jadval — Darslarni 1-Klikda Almashtirish
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+                Ikkita dars katakchasini ketma-ket bosing — ular o‘zaro joyini almashtiradi. Ustozlar to‘qnashuvi avtomatik tekshiriladi!
+              </div>
+            </div>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn-sm" style="background:#0284c7;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;" onclick="window.AdminView.openQuickSubstitutionModal()">
+                ⚡ Kunlik O‘rinbosar / Zamen
+              </button>
+              <a href="schedule-test.html" target="_blank" class="btn-sm" style="background:#0f766e;color:#fff;border:none;border-radius:8px;padding:8px 14px;text-decoration:none;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
+                ↗ Katta ekranda ochish
+              </a>
+              <button class="btn-sm" style="background:#15803d;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:800;cursor:pointer;" onclick="window.AdminView.saveMasterTimetable()">
+                💾 Saqlash
+              </button>
+            </div>
+          </div>
+
+          <!-- Haftaning kunlari tanlovi -->
+          <div style="display:flex;gap:6px;overflow-x:auto;padding-top:12px;padding-bottom:4px;">
+            ${days.map(d => `
+              <button class="btn-sm" style="padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer;white-space:nowrap;${this.masterActiveDay === d.id ? 'background:#0f766e;color:#fff;border:none;' : 'background:var(--bg-body);color:var(--text-primary);border:1px solid var(--border);'}" onclick="window.AdminView.setMasterDay(${d.id})">
+                ${d.name}
+              </button>
+            `).join('')}
+          </div>
+
+          <!-- Qidiruv va To'qnashuvlar -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:10px;flex-wrap:wrap;">
+            <input type="text" placeholder="🔍 Sinfni qidirish (masalan: 5-A)..." value="${this.masterFilterClass}" oninput="window.AdminView.masterFilterClass = this.value; window.AdminView.renderMasterTimetableTab(document.getElementById('admin-tab-body'));" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-body);color:var(--text-primary);font-size:12px;width:200px;">
+
+            ${conflicts.length > 0 ? `
+              <div style="background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:700;">
+                ⚠️ ${conflicts.length} ta ustozda to‘qnashuv bor: ${conflicts.map(c => `${c.teacher} (${c.classes})`).join('; ')}
+              </div>
+            ` : `
+              <div style="background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:700;">
+                ✅ Ustozlar to‘qnashuvi yo‘q
+              </div>
+            `}
+          </div>
+        </div>
+
+        <!-- Master Grid -->
+        <div style="overflow-x:auto;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;box-shadow:0 4px 12px rgba(0,0,0,0.03);">
+          <table style="width:100%;border-collapse:collapse;min-width:700px;font-size:12px;">
+            <thead>
+              <tr style="background:var(--bg-body);border-bottom:1.5px solid var(--border);text-align:left;">
+                <th style="padding:10px;font-weight:800;position:sticky;left:0;background:var(--bg-body);z-index:2;min-width:70px;border-right:1px solid var(--border);">Sinf</th>
+                ${DEFAULT_PERIODS.map(p => `
+                  <th style="padding:10px;font-weight:800;text-align:center;min-width:90px;border-right:1px solid var(--border);">
+                    ${p.period}-soat<br>
+                    <span style="font-size:10px;color:var(--text-muted);font-weight:600;">${p.start_time}</span>
+                  </th>
+                `).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredClasses.map(cls => {
+                return `
+                  <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:10px;font-weight:800;position:sticky;left:0;background:var(--bg-card);z-index:1;border-right:1px solid var(--border);color:var(--primary);">
+                      ${cls.name}
+                    </td>
+                    ${DEFAULT_PERIODS.map(p => {
+                      const lesson = dayLessons.find(l => Number(l.group_id) === Number(cls.id) && (l.period === p.period || l.start_time === p.start_time));
+                      const isSelected = this.masterSelectedCell && this.masterSelectedCell.classId === cls.id && this.masterSelectedCell.period === p.period;
+
+                      let cellBg = isSelected ? '#dbeafe' : 'transparent';
+                      let cellBorder = isSelected ? '2px solid #2563eb' : 'none';
+
+                      // To'qnashuv bormi tekshiramiz
+                      const hasClash = lesson?.teacher && conflicts.some(c => c.teacher.trim().toLowerCase() === lesson.teacher.trim().toLowerCase() && c.time === p.start_time);
+                      if (hasClash && !isSelected) {
+                        cellBg = '#fee2e2';
+                        cellBorder = '1.5px solid #ef4444';
+                      }
+
+                      return `
+                        <td style="padding:6px;border-right:1px solid var(--border);vertical-align:top;cursor:pointer;background:${cellBg};outline:${cellBorder};transition:all 0.15s ease;" onclick="window.AdminView.handleMasterCellClick(${cls.id}, ${p.period})">
+                          ${lesson && lesson.subject ? `
+                            <div style="font-weight:800;color:var(--text-primary);font-size:11.5px;line-height:1.2;">
+                              ${lesson.subject}
+                            </div>
+                            <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;">
+                              ${lesson.teacher || '—'}
+                            </div>
+                            ${lesson.room ? `<div style="font-size:9.5px;color:var(--primary);font-weight:700;">🚪 ${lesson.room}-xona</div>` : ''}
+                          ` : `
+                            <div style="color:var(--text-muted);opacity:0.4;font-size:11px;text-align:center;padding:8px 0;">—</div>
+                          `}
+                        </td>
+                      `;
+                    }).join('')}
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    } catch (err) {
+      container.innerHTML = `<div class="state-box"><div class="state-title">Yuklashda xatolik</div><div class="state-desc">${err.message}</div></div>`;
+    }
+  },
+
+  setMasterDay(dayId) {
+    this.masterActiveDay = dayId;
+    this.masterSelectedCell = null;
+    this.renderMasterTimetableTab(document.getElementById('admin-tab-body'));
+  },
+
+  async handleMasterCellClick(classId, period) {
+    const pDef = DEFAULT_PERIODS[period - 1];
+    const lesson = this.masterLessons.find(l => Number(l.group_id) === Number(classId) && Number(l.day_of_week) === Number(this.masterActiveDay) && (l.period === period || l.start_time === pDef.start_time));
+
+    // 1. Agar birinchi katakcha tanlanmagan bo'lsa -> Tanlaymiz
+    if (!this.masterSelectedCell) {
+      this.masterSelectedCell = { classId, period, lessonId: lesson?.id, lesson };
+      TelegramApp.haptic('light');
+      window.App.showToast(`1-dars tanlandi (${period}-soat). Endi almashtirish uchun 2-darsni bosing!`, 'info');
+      this.renderMasterTimetableTab(document.getElementById('admin-tab-body'));
+      return;
+    }
+
+    // 2. Agar o'sha katakchaning o'zini qayta bossa -> Bekor qilamiz
+    if (this.masterSelectedCell.classId === classId && this.masterSelectedCell.period === period) {
+      this.masterSelectedCell = null;
+      window.App.showToast('Tanlov bekor qilindi', 'info');
+      this.renderMasterTimetableTab(document.getElementById('admin-tab-body'));
+      return;
+    }
+
+    // 3. Ikkita katakchani almashtiramiz!
+    const targetCell = { classId, period, lessonId: lesson?.id, lesson };
+    const sourceCell = this.masterSelectedCell;
+    this.masterSelectedCell = null;
+
+    TelegramApp.haptic('medium');
+
+    try {
+      // Backend bazada almashtirish
+      if (sourceCell.lessonId && targetCell.lessonId) {
+        await Api.swapLessons(sourceCell.lessonId, targetCell.lessonId);
+      }
+
+      // Mahalliy xotirada darslarni almashtirish
+      const pSrc = DEFAULT_PERIODS[sourceCell.period - 1];
+      const pTgt = DEFAULT_PERIODS[targetCell.period - 1];
+
+      if (sourceCell.lesson && targetCell.lesson) {
+        const tempSubj = sourceCell.lesson.subject;
+        const tempTeacher = sourceCell.lesson.teacher;
+        const tempRoom = sourceCell.lesson.room;
+
+        sourceCell.lesson.subject = targetCell.lesson.subject;
+        sourceCell.lesson.teacher = targetCell.lesson.teacher;
+        sourceCell.lesson.room = targetCell.lesson.room;
+
+        targetCell.lesson.subject = tempSubj;
+        targetCell.lesson.teacher = tempTeacher;
+        targetCell.lesson.room = tempRoom;
+      } else if (sourceCell.lesson && !targetCell.lesson) {
+        sourceCell.lesson.period = targetCell.period;
+        sourceCell.lesson.start_time = pTgt.start_time;
+        sourceCell.lesson.end_time = pTgt.end_time;
+        sourceCell.lesson.group_id = targetCell.classId;
+      } else if (!sourceCell.lesson && targetCell.lesson) {
+        targetCell.lesson.period = sourceCell.period;
+        targetCell.lesson.start_time = pSrc.start_time;
+        targetCell.lesson.end_time = pSrc.end_time;
+        targetCell.lesson.group_id = sourceCell.classId;
+      }
+
+      window.App.showToast('🎉 Darslar muvaffaqiyatli almashtirildi!', 'success');
+      this.renderMasterTimetableTab(document.getElementById('admin-tab-body'));
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
+      this.renderMasterTimetableTab(document.getElementById('admin-tab-body'));
+    }
+  },
+
+  async saveMasterTimetable() {
+    try {
+      window.App.showToast('Barcha jadvallar saqlanmoqda...', 'info');
+      const payloadClasses = this.masterClasses.map(c => {
+        const classLessons = this.masterLessons.filter(l => Number(l.group_id) === Number(c.id) && l.subject && l.subject.trim());
+        return {
+          classId: c.id,
+          className: c.name,
+          lessons: classLessons
+        };
+      });
+
+      const res = await Api.bulkSaveTimetable({ classes: payloadClasses, force: true });
+      window.App.showToast('🎉 ' + (res.message || 'Barcha sinflar dars jadvali saqlandi!'), 'success');
+      this.masterLessons = []; // qayta yuklanishi uchun
+      this.renderMasterTimetableTab(document.getElementById('admin-tab-body'));
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
+    }
+  },
+
+  openQuickSubstitutionModal() {
+    const modal = document.getElementById('custom-app-modal');
+    const title = document.getElementById('custom-modal-title');
+    const body = document.getElementById('custom-modal-body');
+    if (!modal || !title || !body) return;
+
+    title.innerText = '⚡ Kunlik O‘rinbosar / Dars Almashtirish (Substitutions)';
+    body.innerHTML = `
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">
+        Ustoz kasal bo‘lganda yoki yo‘qligida bugungi darsni vaqtincha boshqa fanga yoki boshqa o‘qituvchiga almashtirish.
+      </div>
+
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label" style="font-size:11px;">Qaysi sinf?</label>
+        <select id="sub-class-select" class="custom-select" onchange="window.AdminView.populateSubLessonsSelect(this.value)">
+          <option value="">-- Sinfni tanlang --</option>
+          ${this.masterClasses.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label" style="font-size:11px;">Qaysi dars (soat)?</label>
+        <select id="sub-lesson-select" class="custom-select">
+          <option value="">Avval sinfni tanlang</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label" style="font-size:11px;">Yangi Fan</label>
+        <input type="text" id="sub-subject-input" class="auth-input-control" placeholder="Masalan: Tarix" style="padding:8px 12px;font-size:13px;">
+      </div>
+
+      <div class="form-group" style="margin-bottom:12px;">
+        <label class="form-label" style="font-size:11px;">Yangi O‘qituvchi</label>
+        <input type="text" id="sub-teacher-input" class="auth-input-control" placeholder="Masalan: Karimova N." style="padding:8px 12px;font-size:13px;">
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px;">
+        <label class="form-label" style="font-size:11px;">Xona</label>
+        <input type="text" id="sub-room-input" class="auth-input-control" placeholder="Masalan: 14" style="padding:8px 12px;font-size:13px;">
+      </div>
+
+      <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+        <input type="checkbox" id="sub-notify-group" checked style="width:18px;height:18px;cursor:pointer;">
+        <label for="sub-notify-group" style="font-size:12px;font-weight:700;color:var(--text-primary);cursor:pointer;">
+          📢 Sinf Telegram guruhiga darhol ogohlantirish yuborilsin
+        </label>
+      </div>
+
+      <button class="admin-action-btn" onclick="window.AdminView.submitQuickSubstitution()" style="margin-top:0;">
+        ⚡ O‘rinbosarni Tayinlash va Saqlash
+      </button>
+    `;
+
+    modal.style.display = 'flex';
+  },
+
+  populateSubLessonsSelect(classId) {
+    const sel = document.getElementById('sub-lesson-select');
+    if (!sel || !classId) return;
+
+    const classLessons = this.masterLessons.filter(l => Number(l.group_id) === Number(classId) && Number(l.day_of_week) === Number(this.masterActiveDay));
+    if (classLessons.length === 0) {
+      sel.innerHTML = `<option value="">Ushbu kunda darslar yo‘q</option>`;
+      return;
+    }
+
+    sel.innerHTML = classLessons.map(l => `
+      <option value="${l.id}">${l.start_time} — ${l.subject} (${l.teacher || 'Ustozsiz'})</option>
+    `).join('');
+  },
+
+  async submitQuickSubstitution() {
+    const lessonId = document.getElementById('sub-lesson-select')?.value;
+    const subject = document.getElementById('sub-subject-input')?.value?.trim();
+    const teacher = document.getElementById('sub-teacher-input')?.value?.trim();
+    const room = document.getElementById('sub-room-input')?.value?.trim();
+    const notifyGroup = Boolean(document.getElementById('sub-notify-group')?.checked);
+
+    if (!lessonId) {
+      window.App.showToast('Iltimos, almashtiriladigan darsni tanlang', 'error');
+      return;
+    }
+
+    try {
+      window.App.showToast('Almashtirilmoqda...', 'info');
+      const res = await Api.substituteLesson({ lessonId, subject, teacher, room, notifyGroup });
+      window.App.closeModal();
+      window.App.showToast(res.message || 'Dars muvaffaqiyatli almashtirildi!', 'success');
+      this.masterLessons = []; // refresh
+      this.renderMasterTimetableTab(document.getElementById('admin-tab-body'));
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
     }
   }
 };
