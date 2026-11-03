@@ -22,8 +22,9 @@ export function getAdminMainMenuKeyboard() {
     .text('📢 Ustozlarga qo‘llanma', 'admin_send_teacher_guide')
     .row()
     .text('📊 Statistika', 'admin_stats')
-    .text('🔑 Parol', 'admin_change_password')
+    .text('👥 Foydalanuvchilar (ID)', 'admin_list_users')
     .row()
+    .text('🔑 Parol', 'admin_change_password')
     .text('🚪 Chiqish', 'admin_logout');
 }
 

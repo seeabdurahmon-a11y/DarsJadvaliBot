@@ -578,6 +578,72 @@ export function registerAdminHandlers(bot) {
     });
   });
 
+  // 👥 Foydalanuvchilar ro'yxatini matn ko'rinishida formatlash
+  function renderUsersListMessage(users) {
+    if (!users || users.length === 0) {
+      return `👥 <b>FOYDALANUVCHILAR RO‘YXATI</b>\n\nHozircha botda ro‘yxatdan o‘tgan foydalanuvchilar mavjud emas.`;
+    }
+
+    let text = `👥 <b>BOT FOYDALANUVCHILARI VA ULARNING ID LARI (${users.length} ta)</b>\n\n` +
+      `<i>💡 Nusxalash uchun ID raqami ustiga bir marta bosing:</i>\n\n`;
+
+    users.forEach((u, idx) => {
+      const name = escapeHtml(u.first_name || 'Noma‘lum');
+      const uname = u.username ? `@${escapeHtml(u.username)}` : 'username yo‘q';
+      let roleInfo = 'Oddiy foydalanuvchi';
+      if (u.is_admin || u.role === 'admin') {
+        roleInfo = '👑 Admin';
+      } else if (u.role === 'teacher') {
+        roleInfo = `👨‍🏫 Ustoz (${escapeHtml(u.teacher_subject || 'Fan')})`;
+      } else if (u.group_name) {
+        roleInfo = `🎓 ${escapeHtml(u.group_name)}`;
+      }
+
+      text += `${idx + 1}. <b>${name}</b> (${uname})\n` +
+        `   🆔 ID: <code>${u.telegram_id}</code>\n` +
+        `   📌 Roli: <i>${roleInfo}</i>\n`;
+      if (u.created_at) {
+        text += `   📅 Ro‘yxatdan o‘tgan: <code>${u.created_at}</code>\n`;
+      }
+      text += `\n`;
+    });
+
+    return text.trim();
+  }
+
+  // 👥 /users yoki /foydalanuvchilar buyrug'i - Barcha foydalanuvchilar va ID larni ko'rish
+  bot.command(['users', 'foydalanuvchilar', 'idlar', 'userlist'], async (ctx) => {
+    if (ctx.chat.type !== 'private') return;
+    if (!isAdmin(ctx.from?.id) && !adminAuthService.isUserAdmin(ctx.from?.id)) {
+      return ctx.reply(BOT_TEXTS.NOT_AUTHORIZED);
+    }
+
+    const users = usersRepo.getAllUsersWithDetails();
+    const text = renderUsersListMessage(users);
+    const keyboard = new InlineKeyboard()
+      .text('🔄 Yangilash', 'admin_list_users')
+      .text('⚙️ Admin Panel', 'admin_main');
+    return ctx.reply(text, {
+      parse_mode: 'HTML',
+      reply_markup: keyboard
+    });
+  });
+
+  // 👥 Foydalanuvchilar ro'yxati va ularning ID lari inline callback
+  bot.callbackQuery('admin_list_users', async (ctx) => {
+    if (!(await checkAuth(ctx))) return;
+    const users = usersRepo.getAllUsersWithDetails();
+    const text = renderUsersListMessage(users);
+    const keyboard = new InlineKeyboard()
+      .text('🔄 Yangilash', 'admin_list_users')
+      .text('⬅️ Orqaga', 'admin_main');
+    await ctx.answerCallbackQuery();
+    await ctx.editMessageText(text, {
+      parse_mode: 'HTML',
+      reply_markup: keyboard
+    });
+  });
+
   // ⚙️ Sozlamalar
   bot.callbackQuery('admin_settings', async (ctx) => {
     if (!(await checkAuth(ctx))) return;

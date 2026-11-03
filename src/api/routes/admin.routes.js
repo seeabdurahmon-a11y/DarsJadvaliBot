@@ -58,6 +58,26 @@ adminRouter.get('/stats', (req, res) => {
 });
 
 /**
+ * GET /api/admin/users
+ * Barcha foydalanuvchilar ro'yxati va ularning Telegram ID lari
+ */
+adminRouter.get('/users', (req, res) => {
+  try {
+    const schoolId = getEffectiveSchoolId(req);
+    const users = usersRepo.getAllUsersWithDetails(schoolId);
+    res.json({
+      success: true,
+      data: {
+        total: users.length,
+        users
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * TEMPLATE MANAGEMENT
  */
 adminRouter.get('/template', (req, res) => {

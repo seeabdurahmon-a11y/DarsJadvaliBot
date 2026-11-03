@@ -270,6 +270,27 @@ export const usersRepo = {
     return db.prepare(`SELECT * FROM users ORDER BY created_at DESC`).all();
   },
 
+  getAllUsersWithDetails(schoolId = null) {
+    const db = getDatabase();
+    let query = `
+      SELECT u.id, u.telegram_id, u.username, u.first_name, u.role, u.is_admin, u.is_role_locked, u.created_at,
+             g.name as group_name,
+             s.name as school_name,
+             t.first_name as teacher_first_name, t.last_name as teacher_last_name, t.subject as teacher_subject
+      FROM users u
+      LEFT JOIN groups g ON u.selected_group_id = g.id
+      LEFT JOIN schools s ON (u.selected_school_id = s.id OR g.school_id = s.id)
+      LEFT JOIN teachers t ON u.selected_teacher_id = t.id
+    `;
+    const params = [];
+    if (schoolId) {
+      query += ` WHERE (u.selected_school_id = ? OR g.school_id = ? OR t.school_id = ?)`;
+      params.push(schoolId, schoolId, schoolId);
+    }
+    query += ` ORDER BY u.created_at DESC`;
+    return db.prepare(query).all(...params);
+  },
+
   getUsersCount(schoolId = null) {
     const db = getDatabase();
     if (schoolId) {

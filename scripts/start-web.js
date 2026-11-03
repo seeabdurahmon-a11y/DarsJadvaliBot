@@ -18,3 +18,4 @@ try {
   logger.error('Web serverni ishga tushirishda xatolik:', err);
   process.exit(1);
 }
+

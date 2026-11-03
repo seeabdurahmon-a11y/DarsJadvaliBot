@@ -90,6 +90,7 @@ export const AdminView = {
         <button class="tab-pill" onclick="window.AdminView.switchTab('master')" style="background:#0f766e;color:#fff;font-weight:800;">🔀 Master jadval va almashtirish</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('vacation')" style="background:#d97706;color:#fff;font-weight:800;">🏖️ Ta'tillar (Каникулы)</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('stats')">Statistika</button>
+        <button class="tab-pill" onclick="window.AdminView.switchTab('users')" style="background:#4338ca;color:#fff;font-weight:700;">👥 Foydalanuvchilar (ID)</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('classes')">Sinflar</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('teachers')">Ustozlar</button>
         <button class="tab-pill" onclick="window.AdminView.switchTab('subjects')">Fanlar</button>
@@ -373,6 +374,8 @@ export const AdminView = {
         await this.renderVacationTab(body);
       } else if (this.currentTab === 'stats') {
         await this.renderStats(body);
+      } else if (this.currentTab === 'users') {
+        await this.renderUsersTab(body);
       } else if (this.currentTab === 'classes') {
         await this.renderClasses(body);
       } else if (this.currentTab === 'teachers') {
@@ -1239,6 +1242,102 @@ export const AdminView = {
         <div class="stat-box">
           <div class="stat-val">${stats.lessonsCount || 0}</div>
           <div class="stat-label">Darslar</div>
+        </div>
+        <div class="stat-box" onclick="window.AdminView.switchTab('users')" style="cursor:pointer;border:2px solid #c7d2fe;background:#f5f3ff;" title="Foydalanuvchilar va Telegram ID larini ko‘rish">
+          <div class="stat-val" style="color:#4338ca;">${stats.usersCount || 0}</div>
+          <div class="stat-label" style="font-weight:700;color:#4338ca;">👥 Foydalanuvchilar (ID) ➔</div>
+        </div>
+      </div>
+    `;
+  },
+
+  // 1.1 USERS & TELEGRAM IDS
+  async renderUsersTab(container) {
+    container.innerHTML = `<div class="state-box"><div class="skeleton" style="height:140px;"></div></div>`;
+    const res = await Api.getAdminUsers();
+    const users = res?.users || [];
+
+    if (!this.userSearchQuery) this.userSearchQuery = '';
+
+    const filterText = this.userSearchQuery.trim().toLowerCase();
+    const filteredUsers = filterText ? users.filter(u => {
+      const name = (u.first_name || '').toLowerCase();
+      const uname = (u.username || '').toLowerCase();
+      const idStr = String(u.telegram_id || '');
+      const group = (u.group_name || '').toLowerCase();
+      const role = (u.role || '').toLowerCase();
+      return name.includes(filterText) || uname.includes(filterText) || idStr.includes(filterText) || group.includes(filterText) || role.includes(filterText);
+    }) : users;
+
+    const escapeHtml = (str) => {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    };
+
+    container.innerHTML = `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+          <div>
+            <h3 style="font-size:17px;font-weight:800;color:var(--text-primary);margin:0 0 4px 0;">👥 Bot Foydalanuvchilari (${users.length} ta)</h3>
+            <p style="font-size:12px;color:var(--text-muted);margin:0;">Barcha o‘quvchilar, ustozlar va ularning Telegram ID raqamlari</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <input type="text" placeholder="🔍 ID, Ism yoki @username..." value="${escapeHtml(this.userSearchQuery)}" 
+              oninput="window.AdminView.userSearchQuery = this.value; window.AdminView.renderUsersTab(document.getElementById('admin-tab-body'));"
+              style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-body);color:var(--text-primary);font-size:13px;width:220px;">
+            <button class="btn-sm" style="background:#4338ca;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;" onclick="window.AdminView.renderUsersTab(document.getElementById('admin-tab-body'))">
+              🔄 Yangilash
+            </button>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;">
+            <thead>
+              <tr style="border-bottom:2px solid var(--border);background:var(--bg-body);">
+                <th style="padding:10px;font-weight:800;">#</th>
+                <th style="padding:10px;font-weight:800;">Telegram ID</th>
+                <th style="padding:10px;font-weight:800;">Foydalanuvchi</th>
+                <th style="padding:10px;font-weight:800;">Username</th>
+                <th style="padding:10px;font-weight:800;">Roli / Sinf</th>
+                <th style="padding:10px;font-weight:800;">Ro‘yxatdan o‘tgan</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredUsers.length === 0 ? `
+                <tr>
+                  <td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted);">Foydalanuvchi topilmadi</td>
+                </tr>
+              ` : filteredUsers.map((u, i) => {
+                let roleBadge = '<span style="background:#f1f5f9;color:#475569;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;">Oddiy</span>';
+                if (u.is_admin || u.role === 'admin') {
+                  roleBadge = '<span style="background:#fef3c7;color:#b45309;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:800;">👑 Admin</span>';
+                } else if (u.role === 'teacher') {
+                  roleBadge = `<span style="background:#e0e7ff;color:#4338ca;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;">👨‍🏫 Ustoz: ${escapeHtml(u.teacher_subject || '')}</span>`;
+                } else if (u.group_name) {
+                  roleBadge = `<span style="background:#dcfce7;color:#15803d;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;">🎓 ${escapeHtml(u.group_name)}</span>`;
+                }
+
+                return `
+                  <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:10px;color:var(--text-muted);font-weight:700;">${i + 1}</td>
+                    <td style="padding:10px;">
+                      <code style="background:var(--bg-body);padding:3px 8px;border-radius:6px;font-family:monospace;font-weight:800;color:#4338ca;border:1px solid var(--border);cursor:pointer;" 
+                        onclick="navigator.clipboard?.writeText('${u.telegram_id}'); window.App.showToast('Telegram ID nusxalandi: ${u.telegram_id}', 'success');" title="Nusxalash uchun bosing">
+                        ${u.telegram_id}
+                      </code>
+                    </td>
+                    <td style="padding:10px;font-weight:700;color:var(--text-primary);">${escapeHtml(u.first_name || '—')}</td>
+                    <td style="padding:10px;">
+                      ${u.username ? `<a href="https://t.me/${u.username}" target="_blank" style="color:#0284c7;text-decoration:none;font-weight:700;">@${u.username}</a>` : '<span style="color:var(--text-muted);">—</span>'}
+                    </td>
+                    <td style="padding:10px;">${roleBadge}</td>
+                    <td style="padding:10px;color:var(--text-muted);font-size:11.5px;">${u.created_at || '—'}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
         </div>
       </div>
     `;

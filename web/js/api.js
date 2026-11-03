@@ -143,6 +143,9 @@ export const Api = {
     const query = schoolCode ? `?schoolCode=${schoolCode}` : '';
     return this.request(`/admin/stats${query}`);
   },
+  getAdminUsers() {
+    return this.request('/admin/users');
+  },
   createClass(payload) {
     return this.request('/admin/classes', {
       method: 'POST',
