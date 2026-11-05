@@ -124,6 +124,18 @@ export function createWebServer(botInstance = null) {
   app.use('/api', publicRouter);
   app.use('/api/admin', adminRouter);
 
+  // Super-Admin Subdomain handler (masalan: admin.darsjadvalibot.onrender.com yoki admin.maktab.uz)
+  app.use((req, res, next) => {
+    const host = req.headers['x-forwarded-host'] || req.headers.host || '';
+    if (host.startsWith('admin.') && req.path === '/') {
+      const indexPath = path.join(config.WEB_DIR, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        return res.sendFile(indexPath);
+      }
+    }
+    next();
+  });
+
   // Taqdimot va Sotuv sahifasi (Продажная версия)
   app.get(['/', '/sales', '/presentation', '/taqdimot'], (req, res, next) => {
     if (req.query.view === 'app') {
@@ -136,8 +148,8 @@ export function createWebServer(botInstance = null) {
     next();
   });
 
-  // Ishchi tizim va Zavuch kabineti (Рабочая версия)
-  app.get(['/app', '/jadval', '/cabinet'], (req, res) => {
+  // Ishchi tizim, Zavuch kabineti va Super-Admin paneli
+  app.get(['/app', '/jadval', '/cabinet', '/admin', '/superadmin'], (req, res) => {
     const indexPath = path.join(config.WEB_DIR, 'index.html');
     if (fs.existsSync(indexPath)) {
       return res.sendFile(indexPath);

@@ -119,7 +119,11 @@ export const App = {
     if (appMainLayout) appMainLayout.style.display = 'block';
 
     await this.loadAppData();
-    this.navigate('home');
+    if (window.location.hostname.startsWith('admin.') || window.location.pathname.includes('admin') || window.location.pathname.includes('superadmin') || window.location.search.includes('admin')) {
+      this.navigate('admin');
+    } else {
+      this.navigate('home');
+    }
   },
 
   async loadAppData() {

@@ -29,7 +29,7 @@ const COMMON_SUBJECTS = [
 ];
 
 export const AdminView = {
-  currentTab: 'excel', // 'excel' | 'stats' | 'classes' | 'teachers' | 'subjects' | 'lessons' | 'conflicts' | 'import' | 'broadcast'
+  currentTab: (window.location.hostname.startsWith('admin.') || window.location.pathname.includes('admin') || window.location.pathname.includes('superadmin')) ? 'schools' : 'excel', // 'schools' | 'excel' | 'stats' | 'classes' | 'teachers' | 'subjects' | 'lessons' | 'conflicts' | 'import' | 'broadcast'
   authMode: 'login', // 'login' | 'register'
   excelSelectedClassId: null,
   excelActiveDay: 1,
@@ -86,18 +86,19 @@ export const AdminView = {
       </div>
 
       <div class="tab-pills" id="admin-pills" style="overflow-x:auto;white-space:nowrap;margin-bottom:14px;display:flex;gap:6px;">
-        <button class="tab-pill active" onclick="window.AdminView.switchTab('excel')" style="background:#0284c7;color:#fff;font-weight:800;">📊 Dars jadvalini yangilash (Excel)</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('master')" style="background:#0f766e;color:#fff;font-weight:800;">🔀 Master jadval va almashtirish</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('vacation')" style="background:#d97706;color:#fff;font-weight:800;">🏖️ Ta'tillar (Каникулы)</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('stats')">Statistika</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('users')" style="background:#4338ca;color:#fff;font-weight:700;">👥 Foydalanuvchilar (ID)</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('classes')">Sinflar</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('teachers')">Ustozlar</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('subjects')">Fanlar</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('lessons')">Darslar</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('conflicts')">⚠️ To‘qnashuvlar</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('import')">Jadval yuklash</button>
-        <button class="tab-pill" onclick="window.AdminView.switchTab('broadcast')">Hozir yuborish</button>
+        <button class="tab-pill ${this.currentTab === 'schools' ? 'active' : ''}" onclick="window.AdminView.switchTab('schools')" style="background:#7c3aed;color:#fff;font-weight:800;">🏫 Maktablar va Akkauntlar (Super Admin)</button>
+        <button class="tab-pill ${this.currentTab === 'excel' ? 'active' : ''}" onclick="window.AdminView.switchTab('excel')" style="background:#0284c7;color:#fff;font-weight:800;">📊 Dars jadvalini yangilash (Excel)</button>
+        <button class="tab-pill ${this.currentTab === 'master' ? 'active' : ''}" onclick="window.AdminView.switchTab('master')" style="background:#0f766e;color:#fff;font-weight:800;">🔀 Master jadval va almashtirish</button>
+        <button class="tab-pill ${this.currentTab === 'vacation' ? 'active' : ''}" onclick="window.AdminView.switchTab('vacation')" style="background:#d97706;color:#fff;font-weight:800;">🏖️ Ta'tillar (Каникулы)</button>
+        <button class="tab-pill ${this.currentTab === 'stats' ? 'active' : ''}" onclick="window.AdminView.switchTab('stats')">Statistika</button>
+        <button class="tab-pill ${this.currentTab === 'users' ? 'active' : ''}" onclick="window.AdminView.switchTab('users')" style="background:#4338ca;color:#fff;font-weight:700;">👥 Foydalanuvchilar (ID)</button>
+        <button class="tab-pill ${this.currentTab === 'classes' ? 'active' : ''}" onclick="window.AdminView.switchTab('classes')">Sinflar</button>
+        <button class="tab-pill ${this.currentTab === 'teachers' ? 'active' : ''}" onclick="window.AdminView.switchTab('teachers')">Ustozlar</button>
+        <button class="tab-pill ${this.currentTab === 'subjects' ? 'active' : ''}" onclick="window.AdminView.switchTab('subjects')">Fanlar</button>
+        <button class="tab-pill ${this.currentTab === 'lessons' ? 'active' : ''}" onclick="window.AdminView.switchTab('lessons')">Darslar</button>
+        <button class="tab-pill ${this.currentTab === 'conflicts' ? 'active' : ''}" onclick="window.AdminView.switchTab('conflicts')">⚠️ To‘qnashuvlar</button>
+        <button class="tab-pill ${this.currentTab === 'import' ? 'active' : ''}" onclick="window.AdminView.switchTab('import')">Jadval yuklash</button>
+        <button class="tab-pill ${this.currentTab === 'broadcast' ? 'active' : ''}" onclick="window.AdminView.switchTab('broadcast')">Hozir yuborish</button>
       </div>
 
       <div id="admin-tab-body">
@@ -127,7 +128,7 @@ export const AdminView = {
             <label class="auth-field-label">Foydalanuvchi nomi</label>
             <div class="auth-input-container">
               <span class="auth-input-left-icon">${Icons.user}</span>
-              <input type="text" id="admin-login-id" class="auth-input-control" value="test@darsjadvali.uz" placeholder="Email yoki maktab kodi" autocomplete="username">
+              <input type="text" id="admin-login-id" class="auth-input-control" value="" placeholder="Email yoki maktab kodi" autocomplete="username">
             </div>
           </div>
 
@@ -135,7 +136,7 @@ export const AdminView = {
             <label class="auth-field-label">Parol</label>
             <div class="auth-input-container">
               <span class="auth-input-left-icon">${Icons.lock}</span>
-              <input type="password" id="admin-login-pwd" class="auth-input-control" value="darsjadvoli0751" placeholder="Parolni kiriting" autocomplete="current-password">
+              <input type="password" id="admin-login-pwd" class="auth-input-control" value="" placeholder="Parolni kiriting" autocomplete="current-password">
               <button type="button" class="auth-password-toggle-btn" onclick="window.AdminView.togglePasswordVisibility('admin-login-pwd', this)" title="Parolni ko‘rsatish">
                 ${Icons.eye}
               </button>
@@ -143,19 +144,6 @@ export const AdminView = {
           </div>
 
           <button class="auth-submit-btn-emerald" onclick="window.AdminView.submitLogin()">Kirish</button>
-
-          <div class="auth-test-box">
-            <div style="font-size:11px;color:#047857;font-weight:700;">TEST AKKAUNTI:</div>
-            <div style="font-size:12px;color:#065f46;font-weight:600;margin-top:2px;">Email: <b>test@darsjadvali.uz</b> | Parol: <b>darsjadvoli0751</b></div>
-            <button class="auth-test-fill-btn" onclick="window.AdminView.fillTestCredentials()">1-bosishda test bilan kirish</button>
-          </div>
-
-          <hr style="margin:20px 0;border:none;border-top:1px solid #f1f5f9;">
-
-          <div style="text-align:center;">
-            <div style="font-size:12.5px;color:#64748b;margin-bottom:8px;">Yangi maktab yoki zavuch akkaunti ochmoqchimisiz?</div>
-            <button class="auth-toggle-auth-btn" onclick="window.AdminView.setAuthMode('register')">Yangi Akkaunt Ochish</button>
-          </div>
         </div>
       </div>
     `;
@@ -266,14 +254,6 @@ export const AdminView = {
     if (mount) this.render(mount);
   },
 
-  fillTestCredentials() {
-    const idInput = document.getElementById('admin-login-id');
-    const pwdInput = document.getElementById('admin-login-pwd');
-    if (idInput) idInput.value = 'test@darsjadvali.uz';
-    if (pwdInput) pwdInput.value = 'darsjadvoli0751';
-    this.submitLogin();
-  },
-
   async submitLogin() {
     const identifier = document.getElementById('admin-login-id')?.value?.trim();
     const password = document.getElementById('admin-login-pwd')?.value?.trim();
@@ -366,7 +346,9 @@ export const AdminView = {
     if (!body) return;
 
     try {
-      if (this.currentTab === 'excel') {
+      if (this.currentTab === 'schools') {
+        await this.renderSchoolsTab(body);
+      } else if (this.currentTab === 'excel') {
         await this.renderExcelTimetable(body);
       } else if (this.currentTab === 'master') {
         await this.renderMasterTimetableTab(body);
@@ -398,6 +380,240 @@ export const AdminView = {
           <div class="state-desc">${err.message}</div>
         </div>
       `;
+    }
+  },
+
+  // =========================================================
+  // SUPER ADMIN: MAKTABLAR VA AKKAUNTLAR BOSHQARUVI
+  // =========================================================
+  async renderSchoolsTab(container) {
+    container.innerHTML = `<div class="state-box"><div class="skeleton" style="height:140px;"></div></div>`;
+
+    try {
+      const schools = await Api.getAdminSchools();
+
+      let html = `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <div>
+              <div style="font-size:16px;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+                <span>🏫</span> Maktablar va Zavuch Akkauntlari Boshqaruvi
+                <span style="background:#ede9fe;color:#6d28d9;font-size:11px;padding:3px 9px;border-radius:12px;font-weight:800;">${schools.length} ta maktab</span>
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+                Platformadagi barcha maktablar, ularning parollari va yangi maktab akkauntlarini ochish
+              </div>
+            </div>
+            <button class="btn-sm" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(124,58,237,0.3);" onclick="window.AdminView.toggleAddSchoolForm()">
+              ➕ Yangi Maktab Akkauntini Ochish
+            </button>
+          </div>
+
+          <!-- Add School Form (Hidden by default) -->
+          <div id="add-school-form-box" style="display:none;background:var(--bg-body);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:14px;">
+            <div style="font-size:13.5px;font-weight:800;color:var(--text-primary);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+              <span>➕ Yangi Maktab Qo‘shish va Zavuch Akkauntini Ochish</span>
+              <button onclick="window.AdminView.toggleAddSchoolForm()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-weight:700;font-size:14px;">✕</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:12px;margin-bottom:14px;">
+              <div>
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">Maktab nomi *</label>
+                <input type="text" id="new-school-name" placeholder="Masalan: 45-maktab yoki 12-IDUM" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">Maktab kodi (masalan: M-02)</label>
+                <input type="text" id="new-school-code" placeholder="M-${String(schools.length + 1).padStart(2, '0')}" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">Hudud / Shahar</label>
+                <input type="text" id="new-school-region" placeholder="Masalan: Toshkent shahar" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">Zavuch / Admin ismi</label>
+                <input type="text" id="new-school-admin-name" placeholder="Masalan: Rustamov A." style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">Zavuch emaili / logini *</label>
+                <input type="email" id="new-school-email" placeholder="maktab${schools.length + 1}@maktab.uz" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">Boshlang‘ich Parol *</label>
+                <input type="text" id="new-school-pwd" placeholder="Kamida 4 ta belgi" value="maktab${schools.length + 1}_2026" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;box-sizing:border-box;">
+              </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+              <button onclick="window.AdminView.toggleAddSchoolForm()" class="btn-sm" style="background:var(--bg-card);border:1px solid var(--border);padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:600;">Bekor qilish</button>
+              <button onclick="window.AdminView.submitCreateSchool()" class="btn-sm" style="background:#059669;color:#fff;border:none;padding:7px 16px;border-radius:8px;cursor:pointer;font-weight:700;">💾 Saqlash va Akkaunt Ochish</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schools Cards Grid -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:14px;">
+      `;
+
+      schools.forEach(s => {
+        const isCurrentSchool = (String(s.id) === String(window.App.currentSchoolId) || s.code === window.App.currentSchoolCode);
+        html += `
+          <div style="background:var(--bg-card);border:1.5px solid ${isCurrentSchool ? 'var(--primary)' : 'var(--border)'};border-radius:14px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,0.03);position:relative;">
+            ${isCurrentSchool ? '<div style="position:absolute;top:10px;right:10px;background:#d1fae5;color:#047857;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:10px;">Faol Kabinet</div>' : ''}
+            
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+              <div style="width:38px;height:38px;border-radius:10px;background:#ede9fe;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold;">🏫</div>
+              <div style="flex:1;overflow:hidden;">
+                <div style="font-size:15px;font-weight:800;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${s.name}">${s.name}</div>
+                <div style="font-size:11.5px;color:var(--text-muted);display:flex;gap:6px;align-items:center;margin-top:2px;">
+                  <span style="background:var(--bg-body);border:1px solid var(--border);padding:1px 6px;border-radius:4px;font-weight:700;">${s.code}</span>
+                  ${s.region ? `<span>• ${s.region}</span>` : ''}
+                </div>
+              </div>
+            </div>
+
+            <div style="background:var(--bg-body);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <span style="color:var(--text-muted);">Zavuch / Admin:</span>
+                <span style="font-weight:700;color:var(--text-primary);">${s.admin_name || 'Admin'}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <span style="color:var(--text-muted);">Email / Login:</span>
+                <span style="font-weight:700;color:var(--text-primary);font-family:monospace;">${s.admin_email || '—'}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:var(--text-muted);">Parol:</span>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span id="school-pwd-${s.id}" style="font-weight:800;color:#047857;font-family:monospace;background:#d1fae5;padding:1px 6px;border-radius:4px;">${s.admin_password || '******'}</span>
+                  <button onclick="navigator.clipboard?.writeText('${s.admin_password || ''}'); window.App.showToast('Parol nusxalandi!', 'success');" title="Nusxalash" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:12px;">📋</button>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--text-muted);margin-bottom:12px;padding:0 2px;">
+              <span>📚 <b>${s.lessons_count}</b> ta dars</span>
+              <span>👥 <b>${s.groups_count}</b> ta sinf</span>
+              <span>👨‍🏫 <b>${s.teachers_count}</b> ta ustoz</span>
+            </div>
+
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="btn-sm" style="flex:1;background:#f3f4f6;color:#1f2937;border:1px solid #d1d5db;border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px;" onclick="window.AdminView.promptChangePassword(${s.id}, '${s.name.replace(/'/g, "\\'")}')">
+                🔑 Parolni o‘zgartirish
+              </button>
+              ${!isCurrentSchool ? `
+                <button class="btn-sm" style="background:var(--primary);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;" onclick="window.AdminView.switchToSchool('${s.code}', '${s.name.replace(/'/g, "\\'")}', ${s.id}, '${(s.admin_name||'').replace(/'/g, "\\'")}', '${(s.admin_email||'').replace(/'/g, "\\'")}')">
+                  🚪 Kabinetga o‘tish
+                </button>
+              ` : `
+                <button class="btn-sm" style="background:#047857;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:default;">
+                  ✓ Siz bu yerdasiz
+                </button>
+              `}
+              ${s.id !== 1 ? `
+                <button class="btn-sm" style="background:#fee2e2;color:#ef4444;border:1px solid #fecaca;border-radius:8px;padding:6px 8px;font-size:11.5px;cursor:pointer;" title="Maktabni o‘chirish" onclick="window.AdminView.deleteSchool(${s.id}, '${s.name.replace(/'/g, "\\'")}')">
+                  🗑️
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+      container.innerHTML = html;
+    } catch (err) {
+      container.innerHTML = `
+        <div class="state-box">
+          <div class="state-title">Maktablarni yuklashda xatolik</div>
+          <div class="state-desc">${err.message}</div>
+          <button class="btn-sm" style="margin-top:10px;background:var(--primary);color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;" onclick="window.AdminView.renderSchoolsTab(document.getElementById('admin-tab-body'))">Qaytadan urinish</button>
+        </div>
+      `;
+    }
+  },
+
+  toggleAddSchoolForm() {
+    const box = document.getElementById('add-school-form-box');
+    if (box) {
+      box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    }
+  },
+
+  async submitCreateSchool() {
+    const name = document.getElementById('new-school-name')?.value?.trim();
+    const code = document.getElementById('new-school-code')?.value?.trim();
+    const region = document.getElementById('new-school-region')?.value?.trim();
+    const admin_name = document.getElementById('new-school-admin-name')?.value?.trim();
+    const admin_email = document.getElementById('new-school-email')?.value?.trim();
+    const admin_password = document.getElementById('new-school-pwd')?.value?.trim();
+
+    if (!name) {
+      return window.App.showToast('Iltimos, maktab nomini kiriting!', 'error');
+    }
+    if (!admin_password || admin_password.length < 4) {
+      return window.App.showToast('Parol kamida 4 ta belgidan iborat bo‘lishi kerak!', 'error');
+    }
+
+    try {
+      window.App.showToast('Yangi maktab yaratilmoqda...', 'info');
+      const res = await Api.createAdminSchool({
+        name,
+        code,
+        region,
+        admin_name,
+        admin_email,
+        admin_password
+      });
+
+      window.App.showToast(res.message || 'Yangi maktab muvaffaqiyatli yaratildi!', 'success');
+      this.renderSchoolsTab(document.getElementById('admin-tab-body'));
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
+    }
+  },
+
+  async promptChangePassword(schoolId, schoolName) {
+    const newPwd = prompt(`"${schoolName}" maktabi uchun yangi parol kiriting (kamida 4 ta belgi):`);
+    if (!newPwd || !newPwd.trim()) return;
+
+    if (newPwd.trim().length < 4) {
+      return window.App.showToast('Parol kamida 4 ta belgidan iborat bo‘lishi kerak!', 'error');
+    }
+
+    try {
+      window.App.showToast('Parol yangilanmoqda...', 'info');
+      const res = await Api.updateSchoolPassword(schoolId, newPwd.trim());
+      window.App.showToast(res.message || 'Parol muvaffaqiyatli yangilandi!', 'success');
+      this.renderSchoolsTab(document.getElementById('admin-tab-body'));
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
+    }
+  },
+
+  switchToSchool(code, name, id, adminName, adminEmail) {
+    localStorage.setItem('maktab_selected_school_code', code);
+    localStorage.setItem('maktab_selected_school_name', name);
+    localStorage.setItem('maktab_selected_school_id', String(id));
+    if (adminName) localStorage.setItem('maktab_admin_name', adminName);
+    if (adminEmail) localStorage.setItem('maktab_admin_email', adminEmail);
+
+    window.App.currentSchoolCode = code;
+    window.App.currentSchoolName = name;
+    window.App.currentSchoolId = id;
+
+    window.App.showToast(`"${name}" (${code}) maktab kabinetiga o‘tildi!`, 'success');
+    window.App.showMainApp();
+  },
+
+  async deleteSchool(schoolId, schoolName) {
+    if (!confirm(`Haqiqatan ham "${schoolName}" maktabini butunlay o‘chirib tashlamoqchimisiz? Undagi barcha sinflar va darslar ham o‘chiriladi!`)) {
+      return;
+    }
+
+    try {
+      window.App.showToast('Maktab o‘chirilmoqda...', 'info');
+      const res = await Api.deleteAdminSchool(schoolId);
+      window.App.showToast(res.message || 'Maktab o‘chirildi!', 'success');
+      this.renderSchoolsTab(document.getElementById('admin-tab-body'));
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
     }
   },
 

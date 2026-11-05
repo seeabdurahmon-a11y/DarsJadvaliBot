@@ -301,6 +301,28 @@ export const Api = {
       method: 'POST',
       body: JSON.stringify(payload)
     });
+  },
+
+  // Super Admin - Maktablar Boshqaruvi
+  getAdminSchools() {
+    return this.request('/admin/schools');
+  },
+  createAdminSchool(payload) {
+    return this.request('/admin/schools', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+  updateSchoolPassword(schoolId, password) {
+    return this.request(`/admin/schools/${schoolId}/password`, {
+      method: 'PUT',
+      body: JSON.stringify({ password })
+    });
+  },
+  deleteAdminSchool(schoolId) {
+    return this.request(`/admin/schools/${schoolId}`, {
+      method: 'DELETE'
+    });
   }
 };
 

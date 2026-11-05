@@ -163,6 +163,13 @@ export const schoolsRepo = {
     return this.getSchoolById(id);
   },
 
+  updatePassword(id, newPassword) {
+    if (!newPassword || typeof newPassword !== 'string') return null;
+    const db = getDatabase();
+    db.prepare('UPDATE schools SET admin_password = ? WHERE id = ?').run(String(newPassword).trim(), id);
+    return this.getSchoolById(id);
+  },
+
   deleteSchool(id) {
     const db = getDatabase();
     // Cascade delete lessons, groups, teachers, subjects for this school

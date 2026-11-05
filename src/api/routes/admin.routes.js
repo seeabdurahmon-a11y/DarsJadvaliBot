@@ -663,3 +663,141 @@ adminRouter.post('/substitute-lesson', async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+/**
+ * ========================================================
+ * SUPER ADMIN: MAKTABLAR VA AKKAUNTLAR BOSHQARUVI
+ * ========================================================
+ */
+
+/**
+ * GET /api/admin/schools
+ * Barcha maktablar ro'yxati va ularning parollari (faqat adminlar uchun)
+ */
+adminRouter.get('/schools', (req, res) => {
+  try {
+    const schools = schoolsRepo.getAllSchoolsWithStats();
+    res.json({
+      success: true,
+      data: schools.map(s => ({
+        id: s.id,
+        code: s.code,
+        name: s.name,
+        region: s.region,
+        admin_name: s.admin_name,
+        admin_email: s.admin_email,
+        admin_password: s.admin_password,
+        default_send_time: s.default_send_time,
+        is_active: s.is_active,
+        groups_count: s.groups_count || 0,
+        teachers_count: s.teachers_count || 0,
+        lessons_count: s.lessons_count || 0,
+        users_count: s.users_count || 0,
+        created_at: s.created_at
+      }))
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/admin/schools
+ * Yangi maktab akkauntini yaratish
+ */
+adminRouter.post('/schools', (req, res) => {
+  try {
+    const { name, code, admin_name, admin_email, region, admin_password, default_send_time } = req.body;
+
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ success: false, error: 'Maktab nomini kiritish shart' });
+    }
+
+    if (admin_email && admin_email.trim()) {
+      const existing = schoolsRepo.getSchoolByEmail(admin_email.trim());
+      if (existing) {
+        return res.status(400).json({ success: false, error: `Ushbu email (${admin_email}) allaqachon boshqa maktabga bog‘langan` });
+      }
+    }
+
+    const created = schoolsRepo.addSchool({
+      name: name.trim(),
+      code: code ? code.trim() : '',
+      admin_name: admin_name ? admin_name.trim() : 'Zavuch / Admin',
+      admin_email: admin_email ? admin_email.trim() : '',
+      region: region ? region.trim() : '',
+      admin_password: admin_password ? admin_password.trim() : 'darsjadvoli0751',
+      default_send_time: default_send_time ? default_send_time.trim() : '06:00'
+    });
+
+    res.json({
+      success: true,
+      message: `Yangi maktab (${created.name} - ${created.code}) muvaffaqiyatli yaratildi!`,
+      data: created
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * PUT /api/admin/schools/:id/password
+ * Maktab parolini o'zgartirish
+ */
+adminRouter.put('/schools/:id/password', (req, res) => {
+  try {
+    const schoolId = Number(req.params.id);
+    const { password } = req.body;
+
+    if (!password || typeof password !== 'string' || password.trim().length < 4) {
+      return res.status(400).json({ success: false, error: 'Yangi parol kamida 4 ta belgidan iborat bo‘lishi kerak' });
+    }
+
+    const school = schoolsRepo.getSchoolById(schoolId);
+    if (!school) {
+      return res.status(404).json({ success: false, error: 'Maktab topilmadi' });
+    }
+
+    const updated = schoolsRepo.updatePassword(schoolId, password.trim());
+
+    res.json({
+      success: true,
+      message: `"${updated.name}" maktabi paroli muvaffaqiyatli yangilandi!`,
+      data: {
+        id: updated.id,
+        name: updated.name,
+        code: updated.code,
+        admin_password: updated.admin_password
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * DELETE /api/admin/schools/:id
+ * Maktabni o'chirish
+ */
+adminRouter.delete('/schools/:id', (req, res) => {
+  try {
+    const schoolId = Number(req.params.id);
+    if (schoolId === 1) {
+      return res.status(400).json({ success: false, error: 'Asosiy maktabni (ID: 1) o‘chirib bo‘lmaydi!' });
+    }
+
+    const school = schoolsRepo.getSchoolById(schoolId);
+    if (!school) {
+      return res.status(404).json({ success: false, error: 'Maktab topilmadi' });
+    }
+
+    schoolsRepo.deleteSchool(schoolId);
+
+    res.json({
+      success: true,
+      message: `"${school.name}" maktabi muvaffaqiyatli o‘chirildi!`
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
