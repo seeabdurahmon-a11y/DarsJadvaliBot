@@ -42,6 +42,12 @@ export const scheduler = {
    */
   async checkAndSendSchedules(bot) {
     const today = getTodayInfo();
+
+    // Dam olish kuni (Yakshanba) da guruhlarga ertalabki jadval yuborilmaydi
+    if (today.dayOfWeek === 7) {
+      return;
+    }
+
     const currentTime = today.timeStr; // "06:00"
 
     const groups = groupsRepo.getAllGroups(true);
