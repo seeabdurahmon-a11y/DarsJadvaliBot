@@ -1,9 +1,0 @@
-node_modules
-npm-debug.log
-.git
-.gitignore
-.env
-data/*.sqlite
-logs/*
-!logs/.gitkeep
-tests
