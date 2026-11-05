@@ -107,19 +107,13 @@
   <section class="gradient-hero pt-14 pb-20 border-b border-slate-200/60 overflow-hidden relative">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <!-- Live School Switcher Box (Sales Weapon!) -->
-      <div class="mb-10 max-w-3xl mx-auto bg-white/90 backdrop-blur border-2 border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-xl shadow-emerald-500/5">
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg">🏫</div>
-            <div>
-              <div class="text-xs uppercase font-extrabold tracking-wider text-emerald-700">Taqdimot qilinayotgan maktab:</div>
-              <div class="text-lg font-black text-slate-900" id="current-school-display">Smart Maktab (Demo)</div>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 w-full sm:w-auto">
-            <input type="text" id="school-name-input" placeholder="Masalan: 45-maktab yoki 12-IDUM" class="px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-60">
-            <button onclick="updateSchoolName()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded-xl text-sm transition shrink-0">O‘zgartirish</button>
+      <!-- School Info Box (O'zgartirib bo'lmaydigan qilib qotirildi) -->
+      <div class="mb-10 max-w-xl mx-auto bg-white/90 backdrop-blur border-2 border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-xl shadow-emerald-500/5">
+        <div class="flex items-center justify-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg">🏫</div>
+          <div>
+            <div class="text-xs uppercase font-extrabold tracking-wider text-emerald-700">Tizimga ulangan maktab:</div>
+            <div class="text-lg font-black text-slate-900" id="current-school-display">32-umumta'lim maktabi</div>
           </div>
         </div>
       </div>
@@ -583,30 +577,6 @@
       if (e.key === 'ArrowRight' || e.key === 'Space') nextSlide();
       if (e.key === 'ArrowLeft') prevSlide();
     });
-
-    // Update School Name Demo API
-    async function updateSchoolName() {
-      const input = document.getElementById('school-name-input');
-      const val = input?.value?.trim();
-      if (!val) return alert('Iltimos, maktab nomini yozing!');
-
-      try {
-        const res = await fetch('/api/demo/set-school-name', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: val })
-        }).then(r => r.json());
-
-        if (res.success) {
-          const display = document.getElementById('current-school-display');
-          if (display) display.innerText = val;
-          input.value = '';
-          alert(`✅ Maktab nomi "${val}" ga muvaffaqiyatli o'zgartirildi! Endi bot va taqdimotda ushbu nom ko'rinadi.`);
-        }
-      } catch (err) {
-        alert('Xatolik: ' + err.message);
-      }
-    }
 
     // Demo Classes schedule loader
     const demoSchedules = {
