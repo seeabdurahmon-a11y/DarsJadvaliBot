@@ -24,3 +24,7 @@ yarn-error.log*
 Thumbs.db
 
 .vercel
+
+# Unrelated archived projects
+Other_Projects/
+Dars_Jadvali_Test/

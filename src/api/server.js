@@ -124,6 +124,27 @@ export function createWebServer(botInstance = null) {
   app.use('/api', publicRouter);
   app.use('/api/admin', adminRouter);
 
+  // Taqdimot va Sotuv sahifasi (Продажная версия)
+  app.get(['/', '/sales', '/presentation', '/taqdimot'], (req, res, next) => {
+    if (req.query.view === 'app') {
+      return res.sendFile(path.join(config.WEB_DIR, 'index.html'));
+    }
+    const salesPath = path.join(config.WEB_DIR, 'sales.html');
+    if (fs.existsSync(salesPath)) {
+      return res.sendFile(salesPath);
+    }
+    next();
+  });
+
+  // Ishchi tizim va Zavuch kabineti (Рабочая версия)
+  app.get(['/app', '/jadval', '/cabinet'], (req, res) => {
+    const indexPath = path.join(config.WEB_DIR, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      return res.sendFile(indexPath);
+    }
+    return res.status(404).send('Dars jadvali ilovasi topilmadi');
+  });
+
   // Serve static Mini App files
   if (fs.existsSync(config.WEB_DIR)) {
     app.use(express.static(config.WEB_DIR));

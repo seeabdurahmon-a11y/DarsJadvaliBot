@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="uz" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAKTAB DARS JADVALI — Raqamli Ta'lim Tizimi & Taqdimot</title>
+  <meta name="description" content="O'zbekiston maktablari uchun yagona avtomatlashtirilgan Telegram bot va dars jadvali boshqaruv platformasi">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              200: '#a7f3d0',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              900: '#064e3b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .glass-nav {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+    }
+    .gradient-hero {
+      background: radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+                  radial-gradient(circle at 90% 80%, rgba(79, 70, 229, 0.08) 0%, transparent 40%);
+    }
+    .slide-active { display: block; animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-emerald-500 selection:text-white">
+
+  <!-- Top Alert / Demo Switcher Bar -->
+  <div class="bg-gradient-to-r from-emerald-600 to-indigo-700 text-white text-xs sm:text-sm py-2.5 px-4 shadow-sm">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2 font-medium">
+        <span class="inline-flex items-center justify-center bg-white/20 px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase">Taqdimot & Sotuv Versiyasi</span>
+        <span>Maktab direktorlari va zavuchlar uchun rasmiy taqdimot portali</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="/app" class="inline-flex items-center gap-1.5 bg-white text-emerald-800 font-bold px-3 py-1 rounded-md text-xs hover:bg-emerald-50 transition shadow-sm">
+          <span>📅 Ishchi Tizimga O‘tish</span>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Bar -->
+  <header class="sticky top-0 z-40 glass-nav border-b border-slate-200/80 transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-emerald-600/25">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+        </div>
+        <div>
+          <div class="text-xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+            <span>MAKTAB JADVALI</span>
+            <span class="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full uppercase tracking-wider">Smart v2.0</span>
+          </div>
+          <p class="text-xs text-slate-500 font-medium">Telegram Bot & Zavuch Platformasi</p>
+        </div>
+      </div>
+
+      <nav class="hidden md:flex items-center gap-8 font-semibold text-sm text-slate-600">
+        <a href="#taqdimot" class="hover:text-emerald-600 transition">Taqdimot Slaydlari</a>
+        <a href="#imkoniyatlar" class="hover:text-emerald-600 transition">Imkoniyatlar</a>
+        <a href="#jonli-demo" class="hover:text-emerald-600 transition">Jonli Demo</a>
+        <a href="#narxlar" class="hover:text-emerald-600 transition">Tariflar & Narxlar</a>
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <a href="https://t.me/GojaZakaz_bot" target="_blank" class="hidden sm:inline-flex items-center gap-2 text-slate-700 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-xl text-sm font-semibold transition">
+          <svg class="w-4 h-4 text-sky-500 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+          <span>@GojaZakaz_bot</span>
+        </a>
+        <a href="/app" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition shadow-lg shadow-emerald-600/20">
+          <span>Zavuch Kabineti</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="gradient-hero pt-14 pb-20 border-b border-slate-200/60 overflow-hidden relative">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Live School Switcher Box (Sales Weapon!) -->
+      <div class="mb-10 max-w-3xl mx-auto bg-white/90 backdrop-blur border-2 border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-xl shadow-emerald-500/5">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg">🏫</div>
+            <div>
+              <div class="text-xs uppercase font-extrabold tracking-wider text-emerald-700">Taqdimot qilinayotgan maktab:</div>
+              <div class="text-lg font-black text-slate-900" id="current-school-display">Smart Maktab (Demo)</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <input type="text" id="school-name-input" placeholder="Masalan: 45-maktab yoki 12-IDUM" class="px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-60">
+            <button onclick="updateSchoolName()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded-xl text-sm transition shrink-0">O‘zgartirish</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center max-w-4xl mx-auto">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100/80 border border-emerald-200 text-emerald-800 text-xs sm:text-sm font-bold mb-6">
+          <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+          <span>O‘zbekiston maktablari uchun #1 raqamli dars jadvali tizimi</span>
+        </div>
+
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.15] mb-6">
+          Maktabingiz dars jadvali — <br class="hidden sm:block"/>
+          <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600">100% raqamli va Telegramda!</span>
+        </h1>
+
+        <p class="text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto font-medium leading-relaxed mb-10">
+          Qog‘oz jadvallarni unuting. 40 ta sinf, barcha ustozlar va o‘quvchilar uchun 
+          har kuni soat <strong class="text-slate-900 font-bold">06:00 da avtomatik yuboriluvchi</strong> dars jadvali va zavuch uchun 1 daqiqalik boshqaruv paneli.
+        </p>
+
+        <div class="flex flex-wrap items-center justify-center gap-4">
+          <a href="#taqdimot" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold px-7 py-3.5 rounded-2xl text-base shadow-xl shadow-emerald-600/25 transition transform hover:-translate-y-0.5 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>Taqdimot Slaydlarini Ko‘rish</span>
+          </a>
+
+          <a href="#jonli-demo" class="bg-white hover:bg-slate-50 text-slate-800 font-bold px-7 py-3.5 rounded-2xl text-base border-2 border-slate-200 shadow-sm transition flex items-center gap-2">
+            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <span>Jonli Jadval Demo</span>
+          </a>
+
+          <a href="https://t.me/GojaZakaz_bot" target="_blank" class="bg-sky-500 hover:bg-sky-600 text-white font-bold px-7 py-3.5 rounded-2xl text-base shadow-lg shadow-sky-500/25 transition flex items-center gap-2">
+            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+            <span>Telegram Botni Sinash</span>
+          </a>
+        </div>
+
+        <!-- Metrics Row -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-16 max-w-4xl mx-auto">
+          <div class="bg-white/80 backdrop-blur border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+            <div class="text-3xl font-black text-emerald-600">40+</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">Sinflar (1-11)</div>
+          </div>
+          <div class="bg-white/80 backdrop-blur border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+            <div class="text-3xl font-black text-indigo-600">90+</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">O‘qituvchilar</div>
+          </div>
+          <div class="bg-white/80 backdrop-blur border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+            <div class="text-3xl font-black text-teal-600">06:00</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">Avtomatik Eslatma</div>
+          </div>
+          <div class="bg-white/80 backdrop-blur border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+            <div class="text-3xl font-black text-amber-600">1 daq</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">Dars almashtirish</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- PRESENTATION SLIDES SECTION (FOR DIRECTORS) -->
+  <section id="taqdimot" class="py-20 bg-slate-900 text-white relative overflow-hidden">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-10">
+        <div>
+          <span class="text-xs uppercase font-extrabold tracking-widest text-emerald-400">Direktor & Zavuch uchun Taqdimot</span>
+          <h2 class="text-3xl sm:text-4xl font-black text-white mt-1">Raqamli Maktab Taqdimot Slaydlari</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="prevSlide()" class="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white transition border border-slate-700">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <span id="slide-counter" class="text-sm font-bold px-3 py-1 bg-slate-800 rounded-lg text-emerald-400 border border-slate-700">1 / 5</span>
+          <button onclick="nextSlide()" class="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white transition border border-slate-700">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Slide Container -->
+      <div class="bg-slate-800/90 border border-slate-700/80 rounded-3xl p-6 sm:p-12 shadow-2xl relative min-h-[460px] flex flex-col justify-between">
+        
+        <!-- SLIDE 1: MUAMMO -->
+        <div class="presentation-slide slide-active" id="slide-1">
+          <div class="inline-block bg-rose-500/20 text-rose-300 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase mb-4">1-Slayd: Joriy Muammolar</div>
+          <h3 class="text-2xl sm:text-4xl font-extrabold text-white mb-6">Nima uchun maktablarda qog‘oz jadval eskirgan?</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-slate-300">
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700/60">
+              <div class="text-3xl mb-3">📄</div>
+              <h4 class="font-bold text-white text-lg mb-2">Qog‘oz tez eskiradi</h4>
+              <p class="text-sm leading-relaxed text-slate-400">Har safar o‘qituvchi o‘zgarganda yoki dars alishganda yangitdan chop etish, devorlarga ilish talab etiladi.</p>
+            </div>
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700/60">
+              <div class="text-3xl mb-3">⏳</div>
+              <h4 class="font-bold text-white text-lg mb-2">Zavuchning 80% vaqti</h4>
+              <p class="text-sm leading-relaxed text-slate-400">Har bir sinf rahbariga, o‘quvchiga va ustozga zamenalarni yetkazish soatlab vaqt va asab talab qiladi.</p>
+            </div>
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700/60">
+              <div class="text-3xl mb-3">❓</div>
+              <h4 class="font-bold text-white text-lg mb-2">Ota-onalar chalkashligi</h4>
+              <p class="text-sm leading-relaxed text-slate-400">Ota-onalar farzandining bugun qaysi darsda ekanligini, qachon dars tugashini bilmay xavotirlanadi.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- SLIDE 2: YECHIM -->
+        <div class="presentation-slide hidden" id="slide-2">
+          <div class="inline-block bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase mb-4">2-Slayd: Bizning Yechim</div>
+          <h3 class="text-2xl sm:text-4xl font-extrabold text-white mb-6">Telegram Bot + Zavuch Boshqaruv Veb-Paneli</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-slate-300">
+            <div class="space-y-4">
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg shrink-0">✓</div>
+                <div>
+                  <h4 class="font-bold text-white">Har bir sinf uchun shaxsiy jadval</h4>
+                  <p class="text-sm text-slate-400">1-A dan 11-G gacha bo‘lgan barcha sinflar o‘z sinfini tanlaydi va faqat o‘z darslarini ko‘radi.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg shrink-0">✓</div>
+                <div>
+                  <h4 class="font-bold text-white">Har kuni 06:00 da avtomatik jo‘natish</h4>
+                  <p class="text-sm text-slate-400">Telegram bot avtomatik ravishda sinf guruhlariga bugungi darslarni chiroyli formatda yetkazadi.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg shrink-0">✓</div>
+                <div>
+                  <h4 class="font-bold text-white">O‘qituvchilar kabineti va eslatmalar</h4>
+                  <p class="text-sm text-slate-400">Ustozlar qaysi xonada va qaysi sinfda darsi borligini telefonidan tekshira oladi.</p>
+                </div>
+              </div>
+            </div>
+            <div class="bg-slate-900/80 p-6 rounded-2xl border border-slate-700/80 flex flex-col justify-center text-center">
+              <div class="text-4xl font-black text-emerald-400 mb-2">99.9%</div>
+              <div class="text-white font-bold mb-1">O‘quvchilar va Ota-onalar qamrovi</div>
+              <p class="text-xs text-slate-400">O‘zbekistonda har bir oila Telegram ishlatadi — alohida ilova o‘rnatish shart emas!</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- SLIDE 3: ZAVUCH IMKONIYATLARI -->
+        <div class="presentation-slide hidden" id="slide-3">
+          <div class="inline-block bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase mb-4">3-Slayd: Zavuch Boshqaruvi</div>
+          <h3 class="text-2xl sm:text-4xl font-extrabold text-white mb-6">Zavuch uchun oddiy va qulay boshqaruv</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-slate-300">
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700/60">
+              <div class="text-3xl mb-3">📊</div>
+              <h4 class="font-bold text-white text-lg mb-2">Excel orqali 1 marta yuklash</h4>
+              <p class="text-sm text-slate-400">Maktabingizning mavjud dars jadvalini tayyor Excel faylini yuklash orqali bir necha soniyada kiritamiz.</p>
+            </div>
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700/60">
+              <div class="text-3xl mb-3">⚡</div>
+              <h4 class="font-bold text-white text-lg mb-2">Dars almashtirish (Zamena)</h4>
+              <p class="text-sm text-slate-400">O‘qituvchi kasal bo‘lib qolsa, zavuch 1 daqiqada almashtiradi va butun sinf darhol ogohlantiriladi.</p>
+            </div>
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700/60">
+              <div class="text-3xl mb-3">🏖️</div>
+              <h4 class="font-bold text-white text-lg mb-2">Ta'til rejimi (Kuzgi/Qishki)</h4>
+              <p class="text-sm text-slate-400">Ta'tillar va bayram kunlari dars jadvali avtomatik to‘xtatiladi va tabrik xabarlari yuboriladi.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- SLIDE 4: FOYDA VA TEJAMKORLIK -->
+        <div class="presentation-slide hidden" id="slide-4">
+          <div class="inline-block bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase mb-4">4-Slayd: Maktab Uchun Foyda</div>
+          <h3 class="text-2xl sm:text-4xl font-extrabold text-white mb-6">Maktab byudjeti va obro‘si qanday yutadi?</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700/60">
+              <div class="text-3xl font-black text-emerald-400 mb-1">100%</div>
+              <div class="text-sm font-bold text-white mb-2">Qog‘oz tejaladi</div>
+              <p class="text-xs text-slate-400">Jadval uchun qog‘oz va printer toneriga ortiqcha xarajat yo‘qoladi.</p>
+            </div>
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700/60">
+              <div class="text-3xl font-black text-indigo-400 mb-1">5+ soat</div>
+              <div class="text-sm font-bold text-white mb-2">Haftalik vaqt tejaladi</div>
+              <p class="text-xs text-slate-400">Zavuchning har haftalik qimmatli vaqti ta'lim sifatini oshirishga sarflanadi.</p>
+            </div>
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700/60">
+              <div class="text-3xl font-black text-amber-400 mb-1">⭐️⭐️⭐️⭐️⭐️</div>
+              <div class="text-sm font-bold text-white mb-2">Ota-onalar ishonchi</div>
+              <p class="text-xs text-slate-400">Maktabning raqamlashgani va zamonaviy ekanligi ota-onalarda yuqori taassurot qoldiradi.</p>
+            </div>
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700/60">
+              <div class="text-3xl font-black text-teal-400 mb-1">0 ta</div>
+              <div class="text-sm font-bold text-white mb-2">Chalkashlik</div>
+              <p class="text-xs text-slate-400">«Darsimiz bormi, yo‘qmi?» degan savollarga to‘liq barham beriladi.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- SLIDE 5: NARXLAR VA TAKLIF -->
+        <div class="presentation-slide hidden" id="slide-5">
+          <div class="inline-block bg-teal-500/20 text-teal-300 border border-teal-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase mb-4">5-Slayd: Maxsus Taklif</div>
+          <h3 class="text-2xl sm:text-4xl font-extrabold text-white mb-4">Butun maktab uchun hamyonbop narx</h3>
+          <p class="text-slate-400 text-sm max-w-xl mb-6">Maktabdagi har bir o‘quvchi hisobiga emas, balki <strong class="text-white">butun maktab uchun yagona oylik to‘lov</strong>:</p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-slate-300">
+            <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-700/60 text-center">
+              <div class="text-xs uppercase font-extrabold tracking-wider text-emerald-400 mb-1">Sinov Davri</div>
+              <div class="text-3xl font-black text-white mb-2">0 so‘m</div>
+              <p class="text-xs text-slate-400 mb-3">14 kun davomida to‘liq bepul sinab ko‘ring!</p>
+              <div class="text-[11px] text-slate-500">To‘lovsiz boshlash</div>
+            </div>
+            <div class="bg-gradient-to-b from-emerald-900/50 to-slate-900/80 p-6 rounded-2xl border-2 border-emerald-500 text-center relative shadow-xl">
+              <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-slate-950 font-black text-[10px] uppercase px-3 py-0.5 rounded-full">Eng Ommabop</div>
+              <div class="text-xs uppercase font-extrabold tracking-wider text-emerald-400 mb-1">Davlat Maktabi</div>
+              <div class="text-3xl font-black text-white mb-2">150 000 <span class="text-sm font-semibold text-slate-400">so‘m/oy</span></div>
+              <p class="text-xs text-slate-300 mb-3">Yoki yillik <strong class="text-white">1 000 000 so‘m</strong> (katta chegirma bilan)</p>
+              <div class="text-[11px] text-emerald-400 font-semibold">Barcha sinf va ustozlar qamrab olinadi</div>
+            </div>
+            <div class="bg-slate-900/60 p-6 rounded-2xl border border-slate-700/60 text-center">
+              <div class="text-xs uppercase font-extrabold tracking-wider text-indigo-400 mb-1">Xususiy Maktab</div>
+              <div class="text-3xl font-black text-white mb-2">350 000 <span class="text-sm font-semibold text-slate-400">so‘m/oy</span></div>
+              <p class="text-xs text-slate-400 mb-3">Shaxsiy logotip, brending va VIP qo‘llab-quvvatlash</p>
+              <div class="text-[11px] text-indigo-400 font-semibold">Maxsus dizayn</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slide Indicators -->
+        <div class="flex items-center justify-center gap-2 pt-6 border-t border-slate-700/60 mt-8">
+          <button onclick="goToSlide(1)" class="w-3 h-3 rounded-full bg-emerald-500 transition-all" id="dot-1"></button>
+          <button onclick="goToSlide(2)" class="w-3 h-3 rounded-full bg-slate-700 transition-all" id="dot-2"></button>
+          <button onclick="goToSlide(3)" class="w-3 h-3 rounded-full bg-slate-700 transition-all" id="dot-3"></button>
+          <button onclick="goToSlide(4)" class="w-3 h-3 rounded-full bg-slate-700 transition-all" id="dot-4"></button>
+          <button onclick="goToSlide(5)" class="w-3 h-3 rounded-full bg-slate-700 transition-all" id="dot-5"></button>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- LIVE DEMO SECTION -->
+  <section id="jonli-demo" class="py-20 bg-slate-100 border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-12">
+        <span class="text-xs uppercase font-extrabold tracking-widest text-emerald-700">Interaktiv Sinov</span>
+        <h2 class="text-3xl sm:text-4xl font-black text-slate-900 mt-2">Dars Jadvalini Jonli Sinab Ko‘ring</h2>
+        <p class="text-slate-600 mt-2 text-sm sm:text-base">Quyidagi sinflardan birini tanlang va hozirgi dars jadvali qanday qulay ko‘rinishini o‘zingiz his qiling:</p>
+      </div>
+
+      <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xl max-w-4xl mx-auto">
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-200">
+          <div>
+            <span class="text-xs uppercase font-bold text-slate-500">Sinfni tanlang:</span>
+            <div class="flex flex-wrap gap-2 mt-2" id="demo-classes-pills">
+              <button onclick="loadDemoSchedule('1-A sinf')" class="demo-class-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">1-A sinf</button>
+              <button onclick="loadDemoSchedule('5-A sinf')" class="demo-class-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">5-A sinf</button>
+              <button onclick="loadDemoSchedule('7-A sinf')" class="demo-class-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">7-A sinf</button>
+              <button onclick="loadDemoSchedule('9-A sinf')" class="demo-class-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-sm transition active">9-A sinf</button>
+              <button onclick="loadDemoSchedule('11-A sinf')" class="demo-class-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">11-A sinf</button>
+              <button onclick="loadDemoSchedule('11-D sinf')" class="demo-class-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">11-D sinf</button>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-slate-400 font-medium">Tanlangan sinf:</span>
+            <div class="text-lg font-black text-emerald-700" id="demo-current-class">9-A sinf</div>
+          </div>
+        </div>
+
+        <!-- Schedule List -->
+        <div class="py-6" id="demo-schedule-list">
+          <!-- Populated by JavaScript -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-black text-sm flex items-center justify-center">1</div>
+                <div>
+                  <div class="font-bold text-slate-900 text-sm">Algebra va Matematika</div>
+                  <div class="text-xs text-slate-500 font-medium">Xamidova N. • 204-xona</div>
+                </div>
+              </div>
+              <span class="text-xs font-bold text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200">08:00 - 08:45</span>
+            </div>
+            <div class="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-black text-sm flex items-center justify-center">2</div>
+                <div>
+                  <div class="font-bold text-slate-900 text-sm">Ona tili va Adabiyot</div>
+                  <div class="text-xs text-slate-500 font-medium">Yoqubova D. • 105-xona</div>
+                </div>
+              </div>
+              <span class="text-xs font-bold text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200">08:50 - 09:35</span>
+            </div>
+            <div class="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-black text-sm flex items-center justify-center">3</div>
+                <div>
+                  <div class="font-bold text-slate-900 text-sm">Ingliz tili (Xorijiy til)</div>
+                  <div class="text-xs text-slate-500 font-medium">Karimova Sh. • 302-xona</div>
+                </div>
+              </div>
+              <span class="text-xs font-bold text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200">09:40 - 10:25</span>
+            </div>
+            <div class="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-black text-sm flex items-center justify-center">4</div>
+                <div>
+                  <div class="font-bold text-slate-900 text-sm">Fizika</div>
+                  <div class="text-xs text-slate-500 font-medium">Rustamov A. • Laboratoriya</div>
+                </div>
+              </div>
+              <span class="text-xs font-bold text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200">10:35 - 11:20</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
+          <div class="text-xs text-slate-500">
+            🔔 <em>Bu ma'lumotlar o‘quvchilar va guruhlarga har kuni ertalab Telegram orqali yuboriladi.</em>
+          </div>
+          <a href="/app" class="inline-flex items-center gap-2 text-emerald-700 hover:text-emerald-800 font-bold text-sm">
+            <span>Barcha 40 ta sinfni ko‘rish</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- PRICING / TARIFLAR SECTION -->
+  <section id="narxlar" class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-xs uppercase font-extrabold tracking-widest text-emerald-700">Shaffof va Qulay</span>
+        <h2 class="text-3xl sm:text-4xl font-black text-slate-900 mt-2">Maktablar Uchun Maxsus Tariflar</h2>
+        <p class="text-slate-600 mt-2 text-sm sm:text-base">Yashirin to‘lovlarsiz, butun maktab uchun hamyonbop yagona narx:</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        
+        <!-- PLAN 1 -->
+        <div class="rounded-3xl p-8 border border-slate-200 bg-slate-50 flex flex-col justify-between">
+          <div>
+            <div class="text-xs uppercase font-extrabold tracking-wider text-slate-500 mb-1">Sinov Davri</div>
+            <h3 class="text-2xl font-black text-slate-900 mb-2">Bepul Test</h3>
+            <div class="text-3xl font-black text-slate-900 mb-4">0 so‘m <span class="text-xs font-semibold text-slate-500">/ 14 kun</span></div>
+            <p class="text-sm text-slate-600 mb-6">Tizimni maktabingizda to‘liq sinab ko‘rish uchun 2 haftalik bepul sinov.</p>
+            <ul class="space-y-3 text-sm text-slate-600 mb-8">
+              <li class="flex items-center gap-2">✓ <span>40 ta sinf jadvali</span></li>
+              <li class="flex items-center gap-2">✓ <span>Telegram bot ulanishi</span></li>
+              <li class="flex items-center gap-2">✓ <span>Zavuch veb-paneli</span></li>
+              <li class="flex items-center gap-2">✓ <span>Dastlabki o‘rgatish</span></li>
+            </ul>
+          </div>
+          <a href="https://t.me/GojaZakaz_bot" target="_blank" class="w-full text-center py-3 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-2xl border border-slate-300 text-sm transition">Sinovni Boshlash</a>
+        </div>
+
+        <!-- PLAN 2 (RECOMMENDED) -->
+        <div class="rounded-3xl p-8 border-2 border-emerald-500 bg-white shadow-2xl shadow-emerald-500/10 flex flex-col justify-between relative">
+          <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-600 text-white font-black text-[11px] uppercase tracking-wider px-3.5 py-1 rounded-full shadow-md">Eng Ommabop</div>
+          <div>
+            <div class="text-xs uppercase font-extrabold tracking-wider text-emerald-700 mb-1">Davlat Maktablari</div>
+            <h3 class="text-2xl font-black text-slate-900 mb-2">Standart Maktab</h3>
+            <div class="text-4xl font-black text-slate-900 mb-1">150 000 <span class="text-sm font-semibold text-slate-500">so‘m/oy</span></div>
+            <div class="text-xs font-bold text-emerald-700 mb-4">Yoki yiliga 1 000 000 so‘m (2 oy bepul!)</div>
+            <p class="text-sm text-slate-600 mb-6">O‘rtacha 500 dan 2000 gacha o‘quvchisi bor har qanday umumta'lim maktabi uchun.</p>
+            <ul class="space-y-3 text-sm text-slate-700 mb-8 font-medium">
+              <li class="flex items-center gap-2 text-emerald-700">✓ <span class="text-slate-800">Cheksiz o‘quvchi va ota-onalar</span></li>
+              <li class="flex items-center gap-2 text-emerald-700">✓ <span class="text-slate-800">Har kuni 06:00 da avtomatik jo‘natish</span></li>
+              <li class="flex items-center gap-2 text-emerald-700">✓ <span class="text-slate-800">Excel jadvalni yuklash xizmati</span></li>
+              <li class="flex items-center gap-2 text-emerald-700">✓ <span class="text-slate-800">Ustozlar uchun shaxsiy eslatmalar</span></li>
+              <li class="flex items-center gap-2 text-emerald-700">✓ <span class="text-slate-800">24/7 texnik qo‘llab-quvvatlash</span></li>
+            </ul>
+          </div>
+          <a href="/app" class="w-full text-center py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl text-sm transition shadow-lg shadow-emerald-600/25">Maktabni Ulash</a>
+        </div>
+
+        <!-- PLAN 3 -->
+        <div class="rounded-3xl p-8 border border-slate-200 bg-slate-50 flex flex-col justify-between">
+          <div>
+            <div class="text-xs uppercase font-extrabold tracking-wider text-indigo-700 mb-1">Xususiy Maktablar</div>
+            <h3 class="text-2xl font-black text-slate-900 mb-2">Premium Ta'lim</h3>
+            <div class="text-3xl font-black text-slate-900 mb-4">350 000 <span class="text-xs font-semibold text-slate-500">so‘m/oy</span></div>
+            <p class="text-sm text-slate-600 mb-6">Xususiy maktablar, litseylar va ixtisoslashtirilgan maktab-internatlar uchun.</p>
+            <ul class="space-y-3 text-sm text-slate-600 mb-8">
+              <li class="flex items-center gap-2">✓ <span>Shaxsiy maktab logotipi va nom</span></li>
+              <li class="flex items-center gap-2">✓ <span>Individual Telegram bot yaratish</span></li>
+              <li class="flex items-center gap-2">✓ <span>Murakkab smenalar va guruhlar</span></li>
+              <li class="flex items-center gap-2">✓ <span>Biriktirilgan shaxsiy menejer</span></li>
+            </ul>
+          </div>
+          <a href="/app" class="w-full text-center py-3 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-2xl border border-slate-300 text-sm transition">Bog‘lanish</a>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- CTA / FOOTER -->
+  <footer class="bg-slate-950 text-white py-16 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      
+      <div class="w-16 h-16 rounded-3xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center mx-auto mb-6">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      </div>
+
+      <h2 class="text-3xl sm:text-4xl font-black text-white mb-4">Maktabingizni 24 soat ichida raqamlashtiramiz</h2>
+      <p class="text-slate-400 max-w-xl mx-auto text-sm sm:text-base mb-8">
+        Siz faqat dars jadvalingizni (Excel yoki rasmda) berasiz — qolgan barcha sozlash va guruhlarga ulash ishlarini biz to‘liq bajaramiz!
+      </p>
+
+      <div class="flex flex-wrap items-center justify-center gap-4 mb-12">
+        <a href="https://t.me/GojaZakaz_bot" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3.5 rounded-2xl text-sm transition shadow-xl shadow-emerald-600/25">
+          Telegram Botni Ochish
+        </a>
+        <a href="/app" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-8 py-3.5 rounded-2xl text-sm border border-slate-700 transition">
+          Zavuch Ishchi Paneli (Web App)
+        </a>
+      </div>
+
+      <div class="pt-8 border-t border-slate-800 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>© 2026 MAKTAB DARS JADVALI TIZIMI. Barcha huquqlar himoyalangan.</div>
+        <div class="flex gap-4">
+          <a href="/sales" class="hover:text-emerald-400">Taqdimot</a>
+          <a href="/app" class="hover:text-emerald-400">Dars Jadvali</a>
+          <a href="https://t.me/GojaZakaz_bot" class="hover:text-emerald-400">Telegram Bot</a>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- Interactive JavaScript -->
+  <script>
+    // Slide show logic
+    let currentSlide = 1;
+    const totalSlides = 5;
+
+    function showSlide(n) {
+      currentSlide = n;
+      if (currentSlide > totalSlides) currentSlide = 1;
+      if (currentSlide < 1) currentSlide = totalSlides;
+
+      for (let i = 1; i <= totalSlides; i++) {
+        const slide = document.getElementById(`slide-${i}`);
+        const dot = document.getElementById(`dot-${i}`);
+        if (slide) {
+          if (i === currentSlide) {
+            slide.classList.remove('hidden');
+            slide.classList.add('slide-active');
+          } else {
+            slide.classList.add('hidden');
+            slide.classList.remove('slide-active');
+          }
+        }
+        if (dot) {
+          dot.className = (i === currentSlide) 
+            ? 'w-3 h-3 rounded-full bg-emerald-500 transition-all scale-125' 
+            : 'w-3 h-3 rounded-full bg-slate-700 transition-all';
+        }
+      }
+      const counter = document.getElementById('slide-counter');
+      if (counter) counter.innerText = `${currentSlide} / ${totalSlides}`;
+    }
+
+    function nextSlide() { showSlide(currentSlide + 1); }
+    function prevSlide() { showSlide(currentSlide - 1); }
+    function goToSlide(n) { showSlide(n); }
+
+    // Keyboard navigation for presentation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'Space') nextSlide();
+      if (e.key === 'ArrowLeft') prevSlide();
+    });
+
+    // Update School Name Demo API
+    async function updateSchoolName() {
+      const input = document.getElementById('school-name-input');
+      const val = input?.value?.trim();
+      if (!val) return alert('Iltimos, maktab nomini yozing!');
+
+      try {
+        const res = await fetch('/api/demo/set-school-name', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: val })
+        }).then(r => r.json());
+
+        if (res.success) {
+          const display = document.getElementById('current-school-display');
+          if (display) display.innerText = val;
+          input.value = '';
+          alert(`✅ Maktab nomi "${val}" ga muvaffaqiyatli o'zgartirildi! Endi bot va taqdimotda ushbu nom ko'rinadi.`);
+        }
+      } catch (err) {
+        alert('Xatolik: ' + err.message);
+      }
+    }
+
+    // Demo Classes schedule loader
+    const demoSchedules = {
+      '1-A sinf': [
+        { num: 1, subject: 'Savod o‘rgatish (Alifbe)', teacher: 'Usmonova G.', room: '101-xona', time: '08:00 - 08:45' },
+        { num: 2, subject: 'Matematika', teacher: 'Usmonova G.', room: '101-xona', time: '08:50 - 09:35' },
+        { num: 3, subject: 'Tasviriy san‘at', teacher: 'Sobirova M.', room: '101-xona', time: '09:40 - 10:25' },
+        { num: 4, subject: 'Jismoniy tarbiya', teacher: 'Qodirov B.', room: 'Sportzal', time: '10:35 - 11:20' }
+      ],
+      '5-A sinf': [
+        { num: 1, subject: 'Matematika', teacher: 'Karimov N.', room: '202-xona', time: '08:00 - 08:45' },
+        { num: 2, subject: 'O‘zbek tili', teacher: 'Azizova D.', room: '205-xona', time: '08:50 - 09:35' },
+        { num: 3, subject: 'Tarix', teacher: 'Salimov E.', room: '304-xona', time: '09:40 - 10:25' },
+        { num: 4, subject: 'Ingliz tili', teacher: 'Saidova Z.', room: '108-xona', time: '10:35 - 11:20' },
+        { num: 5, subject: 'Informatika', teacher: 'Tursunov B.', room: 'Kompyuter xonasi', time: '11:25 - 12:10' }
+      ],
+      '7-A sinf': [
+        { num: 1, subject: 'Algebra', teacher: 'Xamidova N.', room: '204-xona', time: '08:00 - 08:45' },
+        { num: 2, subject: 'Fizika', teacher: 'Rustamov A.', room: 'Laboratoriya', time: '08:50 - 09:35' },
+        { num: 3, subject: 'Kimyo', teacher: 'Ismoilova M.', room: 'Kimyo xonasi', time: '09:40 - 10:25' },
+        { num: 4, subject: 'Adabiyot', teacher: 'Yoqubova D.', room: '105-xona', time: '10:35 - 11:20' },
+        { num: 5, subject: 'Biologiya', teacher: 'Nazarova D.', room: 'Biologiya xonasi', time: '11:25 - 12:10' }
+      ],
+      '9-A sinf': [
+        { num: 1, subject: 'Algebra va Matematika', teacher: 'Xamidova N.', room: '204-xona', time: '08:00 - 08:45' },
+        { num: 2, subject: 'Ona tili va Adabiyot', teacher: 'Yoqubova D.', room: '105-xona', time: '08:50 - 09:35' },
+        { num: 3, subject: 'Ingliz tili (Xorijiy til)', teacher: 'Karimova Sh.', room: '302-xona', time: '09:40 - 10:25' },
+        { num: 4, subject: 'Fizika', teacher: 'Rustamov A.', room: 'Laboratoriya', time: '10:35 - 11:20' },
+        { num: 5, subject: 'Geometriya', teacher: 'Xamidova N.', room: '204-xona', time: '11:25 - 12:10' }
+      ],
+      '11-A sinf': [
+        { num: 1, subject: 'Matematika (DTM tayyorgarlik)', teacher: 'Alimov B.', room: '301-xona', time: '08:00 - 08:45' },
+        { num: 2, subject: 'Ingliz tili (IELTS)', teacher: 'Karimova Sh.', room: '302-xona', time: '08:50 - 09:35' },
+        { num: 3, subject: 'Ona tili va Adabiyot', teacher: 'Yoqubova D.', room: '105-xona', time: '09:40 - 10:25' },
+        { num: 4, subject: 'O‘zbekiston tarixi', teacher: 'Salimov E.', room: '304-xona', time: '10:35 - 11:20' },
+        { num: 5, subject: 'Fizika', teacher: 'Rustamov A.', room: 'Laboratoriya', time: '11:25 - 12:10' },
+        { num: 6, subject: 'Huquq asoslari', teacher: 'Qosimov T.', room: '208-xona', time: '12:15 - 13:00' }
+      ],
+      '11-D sinf': [
+        { num: 1, subject: 'Ona tili', teacher: 'Tursunova D.', room: '110-xona', time: '08:00 - 08:45' },
+        { num: 2, subject: 'Algebra', teacher: 'Xamidova N.', room: '204-xona', time: '08:50 - 09:35' },
+        { num: 3, subject: 'Fizika', teacher: 'Rustamov A.', room: 'Laboratoriya', time: '09:40 - 10:25' },
+        { num: 4, subject: 'Ingliz tili', teacher: 'Saidova Z.', room: '108-xona', time: '10:35 - 11:20' }
+      ]
+    };
+
+    function loadDemoSchedule(className) {
+      const display = document.getElementById('demo-current-class');
+      if (display) display.innerText = className;
+
+      // Update button active states
+      document.querySelectorAll('.demo-class-btn').forEach(btn => {
+        if (btn.innerText.trim() === className) {
+          btn.className = 'demo-class-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-sm transition active';
+        } else {
+          btn.className = 'demo-class-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition';
+        }
+      });
+
+      const listContainer = document.getElementById('demo-schedule-list');
+      const items = demoSchedules[className] || demoSchedules['9-A sinf'];
+
+      let html = '<div class="space-y-3">';
+      items.forEach(item => {
+        html += `
+          <div class="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 hover:border-emerald-300 transition">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-black text-sm flex items-center justify-center">${item.num}</div>
+              <div>
+                <div class="font-bold text-slate-900 text-sm">${item.subject}</div>
+                <div class="text-xs text-slate-500 font-medium">${item.teacher} • ${item.room}</div>
+              </div>
+            </div>
+            <span class="text-xs font-bold text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200">${item.time}</span>
+          </div>
+        `;
+      });
+      html += '</div>';
+      listContainer.innerHTML = html;
+    }
+
+    // Init with active school
+    fetch('/api/config')
+      .then(r => r.json())
+      .then(res => {
+        if (res.success && res.data?.schoolName) {
+          const display = document.getElementById('current-school-display');
+          if (display) display.innerText = res.data.schoolName;
+        }
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>

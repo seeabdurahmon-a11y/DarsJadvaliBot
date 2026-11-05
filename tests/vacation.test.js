@@ -29,10 +29,10 @@ test.after(() => {
   }
 });
 
-test('Vacation 1: Odatiy holatda ta‘til o‘chirilgan bo‘ladi', () => {
-  const info = vacationService.getVacationInfo(1);
+test('Vacation 1: Odatiy holatda ta‘til o‘chirilgan bo‘ladi (ta‘tildan tashqari sanada)', () => {
+  const info = vacationService.getVacationInfo(1, '2026-10-15');
   assert.equal(info.isActive, false);
-  assert.equal(vacationService.isVacationActive(1), false);
+  assert.equal(vacationService.isVacationActive(1, '2026-10-15'), false);
 });
 
 test('Vacation 2: Qo‘lda yoqish (manual on) ta‘tilni faollashtiradi', () => {

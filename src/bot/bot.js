@@ -29,6 +29,24 @@ export function createBot(token = config.BOT_TOKEN) {
   registerAdminHandlers(bot);
   registerExamHandlers(bot);
 
+  // Rasmiy komandalar ro'yxatini Telegram ga sozlash
+  bot.setupCommands = async () => {
+    try {
+      await bot.api.setMyCommands([
+        { command: 'start', description: 'Botni ishga tushirish / Bosh sahifa' },
+        { command: 'bugun', description: 'Bugungi dars jadvali' },
+        { command: 'ertaga', description: 'Ertangi dars jadvali' },
+        { command: 'hafta', description: 'Haftalik dars jadvali' },
+        { command: 'sinf', description: 'Sinfni tanlash yoki o‘zgartirish' },
+        { command: 'admin', description: 'Zavuch / Admin boshqaruv paneli' },
+        { command: 'chiqish', description: 'Rol yoki maktabni qaytadan tanlash' }
+      ]);
+      logger.info('Telegram rasmiy komandalar menyusi muvaffaqiyatli sozlandi');
+    } catch (err) {
+      logger.warn('Telegram komandalarini sozlashda ogohlantirish:', err.message);
+    }
+  };
+
   // Menu Button helper
   bot.setupMenuButton = async () => {
     if (config.WEB_APP_URL && config.WEB_APP_URL.startsWith('https://')) {

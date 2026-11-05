@@ -41,7 +41,8 @@ async function main() {
     const webServer = createWebServer(bot);
     await webServer.start(config.PORT);
 
-    // 4. Telegram Web App Chat Menu Buttonni sozlash
+    // 4. Telegram Web App Chat Menu Button va rasmiy komandalarni sozlash
+    await bot.setupCommands();
     await bot.setupMenuButton();
 
     // 5. Avtomatik dars jadvalini yuboruvchi schedulerni ishga tushirish

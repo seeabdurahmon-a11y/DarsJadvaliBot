@@ -1,24 +1,33 @@
 @echo off
-title @JadvaliBot 24/7 Supervisor
+title MAKTAB_BOT_SERVER
 cd /d "%~dp0"
-echo ===================================================
-echo     @JadvaliBot 24/7 Avtomatik Ishga Tushirish
-echo ===================================================
+cls
+color 0A
 
-if exist "node_modules\.bin\pm2.cmd" (
-    call "node_modules\.bin\pm2.cmd" start ecosystem.config.cjs
-    call "node_modules\.bin\pm2.cmd" save
-    call "node_modules\.bin\pm2.cmd" status
-) else (
-    call npx pm2 start ecosystem.config.cjs
-    call npx pm2 save
-    call npx pm2 status
+echo ====================================================
+echo     MAKTAB DARS JADVALI — BOT VA VEB SERVER
+echo ====================================================
+echo.
+
+REM 1. Port 3000 ni tozalash
+for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":3000" ^| findstr "LISTENING"') do (
+    taskkill /F /PID %%a >nul 2>&1
 )
 
+echo [1/2] Telegram Bot va Server ishga tushirilmoqda...
 echo.
-echo ===================================================
-echo  Bot va Server muvaffaqiyatli ishga tushirildi!
-echo  Web Server: http://localhost:3000
-echo  Loglar: npx pm2 logs jadvalibot
-echo ===================================================
+echo  🤖 Telegram Bot:   @GojaZakaz_bot
+echo  🌐 Sotuv/Taqdimot: http://localhost:3000
+echo  📅 Dars Jadvali:   http://localhost:3000/app
+echo.
+echo ====================================================
+echo  Diqqat: Ushbu oynani yopmang, bot shu yerda ishlaydi!
+echo  To'xtatish uchun Ish stolida 'Stop Bot' ni bosing.
+echo ====================================================
+echo.
+
+node src/index.js
+
+echo.
+echo [OGOHLANTIRISH] Bot to'xtadi yoki xatolik yuz berdi.
 pause

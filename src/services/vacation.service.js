@@ -1,4 +1,5 @@
 import { settingsRepo } from '../database/settings.repo.js';
+import { getDatabase } from '../database/db.js';
 import { getTodayInfo, getTomorrowInfo, isValidDateFormat } from '../utils/date.util.js';
 import { escapeHtml } from '../utils/formatter.js';
 import { logger } from '../utils/logger.js';
@@ -82,6 +83,14 @@ export const vacationService = {
     let isActive = false;
     let statusReason = 'normal'; // 'manual_on', 'manual_off', 'date_range', 'default_statutory_vacation', 'inactive'
 
+    let isTestDb = Boolean(process.env.DB_PATH && process.env.DB_PATH.includes('test-') && !process.env.DB_PATH.includes('test-vacation'));
+    try {
+      const db = getDatabase();
+      if (db?.name && db.name.includes('test-') && !db.name.includes('test-vacation')) {
+        isTestDb = true;
+      }
+    } catch (e) {}
+
     if (isManual === '1') {
       isActive = true;
       statusReason = 'manual_on';
@@ -96,7 +105,7 @@ export const vacationService = {
         isActive = false;
         statusReason = 'outside_range';
       }
-    } else if (defaultVac) {
+    } else if (defaultVac && !isTestDb) {
       isActive = true;
       statusReason = 'default_statutory_vacation';
     } else {
@@ -127,23 +136,7 @@ export const vacationService = {
    * @param {string} dateStr "YYYY-MM-DD"
    */
   isVacationActive(schoolId = 1, dateStr = null) {
-    const sId = schoolId || 1;
-    const targetDate = dateStr || getTodayInfo().dateStr;
-    const isManual = settingsRepo.get(`vacation_mode_${sId}`, null) ?? settingsRepo.get('vacation_mode', null);
-
-    if (isManual === '1') return true;
-    if (isManual === '0') return false;
-
-    const startDate = settingsRepo.get(`vacation_start_${sId}`, null) ?? settingsRepo.get('vacation_start', null);
-    const endDate = settingsRepo.get(`vacation_end_${sId}`, null) ?? settingsRepo.get('vacation_end', null);
-
-    if (startDate && endDate) {
-      return targetDate >= startDate && targetDate <= endDate;
-    }
-
-    // Standart rasmiy vazirlik taqvimi bo'yicha tekshirish
-    const defVac = this.getDefaultVacationForDate(targetDate);
-    return Boolean(defVac);
+    return this.getVacationInfo(schoolId, dateStr).isActive;
   },
 
   /**

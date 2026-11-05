@@ -46,6 +46,12 @@ export const schoolsRepo = {
     return this.getSchoolByCode(cleanCode);
   },
 
+  updateSchoolName(id, name) {
+    const db = getDatabase();
+    db.prepare('UPDATE schools SET name = ? WHERE id = ?').run(String(name).trim(), id);
+    return this.getSchoolById(id);
+  },
+
   getSchoolById(id) {
     const db = getDatabase();
     return db.prepare(`SELECT * FROM schools WHERE id = ?`).get(id);

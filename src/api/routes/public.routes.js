@@ -32,6 +32,24 @@ publicRouter.get('/config', (req, res) => {
 });
 
 /**
+ * POST /api/demo/set-school-name
+ * Prezentatsiya va sotuv uchun demo maktab nomini moslashtirish
+ */
+publicRouter.post('/demo/set-school-name', (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ success: false, error: 'Maktab nomi kiritilmadi' });
+    }
+    const cleanName = name.trim();
+    const updated = schoolsRepo.updateSchoolName(1, cleanName);
+    return res.json({ success: true, school: updated });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * GET /api/schools
  * List all active schools with basic stats
  */

@@ -1,0 +1,44 @@
+{
+  "name": "maktab-dars-jadvali-bot",
+  "version": "1.0.0",
+  "description": "MAKTAB — Telegram Dars Jadvali Boti",
+  "main": "src/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=22.x"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "web": "node scripts/start-web.js",
+    "dev": "node --watch src/index.js",
+    "pm2:start": "pm2 start ecosystem.config.cjs",
+    "pm2:stop": "pm2 stop ecosystem.config.cjs",
+    "pm2:restart": "pm2 restart ecosystem.config.cjs",
+    "pm2:status": "pm2 status",
+    "pm2:logs": "pm2 logs jadvalibot",
+    "test": "node --test tests/admin-auth.test.js tests/api.test.js tests/auth.test.js tests/date.test.js tests/db.test.js tests/schedule.test.js tests/subjects.test.js tests/teachers.test.js tests/telegram-auth.test.js tests/telegram-sender.test.js tests/template.test.js tests/role-teacher.test.js tests/teacher-reminders.test.js tests/exams.test.js tests/excel-conflicts.test.js tests/anti-ad.test.js tests/vacation.test.js",
+    "seed": "node scripts/seed.js"
+  },
+  "keywords": [
+    "telegram-bot",
+    "timetable",
+    "scheduler",
+    "maktab",
+    "school",
+    "education"
+  ],
+  "author": "Maktab",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "grammy": "^1.35.0",
+    "luxon": "^3.5.0",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "pm2": "^7.0.4"
+  }
+}
