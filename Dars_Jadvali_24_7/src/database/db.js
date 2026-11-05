@@ -214,7 +214,13 @@ function initSchema(db) {
     VALUES (1, 'M-01', '32-maktab', 'Bosh Zavuch / Admin', 'test@darsjadvali.uz', 'Toshkent shahar', 'darsjadvoli0751', '06:00', 1)
   `).run();
 
-  // Update existing school #1 with 32-maktab and remove M-02 if present
+  // Ensure School #2: 1-maktab exists (bo'sh, dars jadvali yo'q)
+  db.prepare(`
+    INSERT OR IGNORE INTO schools (id, code, name, admin_name, admin_email, region, admin_password, default_send_time, is_active)
+    VALUES (2, 'M-02', '1-maktab', '1-maktab Zavuchi', '1-maktab@darsjadvali.uz', 'Toshkent shahar', 'darsjadvoli0751', '06:00', 1)
+  `).run();
+
+  // Update existing school #1 with 32-maktab
   try {
     db.prepare(`
       UPDATE schools 
@@ -223,7 +229,6 @@ function initSchema(db) {
           admin_password = CASE WHEN admin_password = 'admin' OR admin_password = 'admin123' THEN 'darsjadvoli0751' ELSE admin_password END
       WHERE id = 1
     `).run();
-    db.prepare(`DELETE FROM schools WHERE code = 'M-02' OR id = 2;`).run();
   } catch (e) {}
 
   // Standart sozlamalarni kiritish
