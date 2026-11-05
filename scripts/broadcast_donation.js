@@ -40,8 +40,9 @@ async function main() {
 
   getDatabase();
   const allUsers = usersRepo.getAllUsers();
-  // Filter out anonymous bots or invalid IDs
-  const validUsers = allUsers.filter(u => u.telegram_id && String(u.telegram_id) !== '1087968824');
+  // Filter out anonymous bots or excluded user IDs
+  const EXCLUDED_IDS = ['1087968824', '8398361381', '7433152984'];
+  const validUsers = allUsers.filter(u => u.telegram_id && !EXCLUDED_IDS.includes(String(u.telegram_id)));
 
   console.log(`👥 Jami ro‘yxatdan o‘tgan foydalanuvchilar: ${validUsers.length} ta\n`);
 
