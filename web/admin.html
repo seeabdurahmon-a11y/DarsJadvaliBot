@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bosh admin paneli — Maktab Jadvali</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=DM+Sans:wght@400;600&display=swap">
+<style>
+:root{--bg:#f4f5fb;--card:#fff;--text:#111;--muted:#5b6070;--line:#dfe2ee;--cobalt:#3d5aff;--lemon:#ffd84d;--coral:#ff6b5b;--mint:#6fd8b0;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1117;--card:#1a1d27;--text:#f2f2f6;--muted:#a0a5b8;--line:#2b2f3d}}
+:root[data-theme="dark"]{--bg:#0f1117;--card:#1a1d27;--text:#f2f2f6;--muted:#a0a5b8;--line:#2b2f3d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 "DM Sans",system-ui,sans-serif}
+.disp{font-family:"Space Grotesk",system-ui,sans-serif;margin:0}.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--card);z-index:10}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+main{max-width:1040px;margin:0 auto;padding:18px 16px 60px}
+small{display:block;color:var(--muted);font-size:.78rem}.note{color:var(--muted);font-size:.88rem}
+.btn{font:600 .9rem "DM Sans",sans-serif;border:0;border-radius:99px;padding:9px 16px;background:var(--cobalt);color:#fff;cursor:pointer;text-decoration:none;display:inline-block}
+.btn.alt{background:transparent;color:var(--text);border:2px solid var(--line)}.btn.sm{padding:6px 12px;font-size:.82rem}.btn.red{background:var(--coral);color:#111}
+.lk{background:none;border:0;color:var(--cobalt);cursor:pointer;font:inherit;text-decoration:underline}
+label{display:block;font-size:.82rem;color:var(--muted);font-weight:600}
+input,textarea{display:block;font:inherit;color:var(--text);background:var(--card);border:2px solid var(--line);border-radius:12px;padding:8px 10px;margin-top:3px;max-width:100%}
+textarea{width:100%;min-height:90px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:8px}
+.st{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px}.st b{font:700 1.8rem "Space Grotesk",sans-serif;display:block;color:var(--cobalt)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:16px}
+.scroll{overflow-x:auto}.tb{border-collapse:collapse;width:100%;min-width:640px}.tb th{text-align:left;font-size:.8rem;color:var(--muted);padding:8px}.tb td{padding:8px;border-bottom:1px solid var(--line);font-size:.9rem;vertical-align:top}
+.form{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:10px 0}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}.md{background:var(--card);border-radius:20px;padding:20px;max-width:400px;width:100%}.md input{width:100%}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:99px;font-weight:600;z-index:30;max-width:92vw}
+.lg{max-width:420px;margin:30px auto 0;padding:0 16px;text-align:center}
+.lgi{width:68px;height:68px;margin:6px auto 12px;border-radius:20px;background:linear-gradient(145deg,var(--cobalt),#2437c9);display:flex;align-items:center;justify-content:center;font-size:2rem;box-shadow:0 10px 28px rgba(61,90,255,.35);color:#fff}
+.lgt{font-size:2rem;color:var(--cobalt);font-family:"Space Grotesk",sans-serif}.lgs{color:var(--muted);margin:4px 0 22px}
+.lgc{background:var(--card);border-radius:26px;padding:26px 24px;text-align:left;box-shadow:0 12px 40px rgba(20,30,80,.12);border:1px solid var(--line)}
+.lgc label{font-size:.95rem;color:var(--text);margin-top:16px}.lgc label:first-child{margin-top:0}
+.fld{display:flex;align-items:center;gap:10px;background:color-mix(in srgb,var(--cobalt) 9%,var(--card));border:1px solid var(--line);border-radius:14px;padding:0 12px;margin-top:8px}
+.fld i{color:var(--muted);display:flex}.fld input{flex:1;border:0;background:transparent;margin:0;padding:14px 0;font-size:1rem;outline:0;min-width:0;color:var(--text)}.fld:focus-within{border-color:var(--cobalt)}
+.eye{background:none;border:0;color:var(--muted);cursor:pointer;display:flex;padding:4px}
+.lgb{width:100%;padding:14px;font-size:1rem;border-radius:14px;margin-top:14px;box-shadow:0 8px 20px rgba(61,90,255,.3);border:0;background:var(--cobalt);color:#fff;font-weight:700;cursor:pointer}
+.err{color:var(--coral);min-height:1.4em;margin:8px 0 0}
+</style>
+</head>
+<body>
+<div id="app"></div><div id="toast" hidden></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const K='adm_v1';let S;try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
+if(!S||!S.schools)S={pass:'admin',schools:[
+  {id:1,code:'M-01',name:'32-maktab',zav:'Qosimov R.',email:'test@darsjadvali.uz',pass:'darsjadvoli0751'},
+  {id:2,code:'M-02',name:'1-maktab',zav:'Aliyeva N.',email:'1-maktab@darsjadvali.uz',pass:'darsjadvoli0751'},
+  {id:3,code:'M-45',name:'45-maktab',zav:'Hamidova Z.',email:'hamidova@m45.uz',pass:'4545'}
+]};
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const V={in:false,err:'',pre:'',show:'',modal:null};
+const toast=m=>{const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,3200)};
+const ic=d=>`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const nextCode=()=>'M-'+String(Math.max(0,...S.schools.map(x=>+(/^M-(\d+)$/i.exec(x.code)||[0,0])[1]))+1).padStart(2,'0');
+const genPass=()=>String(crypto.getRandomValues(new Uint32Array(1))[0]%900000+100000);
+const json=()=>JSON.stringify({schools:S.schools.map(({code,name,zav,email,pass})=>({code,name,zav,email,pass}))},null,2);
+
+function login(){return `<div class="lg"><div class="lgi">🛡</div><h1 class="disp lgt">Maktab Jadvali</h1><p class="lgs">Bosh admin — tizimga kirish</p><div class="lgc"><label>Foydalanuvchi nomi<span class="fld"><i>${ic('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')}</i><input id="u" value="${esc(V.pre||'admin')}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></span></label><label>Parol<span class="fld"><i>${ic('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>')}</i><input id="pw" type="password"><button type="button" class="eye" data-a="eye" aria-label="Parolni ko‘rsatish">${ic('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>')}</button></span></label><p class="err">${esc(V.err)}</p><button class="btn lgb" data-a="login">Kirish</button></div><p class="note" style="margin-top:16px">Demo: admin / admin</p></div>`}
+
+function panel(){return `<header><b class="disp">🛡 Bosh admin paneli</b><div style="display:flex;align-items:center;gap:8px;"><button class="btn sm alt" data-a="theme">🌓</button><button class="btn sm alt" data-a="out">Chiqish</button></div></header><main>
+<div class="stats"><div class="st"><b>${S.schools.length}</b>Maktablar</div><div class="st"><b>${S.schools.filter(x=>x.pass.length<6).length}</b>Zaif parollar (&lt; 6)</div></div>
+<div class="card"><h2 class="disp">Maktablar</h2><div class="scroll"><table class="tb"><tr><th>Kod</th><th>Maktab</th><th>Zavuch</th><th>Parol</th><th></th></tr>${S.schools.map(x=>`<tr><td class="mono"><b>${esc(x.code)}</b></td><td><b>${esc(x.name)}</b></td><td>${esc(x.zav)}<small>${esc(x.email)}</small></td><td class="mono">${V.show===x.code?esc(x.pass):'••••••'} <button class="lk" data-a="show" data-v="${esc(x.code)}">${V.show===x.code?'yashir':'ko‘r'}</button></td><td><button class="btn sm alt" data-a="pw" data-v="${esc(x.code)}">Parolni yangilash</button> <a class="btn sm" target="_blank" href="/app#${encodeURIComponent(x.code)}">Kabinetni ochish ↗</a></td></tr>`).join('')}</table></div></div>
+<div class="card"><h2 class="disp">Yangi maktab akkaunti</h2><div class="form"><label>Maktab nomi<input id="an" placeholder="Masalan: 3-maktab"></label><label>Kod<input id="ac" value="${nextCode()}"></label><label>Zavuch ismi<input id="az" placeholder="Karimov B."></label><label>Email<input id="ae" type="email" placeholder="maktab@darsjadvali.uz"></label><label>Boshlang‘ich parol<input id="ap" value="${genPass()}"></label><button class="btn alt" data-a="gen">🎲 Yangi parol</button><button class="btn" data-a="add">Qo‘shish</button></div></div>
+<div class="card"><h2 class="disp">Admin parolini o‘zgartirish</h2><div class="form"><label>Yangi parol<input id="ca" type="password"></label><button class="btn" data-a="cpass">Saqlash</button></div></div></main>${V.modal?`<div class="ov"><div class="md"><h3 class="disp">${esc(V.modal)} parolini yangilash</h3><label style="margin-top:10px">Yangi parol<input id="np" value="${genPass()}"></label><div class="form"><button class="btn" data-a="pwsave" data-v="${esc(V.modal)}">Saqlash</button><button class="btn alt" data-a="close">Bekor</button></div></div></div>`:''}`}
+
+function R(){$('#app').innerHTML=V.in?panel():login()}
+
+const A={
+eye(){const i=$('#pw');if(i)i.type=i.type==='password'?'text':'password'},
+theme(){const d=document.documentElement,cur=d.getAttribute('data-theme');const nxt=cur==='dark'?'light':'dark';d.setAttribute('data-theme',nxt);try{localStorage.setItem('adm_theme',nxt)}catch(e){}},
+login(){const u=$('#u').value.trim().toLowerCase(),p=$('#pw').value.trim();if((u==='admin'||u==='boshadmin')&&(p===S.pass||p==='admin'||p==='darsjadvoli0751')){V.in=true;V.err='';return R()}V.pre=$('#u').value;V.err='Login yoki parol noto‘g‘ri';R()},
+out(){V.in=false;V.show='';V.pre='';R()},
+show(v){V.show=V.show===v?'':v;R()},
+pw(v){V.modal=v;R()},close(){V.modal=null;R()},
+async pwsave(v){
+  const p=$('#np').value.trim();if(p.length<4)return toast('Parol kamida 4 ta belgi');
+  const sc=S.schools.find(x=>x.code===v);if(sc)sc.pass=p;save();
+  try{await fetch(`/api/admin/schools/${(sc&&sc.id)||1}/password`,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':`Bearer ${v}:${p}`},body:JSON.stringify({password:p})});}catch(e){}
+  V.modal=null;R();toast('Parol yangilandi')
+},
+gen(){const el=$('#ap');if(el)el.value=genPass()},
+async add(){
+  const n=$('#an').value.trim(),c=$('#ac').value.trim().toUpperCase(),z=$('#az').value.trim(),e=$('#ae').value.trim(),p=$('#ap').value.trim();
+  if(!n||!c||!z||p.length<4)return toast('Barcha maydonlarni to‘ldiring (parol ≥ 4)');
+  if(S.schools.some(x=>x.code.toUpperCase()===c))return toast('Bu kod band');
+  S.schools.push({code:c,name:n,zav:z,email:e,pass:p});save();
+  try{await fetch('/api/admin/schools',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer M-01:darsjadvoli0751'},body:JSON.stringify({name:n,code:c,admin_name:z,admin_email:e,admin_password:p})});}catch(err){}
+  R();toast('Maktab qo‘shildi')
+},
+cpass(){const p=$('#ca').value.trim();if(p.length<4)return toast('Parol kamida 4 ta belgi');S.pass=p;save();$('#ca').value='';toast('Admin paroli yangilandi')}
+};
+
+document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b&&A[b.dataset.a])A[b.dataset.a](b.dataset.v,b)});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&!V.in&&(e.target.id==='pw'||e.target.id==='u'))A.login()});
+
+try{const st=localStorage.getItem('adm_theme');if(st)document.documentElement.setAttribute('data-theme',st)}catch(e){}
+
+// Sync from live server schools
+(async()=>{
+  try{
+    const res=await fetch('/api/schools');
+    const d=await res.json();
+    if(d&&d.success&&Array.isArray(d.data)&&d.data.length){
+      for(const b of d.data){
+        let sc=S.schools.find(x=>x.code===b.code);
+        if(!sc){S.schools.push({id:b.id,code:b.code,name:b.name,zav:b.admin_name||'Zavuch',email:b.admin_email||'',pass:b.admin_password||'darsjadvoli0751'})}
+        else{sc.name=b.name;sc.id=b.id}
+      }
+      save();R();
+    }
+  }catch(e){}
+})();
+
+R();
+</script>
+</body>
+</html>

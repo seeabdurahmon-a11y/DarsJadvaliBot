@@ -127,17 +127,33 @@ export function createWebServer(botInstance = null) {
   // Super-Admin Subdomain handler (masalan: admin.darsjadvalibot.onrender.com yoki admin.maktab.uz)
   app.use((req, res, next) => {
     const host = req.headers['x-forwarded-host'] || req.headers.host || '';
-    if (host.startsWith('admin.') && req.path === '/') {
-      const indexPath = path.join(config.WEB_DIR, 'index.html');
-      if (fs.existsSync(indexPath)) {
-        return res.sendFile(indexPath);
+    if (host.startsWith('admin.') && (req.path === '/' || req.path === '/app')) {
+      const adminPath = path.join(config.WEB_DIR, 'admin.html');
+      if (fs.existsSync(adminPath)) {
+        return res.sendFile(adminPath);
       }
     }
     next();
   });
 
+  // Dedicated Super-Admin Standalone Page
+  app.get(['/admin', '/superadmin', '/admin.html'], (req, res) => {
+    const adminPath = path.join(config.WEB_DIR, 'admin.html');
+    if (fs.existsSync(adminPath)) {
+      return res.sendFile(adminPath);
+    }
+    return res.status(404).send('Bosh admin paneli topilmadi');
+  });
+
   // Taqdimot va Sotuv sahifasi (Продажная версия)
   app.get(['/', '/sales', '/presentation', '/taqdimot'], (req, res, next) => {
+    const host = req.headers['x-forwarded-host'] || req.headers.host || '';
+    if (host.startsWith('admin.')) {
+      const adminPath = path.join(config.WEB_DIR, 'admin.html');
+      if (fs.existsSync(adminPath)) {
+        return res.sendFile(adminPath);
+      }
+    }
     if (req.query.view === 'app') {
       return res.sendFile(path.join(config.WEB_DIR, 'index.html'));
     }
@@ -148,8 +164,8 @@ export function createWebServer(botInstance = null) {
     next();
   });
 
-  // Ishchi tizim, Zavuch kabineti va Super-Admin paneli
-  app.get(['/app', '/jadval', '/cabinet', '/admin', '/superadmin'], (req, res) => {
+  // Ishchi tizim: Zavuch kabineti va Maktab dars jadvali boshqaruvi
+  app.get(['/app', '/jadval', '/cabinet'], (req, res) => {
     const indexPath = path.join(config.WEB_DIR, 'index.html');
     if (fs.existsSync(indexPath)) {
       return res.sendFile(indexPath);
