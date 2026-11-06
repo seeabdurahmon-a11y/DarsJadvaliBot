@@ -5,10 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Maktab Dars Jadvali</title>
 
-  <!-- Google Fonts: Plus Jakarta Sans -->
+  <!-- Google Fonts: Space Grotesk & DM Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=DM+Sans:wght@400;500;600;700&display=swap">
+
+  <!-- SheetJS for Live Client-Side Excel / CSV Timetable Import -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -64,22 +67,54 @@
 
       <!-- VIEW 1: HOME (Bosh Sahifa) -->
       <section class="view-section active" id="view-home">
-        <div class="welcome-card">
-          <div class="welcome-title" id="home-greeting">Assalomu alaykum!</div>
-          <div class="welcome-subtitle">Bugungi va haftalik dars jadvalini qulay ko‘ring.</div>
-          <div class="welcome-class-badge" id="home-current-class-badge" onclick="window.App.openClassModal()" style="cursor:pointer;">
-            Sinf tanlanmagan
-          </div>
+        <!-- Modern Hero Banner -->
+        <div class="hero">
+          <small id="home-school-banner-pill">32-maktab (M-01)</small>
+          <h2 id="home-greeting">Maktab Dars Jadvali</h2>
+          <p style="margin-top:4px;font-size:13px;opacity:0.9;">O‘z rolingizni tanlang yoki to‘g‘ridan-to‘g‘ri darslarni ko‘ring:</p>
         </div>
 
-        <!-- School Code Banner -->
-        <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:12px;">
-          <div style="font-weight:800;font-size:13px;color:var(--primary);display:flex;align-items:center;gap:6px;" id="home-school-code-pill">
-            Maktab Kodi: M-01
-          </div>
-          <button class="btn-sm" style="font-size:11px;padding:5px 10px;border-radius:6px;background:var(--primary);color:#fff;border:none;cursor:pointer;font-weight:700;" onclick="window.App.openSchoolModal()">
-            O‘zgartirish / Kod
+        <!-- Role Selector Cards (Claude Design System) -->
+        <div class="cards" style="margin-bottom:16px;">
+          <button class="rc" onclick="window.App.selectRole('student')">
+            <span style="font-size:1.8rem">🎒</span>
+            <b>O‘quvchi / ota-ona</b>
+            <small style="color:var(--text-muted);font-size:12px;">Kunlik va haftalik jadval, imtihonlar, ta’tillar</small>
           </button>
+
+          <button class="rc" onclick="window.App.selectRole('teacher')">
+            <span style="font-size:1.8rem">👩‍🏫</span>
+            <b>O‘qituvchi</b>
+            <small style="color:var(--text-muted);font-size:12px;">Shaxsiy dars jadvali va xonalar taqsimoti</small>
+          </button>
+
+          <button class="rc" onclick="window.App.selectRole('zavuch')">
+            <span style="font-size:1.8rem">🗂</span>
+            <b>Zavuch</b>
+            <small style="color:var(--text-muted);font-size:12px;">Master jadval, to‘qnashuvlar, almashtirish, Excel</small>
+          </button>
+
+          <button class="rc" onclick="window.App.selectRole('admin')">
+            <span style="font-size:1.8rem">🛡</span>
+            <b>Bosh admin</b>
+            <small style="color:var(--text-muted);font-size:12px;">Barcha maktablar ro‘yxati, parollar va yangi akkauntlar</small>
+          </button>
+        </div>
+
+        <!-- Current Class & School Pill -->
+        <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:12px 16px;margin-bottom:14px;box-shadow:var(--shadow-sm);">
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);font-weight:700;">TANLANGAN SINF:</div>
+            <div style="font-weight:800;font-size:14px;color:var(--primary);cursor:pointer;" id="home-current-class-badge" onclick="window.App.openClassModal()">
+              Sinf tanlanmagan ▾
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:var(--text-muted);font-weight:700;">MAKTAB KODI:</div>
+            <div style="font-weight:800;font-size:13px;color:var(--cobalt);cursor:pointer;" id="home-school-code-pill" onclick="window.App.openSchoolModal()">
+              M-01 ▾
+            </div>
+          </div>
         </div>
 
         <div class="quick-nav-grid">
@@ -117,7 +152,7 @@
             <div class="quick-card-icon icon-indigo" id="icon-quick-teacher"></div>
             <div>
               <div class="quick-card-title">O‘qituvchi jadvali</div>
-              <div class="quick-card-desc">Ustozlarning dars soatlari</div>
+              <div class="quick-card-desc">Ustozlarning dars soatlari va xonalari</div>
             </div>
           </div>
         </div>

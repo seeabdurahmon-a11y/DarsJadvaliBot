@@ -111,40 +111,35 @@ export const AdminView = {
 
   renderLoginView(container) {
     container.innerHTML = `
-      <div class="auth-page-wrapper">
-        <div class="auth-header-center">
-          <div class="auth-brand-logo-icon">
-            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-            </svg>
-          </div>
-          <div class="auth-brand-title">Maktab Jadvali</div>
-          <div class="auth-brand-subtitle">Tizimga kirish</div>
-        </div>
+      <div class="lg">
+        <div class="lgi">🎓</div>
+        <h1 class="disp lgt">Maktab Jadvali</h1>
+        <p class="lgs">Tizimga kirish</p>
 
-        <div class="auth-white-card">
-          <div class="form-group" style="margin-bottom:14px;">
-            <label class="auth-field-label">Foydalanuvchi nomi</label>
-            <div class="auth-input-container">
-              <span class="auth-input-left-icon">${Icons.user}</span>
-              <input type="text" id="admin-login-id" class="auth-input-control" value="" placeholder="Email yoki maktab kodi" autocomplete="username">
-            </div>
-          </div>
+        <div class="lgc">
+          <label>Foydalanuvchi nomi
+            <span class="fld">
+              <i>${Icons.user}</i>
+              <input type="text" id="admin-login-id" placeholder="Maktab kodi (masalan M-01) yoki email" autocomplete="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter') window.AdminView.submitLogin()">
+            </span>
+          </label>
 
-          <div class="form-group" style="margin-bottom:18px;">
-            <label class="auth-field-label">Parol</label>
-            <div class="auth-input-container">
-              <span class="auth-input-left-icon">${Icons.lock}</span>
-              <input type="password" id="admin-login-pwd" class="auth-input-control" value="" placeholder="Parolni kiriting" autocomplete="current-password">
-              <button type="button" class="auth-password-toggle-btn" onclick="window.AdminView.togglePasswordVisibility('admin-login-pwd', this)" title="Parolni ko‘rsatish">
+          <label>Parol
+            <span class="fld">
+              <i>${Icons.lock}</i>
+              <input type="password" id="admin-login-pwd" placeholder="Parol" autocomplete="current-password" onkeydown="if(event.key==='Enter') window.AdminView.submitLogin()">
+              <button type="button" class="eye" onclick="window.AdminView.togglePasswordVisibility('admin-login-pwd', this)" title="Parolni ko‘rsatish">
                 ${Icons.eye}
               </button>
-            </div>
-          </div>
+            </span>
+          </label>
 
-          <button class="auth-submit-btn-emerald" onclick="window.AdminView.submitLogin()">Kirish</button>
+          <button class="lgb" onclick="window.AdminView.submitLogin()">Kirish</button>
         </div>
+
+        <p class="note" style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center;">
+          Kirish: <b>M-01</b> / <b>darsjadvoli0751</b> &middot; Bosh admin: <b>admin</b> / <b>admin</b>
+        </p>
       </div>
     `;
   },
@@ -391,45 +386,63 @@ export const AdminView = {
 
     try {
       const schools = await Api.getAdminSchools();
+      const weakPasswordsCount = schools.filter(x => (x.admin_password || '').length < 6).length;
+      const totalLessons = schools.reduce((acc, s) => acc + (s.lessons_count || 0), 0);
 
       let html = `
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+        <!-- Stats Summary (Claude Style) -->
+        <div class="stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;">
+          <div class="st">
+            <b>${schools.length}</b>
+            <span style="font-size:12px;color:var(--text-muted);font-weight:600;">Jami Maktablar</span>
+          </div>
+          <div class="st">
+            <b style="color:${weakPasswordsCount > 0 ? 'var(--coral)' : 'var(--mint)'};">${weakPasswordsCount}</b>
+            <span style="font-size:12px;color:var(--text-muted);font-weight:600;">Zaif parollar (&lt; 6)</span>
+          </div>
+          <div class="st">
+            <b>${totalLessons}</b>
+            <span style="font-size:12px;color:var(--text-muted);font-weight:600;">Platformadagi darslar</span>
+          </div>
+        </div>
+
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:var(--shadow-sm);">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
             <div>
               <div style="font-size:16px;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
-                <span>🏫</span> Maktablar va Zavuch Akkauntlari Boshqaruvi
+                <span>🛡️</span> Bosh Admin: Maktablar va Zavuch Akkauntlari
                 <span style="background:#ede9fe;color:#6d28d9;font-size:11px;padding:3px 9px;border-radius:12px;font-weight:800;">${schools.length} ta maktab</span>
               </div>
               <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
                 Platformadagi barcha maktablar, ularning parollari va yangi maktab akkauntlarini ochish
               </div>
             </div>
-            <button class="btn-sm" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(124,58,237,0.3);" onclick="window.AdminView.toggleAddSchoolForm()">
+            <button class="btn-sm" style="background:var(--cobalt);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(61,90,255,0.25);" onclick="window.AdminView.toggleAddSchoolForm()">
               ➕ Yangi Maktab Akkauntini Ochish
             </button>
           </div>
 
           <!-- Add School Form (Hidden by default) -->
-          <div id="add-school-form-box" style="display:none;background:var(--bg-body);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:14px;">
+          <div id="add-school-form-box" style="display:none;background:var(--bg-subtle);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:14px;">
             <div style="font-size:13.5px;font-weight:800;color:var(--text-primary);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
               <span>➕ Yangi Maktab Qo‘shish va Zavuch Akkauntini Ochish</span>
               <button onclick="window.AdminView.toggleAddSchoolForm()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-weight:700;font-size:14px;">✕</button>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:12px;margin-bottom:14px;">
+            <div style="grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:12px;margin-bottom:14px;display:grid;">
               <div>
                 <label style="font-size:11.5px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">Maktab nomi *</label>
                 <input type="text" id="new-school-name" placeholder="Masalan: 45-maktab yoki 12-IDUM" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;box-sizing:border-box;">
               </div>
               <div>
-                <label style="font-size:11.5px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">Maktab kodi (masalan: M-02)</label>
-                <input type="text" id="new-school-code" placeholder="M-${String(schools.length + 1).padStart(2, '0')}" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;box-sizing:border-box;">
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">Maktab kodi (masalan: M-${String(schools.length + 1).padStart(2, '0')})</label>
+                <input type="text" id="new-school-code" placeholder="M-${String(schools.length + 1).padStart(2, '0')}" value="M-${String(schools.length + 1).padStart(2, '0')}" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;box-sizing:border-box;">
               </div>
               <div>
                 <label style="font-size:11.5px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">Hudud / Shahar</label>
                 <input type="text" id="new-school-region" placeholder="Masalan: Toshkent shahar" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;box-sizing:border-box;">
               </div>
               <div>
-                <label style="font-size:11.5px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">Zavuch / Admin ismi</label>
+                <label style="font-size:11.5px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">Zavuch / Mas'ul ismi</label>
                 <input type="text" id="new-school-admin-name" placeholder="Masalan: Rustamov A." style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;box-sizing:border-box;">
               </div>
               <div>
@@ -438,7 +451,10 @@ export const AdminView = {
               </div>
               <div>
                 <label style="font-size:11.5px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;">Boshlang‘ich Parol *</label>
-                <input type="text" id="new-school-pwd" placeholder="Kamida 4 ta belgi" value="maktab${schools.length + 1}_2026" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;box-sizing:border-box;">
+                <div style="display:flex;gap:6px;">
+                  <input type="text" id="new-school-pwd" placeholder="Kamida 4 ta belgi" value="${String(crypto.getRandomValues(new Uint32Array(1))[0] % 900000 + 100000)}" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;box-sizing:border-box;font-family:monospace;font-weight:700;">
+                  <button type="button" class="btn-sm" style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer;font-weight:700;font-size:11px;" onclick="document.getElementById('new-school-pwd').value = String(crypto.getRandomValues(new Uint32Array(1))[0] % 900000 + 100000)">🎲 Yangi</button>
+                </div>
               </div>
             </div>
             <div style="display:flex;justify-content:flex-end;gap:8px;">
@@ -2151,13 +2167,33 @@ export const AdminView = {
   async renderImport(container) {
     container.innerHTML = `
       <div class="welcome-card" style="margin-bottom:16px;">
-        <div class="welcome-title">Dars Jadvallarini Ommaviy Yuklash</div>
-        <div class="welcome-subtitle">Barcha sinflar va darslarni 1 zumda saytga kiritish</div>
+        <div class="welcome-title">📊 Excel / CSV Jadvalini Yuklash</div>
+        <div class="welcome-subtitle">Maktab dars jadvalini to‘g‘ridan-to‘g‘ri Excel (.xlsx, .csv) faylidan yuklash</div>
+      </div>
+
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow-sm);">
+        <div class="banner" style="margin-top:0;">
+          <b>Excel / CSV orqali yuklash formati:</b><br>
+          Ustunlar ketma-ketligi: <span class="mono">Kun | Sinf | Soat | Fan | Ustoz | Xona</span><br>
+          <small style="color:var(--text-muted);font-size:12px;margin-top:4px;">
+            • <b>Kun:</b> 1–6 yoki Du, Se, Ch, Pa, Ju, Sh<br>
+            • <b>Sinf:</b> 1-A, 5-B, 11-A yoki 1-11<br>
+            • <b>Soat:</b> 1–7 dars soati<br>
+            • Birinchi qator sarlavha (zagolovok) bo‘lishi mumkin.
+          </small>
+        </div>
+
+        <div style="margin-top:14px;padding:16px;border:2px dashed var(--cobalt);border-radius:14px;background:var(--bg-subtle);text-align:center;">
+          <div style="font-size:2rem;margin-bottom:6px;">📁</div>
+          <div style="font-size:14px;font-weight:700;color:var(--text-main);margin-bottom:4px;">Excel faylingizni tanlang</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">.xlsx, .xls yoki .csv formatida</div>
+          <input type="file" id="excel-file-uploader" accept=".xlsx,.xls,.csv" onchange="window.AdminView.handleExcelFile(event)" style="display:inline-block;max-width:280px;font-size:12px;">
+        </div>
       </div>
 
       <div class="profile-card" style="text-align:left;">
-        <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Format namunasi (JSON):</div>
-        <textarea id="import-json-text" class="template-textarea" style="height:160px;font-family:monospace;font-size:11px;" placeholder='[
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Format namunasi (JSON orqali yuklash):</div>
+        <textarea id="import-json-text" class="template-textarea" style="height:120px;font-family:monospace;font-size:11px;" placeholder='[
   {
     "name": "11-A sinf",
     "lessons": [
@@ -2168,10 +2204,111 @@ export const AdminView = {
 ]'></textarea>
 
         <button class="admin-action-btn" style="margin-top:10px;display:inline-flex;align-items:center;justify-content:center;gap:6px;" onclick="window.AdminView.submitImport()">
-          ${Icons.upload} Jadvalni Bazaga Yuklash
+          ${Icons.upload} JSON Jadvalini Bazaga Yuklash
         </button>
       </div>
     `;
+  },
+
+  handleExcelFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (typeof XLSX === 'undefined') {
+      return window.App.showToast('XLSX kutubxonasi yuklanmadi', 'error');
+    }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const firstSheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+        await this.processExcelRows(rows);
+      } catch (err) {
+        window.App.showToast('Excel faylini ochishda xatolik: ' + err.message, 'error');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  },
+
+  async processExcelRows(rows) {
+    if (!rows || rows.length < 2) {
+      return window.App.showToast('Excel faylida yetarli ma’lumot topilmadi', 'error');
+    }
+    const DS = ['du', 'se', 'ch', 'pa', 'ju', 'sh'];
+    const PERIOD_TIMES = [
+      { p: 1, s: '08:00', e: '08:45' },
+      { p: 2, s: '08:50', e: '09:35' },
+      { p: 3, s: '09:40', e: '10:25' },
+      { p: 4, s: '10:30', e: '11:15' },
+      { p: 5, s: '11:20', e: '12:05' },
+      { p: 6, s: '12:10', e: '12:55' },
+      { p: 7, s: '13:00', e: '13:45' }
+    ];
+
+    const parsedClasses = new Map();
+    let validLessonCount = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r || r.length < 4) continue;
+
+      if (String(r[0]).toLowerCase().includes('kun') || String(r[1]).toLowerCase().includes('sinf') || String(r[3]).toLowerCase().includes('fan')) {
+        continue;
+      }
+
+      const kRaw = String(r[0]).trim().toLowerCase();
+      let day = /^\d$/.test(kRaw) ? Number(kRaw) : DS.findIndex(x => kRaw.startsWith(x)) + 1;
+      if (day < 1 || day > 6) continue;
+
+      const classNameRaw = String(r[1]).trim();
+      if (!classNameRaw) continue;
+      const normalizedClassName = classNameRaw.toLowerCase().includes('sinf') ? classNameRaw : `${classNameRaw} sinf`;
+
+      const pRaw = parseInt(r[2], 10);
+      const period = (!isNaN(pRaw) && pRaw >= 1 && pRaw <= 7) ? pRaw : 1;
+      const timeInfo = PERIOD_TIMES.find(pt => pt.p === period) || PERIOD_TIMES[0];
+
+      const subject = String(r[3] || '').trim();
+      if (!subject) continue;
+      const teacher = String(r[4] || '').trim();
+      const room = String(r[5] || '').trim();
+
+      if (!parsedClasses.has(normalizedClassName)) {
+        parsedClasses.set(normalizedClassName, []);
+      }
+
+      parsedClasses.get(normalizedClassName).push({
+        day_of_week: day,
+        period: period,
+        start_time: timeInfo.s,
+        end_time: timeInfo.e,
+        subject: subject,
+        teacher: teacher || null,
+        room: room || null
+      });
+      validLessonCount++;
+    }
+
+    if (validLessonCount === 0) {
+      return window.App.showToast('Mos qatorlar topilmadi. Ustunlar: Kun | Sinf | Soat | Fan | Ustoz | Xona', 'error');
+    }
+
+    const payloadClasses = [];
+    for (const [className, lessons] of parsedClasses.entries()) {
+      payloadClasses.push({
+        name: className,
+        lessons: lessons
+      });
+    }
+
+    window.App.showToast(`${payloadClasses.length} ta sinf va ${validLessonCount} ta dars aniqlandi. Bazaga yuklanmoqda...`, 'info');
+    try {
+      const res = await Api.importTimetable({ classes: payloadClasses, school_id: window.App.currentSchoolId });
+      window.App.showToast(`Muvaffaqiyatli: ${res.message || validLessonCount + ' ta dars yuklandi!'}`, 'success');
+      this.switchTab('excel');
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
+    }
   },
 
   async submitImport() {
@@ -2272,6 +2409,21 @@ export const AdminView = {
           </div>
         </div>
 
+        <!-- 1-Click Emergency Cold Day buttons (Claude Style) -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:16px;">
+          <div style="font-size:12.5px;font-weight:800;color:var(--text-primary);margin-bottom:8px;">
+            ❄️ Kutilmagan Ta'til / Favqulodda Holat (1 bosishda):
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-sm" style="background:var(--coral);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;" onclick="window.AdminView.setColdDayOff(true)">
+              ❄️ Bugun dars yo‘q (sovuq kun)
+            </button>
+            <button class="btn-sm" style="background:#f97316;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;" onclick="window.AdminView.setColdDayOff(false)">
+              ❄️ Ertaga dars yo‘q
+            </button>
+          </div>
+        </div>
+
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;">
           <div style="font-size:15px;font-weight:800;color:var(--text-primary);margin-bottom:4px;display:flex;align-items:center;gap:6px;">
             📅 Ta‘til Sanalarini Belgilash (Avtomatik rejalashtirish)
@@ -2342,6 +2494,26 @@ export const AdminView = {
       window.App.showToast('Yangilanmoqda...', 'info');
       await Api.saveVacation({ isActive: newActive });
       window.App.showToast(newActive ? 'Ta‘til rejimi yoqildi (Bot to‘xtatildi)' : 'Ta‘til rejimi o‘chirildi (Bot faollashdi)', 'success');
+      this.switchTab('vacation');
+    } catch (err) {
+      window.App.showToast(err.message, 'error');
+    }
+  },
+
+  async setColdDayOff(isToday = true) {
+    const today = new Date();
+    if (!isToday) today.setDate(today.getDate() + 1);
+    const dateStr = today.toISOString().split('T')[0];
+    try {
+      window.App.showToast('Kutilmagan ta’til belgilanmoqda...', 'info');
+      await Api.saveVacation({
+        startDate: dateStr,
+        endDate: dateStr,
+        title: isToday ? "Bugun darslar bekor qilindi (sovuq kun)" : "Ertaga darslar bekor qilindi",
+        message: isToday ? "Bugun noqulay ob-havo sharoiti tufayli barcha darslar qoldirildi." : "Ertaga noqulay ob-havo sharoiti tufayli barcha darslar qoldirildi.",
+        isActive: true
+      });
+      window.App.showToast(isToday ? 'Bugun ta’til e’lon qilindi!' : 'Ertaga ta’til e’lon qilindi!', 'success');
       this.switchTab('vacation');
     } catch (err) {
       window.App.showToast(err.message, 'error');

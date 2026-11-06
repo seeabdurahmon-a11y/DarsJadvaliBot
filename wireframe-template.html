@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maktab Dars Jadvali va Zavuch Platformasi</title>
+</head>
+<body>
+
+  <!-- ========================================== -->
+  <!-- 1. ASOSIY HEADER VA NAVIGATSIYA             -->
+  <!-- ========================================== -->
+  <header id="main-header">
+    <div class="header-logo">
+      <h1>Maktab Dars Jadvali</h1>
+      <p>Avtomatlashtirilgan o‘quv boshqaruv tizimi</p>
+    </div>
+
+    <!-- Foydalanuvchi qaysi maktabdaligi -->
+    <div class="school-selector-box">
+      <label for="active-school-select">Faol Maktab:</label>
+      <select id="active-school-select">
+        <option value="M-01">32-umumta'lim maktabi (M-01)</option>
+        <option value="M-02">1-maktab (M-02)</option>
+      </select>
+    </div>
+
+    <!-- Tizim bo'limlari navigatsiyasi -->
+    <nav class="main-nav">
+      <ul>
+        <li><a href="#student-portal">O‘quvchi va Ota-onalar</a></li>
+        <li><a href="#teacher-portal">O‘qituvchi Kabineti</a></li>
+        <li><a href="#zavuch-dashboard">Zavuch Paneli (Master Jadval)</a></li>
+        <li><a href="#super-admin-panel">Super Admin (Maktablar)</a></li>
+      </ul>
+    </nav>
+  </header>
+
+
+  <main id="app-content">
+
+    <!-- ========================================== -->
+    <!-- 2. O‘QUVCHI VA OTA-ONALAR PORTALI          -->
+    <!-- ========================================== -->
+    <section id="student-portal">
+      <h2>Sinf Dars Jadvali</h2>
+
+      <!-- Qidiruv va tanlash filtri -->
+      <form id="schedule-filter-form">
+        <div>
+          <label for="select-class">Sinfni tanlang:</label>
+          <select id="select-class" name="class">
+            <option value="5-A">5-A sinf</option>
+            <option value="5-B">5-B sinf</option>
+            <option value="9-A">9-A sinf</option>
+            <option value="11-A">11-A sinf</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="select-day">Hafta kuni:</label>
+          <select id="select-day" name="day">
+            <option value="1">Dushanba</option>
+            <option value="2">Seshanba</option>
+            <option value="3">Chorshanba</option>
+            <option value="4">Payshanba</option>
+            <option value="5">Juma</option>
+            <option value="6">Shanba</option>
+          </select>
+        </div>
+
+        <button type="button" id="btn-today">Bugungi jadval</button>
+        <button type="button" id="btn-tomorrow">Ertangi jadval</button>
+      </form>
+
+      <!-- Ta'til xabarnomasi (agar ta'til bo'lsa ko'rinadi) -->
+      <article id="vacation-banner">
+        <h3>🏖️ Hozir Kuzgi Ta‘til Davri!</h3>
+        <p>4-noyabrdan 10-noyabrgacha darslar to‘xtatilgan. Darslar 11-noyabr Dushanba kunidan boshlanadi.</p>
+      </article>
+
+      <!-- Kunlik darslar ro'yxati -->
+      <div id="daily-timetable-view">
+        <h3>5-A sinf — Dushanba kungi darslar</h3>
+        
+        <table id="timetable-table">
+          <thead>
+            <tr>
+              <th>Soat</th>
+              <th>Vaqti</th>
+              <th>Fan nomi</th>
+              <th>O‘qituvchi</th>
+              <th>Xona</th>
+              <th>Holati</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>08:00 - 08:45</td>
+              <td>Ona tili</td>
+              <td>Yoqubova D.</td>
+              <td>105-xona</td>
+              <td>Reja bo‘yicha</td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>08:50 - 09:35</td>
+              <td>Matematika</td>
+              <td>Xamidova N.</td>
+              <td>204-xona</td>
+              <td>Reja bo‘yicha</td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td>09:40 - 10:25</td>
+              <td>Ingliz tili</td>
+              <td>Karimova Sh.</td>
+              <td>302-xona</td>
+              <td>Almashtirilgan (O‘rniga: Tarix)</td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td>10:35 - 11:20</td>
+              <td>Jismoniy tarbiya</td>
+              <td>Qodirov B.</td>
+              <td>Sportzal</td>
+              <td>Reja bo‘yicha</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Yaqinlashayotgan imtihonlar -->
+      <aside id="upcoming-exams">
+        <h3>Yaqinlashib kelayotgan nazorat ishlari</h3>
+        <ul>
+          <li><strong>Matematika (BSB):</strong> 12-noyabr, 2-soat</li>
+          <li><strong>Ona tili (CHSB):</strong> 15-noyabr, 1-soat</li>
+        </ul>
+      </aside>
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- 3. O‘QITUVCHI KABINETI                     -->
+    <!-- ========================================== -->
+    <section id="teacher-portal">
+      <h2>O‘qituvchi Shaxsiy Ish Jadvali</h2>
+
+      <div>
+        <label for="teacher-select">O‘qituvchini tanlang:</label>
+        <select id="teacher-select">
+          <option>Xamidova N. (Matematika)</option>
+          <option>Yoqubova D. (Ona tili)</option>
+          <option>Rustamov A. (Fizika)</option>
+        </select>
+      </div>
+
+      <div id="teacher-schedule-card">
+        <h3>Bugungi darslarim (4 ta dars)</h3>
+        <ul>
+          <li>
+            <span>1-soat (08:00):</span> 
+            <b>5-A sinf</b> — Matematika (204-xona)
+          </li>
+          <li>
+            <span>2-soat (08:50):</span> 
+            <b>7-B sinf</b> — Algebra (204-xona)
+          </li>
+          <li>
+            <span>4-soat (10:35):</span> 
+            <b>9-A sinf</b> — Geometriya (204-xona)
+          </li>
+        </ul>
+        <p>Eslatma: Har bir dars boshlanishidan 5 daqiqa oldin Telegram orqali xabar olasiz.</p>
+      </div>
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- 4. ZAVUCH BOSHQARUV PANELİ (ACADEMIC ADMIN) -->
+    <!-- ========================================== -->
+    <section id="zavuch-dashboard">
+      <h2>Zavuch Boshqaruv Markazi (Master Jadval)</h2>
+
+      <!-- Tezkor amallar paneli -->
+      <div id="zavuch-actions-bar">
+        <button type="button" id="btn-import-excel">📥 Excel Jadval Yuklash</button>
+        <button type="button" id="btn-substitute-lesson">🔀 Darsni Almashtirish</button>
+        <button type="button" id="btn-toggle-vacation">🏖️ Ta‘til Rejimi</button>
+        <button type="button" id="btn-send-broadcast">📢 Hozir Guruhlarga Tarqatish</button>
+      </div>
+
+      <!-- To'qnashuvlar (Conflicts & Clashes) ogohlantirishi -->
+      <article id="conflicts-alert-box">
+        <h3>⚠️ To‘qnashuvlar Aniqlangan (2 ta)</h3>
+        <ul>
+          <li>
+            <strong>O‘qituvchi band:</strong> Karimova Sh. Dushanba 3-soatda bir vaqtning o‘zida ham 5-A, ham 7-B sinflariga biriktirilgan!
+          </li>
+          <li>
+            <strong>Xona band:</strong> 204-xona Dushanba 2-soatda 2 ta turli fanga berilgan!
+          </li>
+        </ul>
+      </article>
+
+      <!-- Haftalik Master Jadval Matritsasi -->
+      <div id="master-timetable-matrix">
+        <h3>Barcha Sinflar Master Jadvali (Dushanba)</h3>
+
+        <table id="matrix-table">
+          <thead>
+            <tr>
+              <th>Sinf</th>
+              <th>1-soat</th>
+              <th>2-soat</th>
+              <th>3-soat</th>
+              <th>4-soat</th>
+              <th>5-soat</th>
+              <th>6-soat</th>
+              <th>7-soat</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>5-A</strong></td>
+              <td>Ona tili<br><small>Yoqubova D. (105)</small></td>
+              <td>Matematika<br><small>Xamidova N. (204)</small></td>
+              <td>Ingliz tili<br><small>Karimova Sh. (302)</small></td>
+              <td>Jismoniy t.<br><small>Qodirov B. (Zal)</small></td>
+              <td>Tarix<br><small>Salimov E. (304)</small></td>
+              <td>—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><strong>5-B</strong></td>
+              <td>Matematika<br><small>Karimov N. (202)</small></td>
+              <td>Ona tili<br><small>Azizova D. (205)</small></td>
+              <td>Rus tili<br><small>Sobirova M. (101)</small></td>
+              <td>Informatika<br><small>Tursunov B. (Komp)</small></td>
+              <td>Biologiya<br><small>Nazarova D. (106)</small></td>
+              <td>—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><strong>9-A</strong></td>
+              <td>Algebra<br><small>Xamidova N. (204)</small></td>
+              <td>Fizika<br><small>Rustamov A. (Lab)</small></td>
+              <td>Kimyo<br><small>Ismoilova M. (Lab-2)</small></td>
+              <td>Adabiyot<br><small>Yoqubova D. (105)</small></td>
+              <td>Geometriya<br><small>Xamidova N. (204)</small></td>
+              <td>Ingliz tili<br><small>Saidova Z. (108)</small></td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Darsni almashtirish dialogi (Modal/Form) -->
+      <dialog id="substitute-modal" open>
+        <h3>Darsni Almashtirish (Tezkor o‘zgarish)</h3>
+        <form method="dialog">
+          <div>
+            <label for="sub-class">Sinf:</label>
+            <input type="text" id="sub-class" value="5-A sinf" readonly>
+          </div>
+          <div>
+            <label for="sub-period">Dars soati:</label>
+            <input type="text" id="sub-period" value="3-soat (09:40)" readonly>
+          </div>
+          <div>
+            <label for="sub-old-subject">Asl dars va ustoz:</label>
+            <input type="text" id="sub-old-subject" value="Ingliz tili (Karimova Sh.)" readonly>
+          </div>
+          <div>
+            <label for="sub-reason">Almashtirish sababi:</label>
+            <select id="sub-reason">
+              <option>Ustoz betob</option>
+              <option>Malaka oshirish kursida</option>
+              <option>Tadbir / Seminar</option>
+            </select>
+          </div>
+          <div>
+            <label for="sub-new-subject">Yangi fan:</label>
+            <input type="text" id="sub-new-subject" placeholder="Masalan: Tarix">
+          </div>
+          <div>
+            <label for="sub-new-teacher">O‘rniga kiruvchi o‘qituvchi:</label>
+            <input type="text" id="sub-new-teacher" placeholder="Masalan: Salimov E.">
+          </div>
+          <div>
+            <label for="sub-new-room">Xona:</label>
+            <input type="text" id="sub-new-room" placeholder="304-xona">
+          </div>
+          <div>
+            <label>
+              <input type="checkbox" id="sub-notify-tg" checked>
+              Sinf Telegram guruhiga darhol o‘zgarish xabarini yuborish
+            </label>
+          </div>
+          <div>
+            <button type="submit">Saqlash va E'lon qilish</button>
+            <button type="button">Bekor qilish</button>
+          </div>
+        </form>
+      </dialog>
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- 5. SUPER ADMIN: KO‘P MAKTABLI BOSHQARUV    -->
+    <!-- ========================================== -->
+    <section id="super-admin-panel">
+      <h2>Super Admin Boshqaruvi (Barcha Maktablar)</h2>
+      <p>Platformadagi barcha umumta'lim maktablarini boshqarish, yangi akkaunt ochish va parollarni o‘zgartirish markazi.</p>
+
+      <!-- Yangi maktab ochish formasi -->
+      <form id="create-school-form">
+        <fieldset>
+          <legend>➕ Yangi Maktab Akkauntini Ochish</legend>
+
+          <div>
+            <label for="school-name-field">Maktab nomi:</label>
+            <input type="text" id="school-name-field" placeholder="Masalan: 45-maktab yoki 12-IDUM" required>
+          </div>
+
+          <div>
+            <label for="school-code-field">Maktab kodi:</label>
+            <input type="text" id="school-code-field" placeholder="Masalan: M-03" required>
+          </div>
+
+          <div>
+            <label for="school-region-field">Hudud / Shahar:</label>
+            <input type="text" id="school-region-field" placeholder="Masalan: Samarqand viloyati">
+          </div>
+
+          <div>
+            <label for="school-admin-name-field">Zavuch / Admin ismi:</label>
+            <input type="text" id="school-admin-name-field" placeholder="Masalan: Olimov B.">
+          </div>
+
+          <div>
+            <label for="school-admin-email-field">Login (Email yoki Foydalanuvchi nomi):</label>
+            <input type="email" id="school-admin-email-field" placeholder="maktab45@maktab.uz" required>
+          </div>
+
+          <div>
+            <label for="school-password-field">Boshlang‘ich Parol:</label>
+            <input type="text" id="school-password-field" placeholder="Kamida 4 ta belgi" required>
+          </div>
+
+          <button type="submit">Yangi Maktabni Tizimga Qo‘shish</button>
+        </fieldset>
+      </form>
+
+      <!-- Ro'yxatdan o'tgan maktablar jadvali -->
+      <div id="schools-list-table-box">
+        <h3>Ulangan Maktablar Ro‘yxati</h3>
+
+        <table id="schools-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Kodi</th>
+              <th>Maktab nomi</th>
+              <th>Zavuch / Admin</th>
+              <th>Email / Login</th>
+              <th>Paroli</th>
+              <th>Sinflar</th>
+              <th>Darslar</th>
+              <th>Amallar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td><strong>M-01</strong></td>
+              <td>32-umumta'lim maktabi</td>
+              <td>Bosh Zavuch</td>
+              <td>test@darsjadvali.uz</td>
+              <td><code>darsjadvoli0751</code></td>
+              <td>40 ta sinf</td>
+              <td>1189 ta dars</td>
+              <td>
+                <button type="button">🔑 Parolni o‘zgartirish</button>
+                <button type="button">🚪 Kabinetga o‘tish</button>
+              </td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td><strong>M-02</strong></td>
+              <td>1-maktab</td>
+              <td>1-maktab Zavuchi</td>
+              <td>1-maktab@darsjadvali.uz</td>
+              <td><code>darsjadvoli0751</code></td>
+              <td>0 ta sinf</td>
+              <td>0 ta dars</td>
+              <td>
+                <button type="button">🔑 Parolni o‘zgartirish</button>
+                <button type="button">🚪 Kabinetga o‘tish</button>
+                <button type="button">🗑️ O‘chirish</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Parolni o'zgartirish modal oynasi -->
+      <dialog id="change-password-modal">
+        <h3>Maktab Parolini O‘zgartirish</h3>
+        <form method="dialog">
+          <p>Tanlangan maktab: <strong>1-maktab (M-02)</strong></p>
+          <div>
+            <label for="new-school-password">Yangi parol kiriting:</label>
+            <input type="text" id="new-school-password" placeholder="Yangi parol (kamida 4 belgi)" required>
+          </div>
+          <div>
+            <button type="submit">Yangi Parolni Saqlash</button>
+            <button type="button">Bekor qilish</button>
+          </div>
+        </form>
+      </dialog>
+    </section>
+
+  </main>
+
+
+  <!-- ========================================== -->
+  <!-- 6. FOOTER VA TIZIM MA'LUMOTLARI            -->
+  <!-- ========================================== -->
+  <footer id="main-footer">
+    <p>© 2026 Maktab Dars Jadvali Tizimi. O‘zbekiston umumta'lim maktablari uchun.</p>
+    <p>Telegram Bot: @JadvaliBot | 24/7 Avtomatlashtirilgan xabarnomalar</p>
+  </footer>
+
+</body>
+</html>

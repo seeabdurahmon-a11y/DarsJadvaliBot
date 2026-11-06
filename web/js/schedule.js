@@ -98,11 +98,12 @@ export const ScheduleView = {
         return;
       }
 
-      // Hozirgi dars holati banneri
+      // Hozirgi dars holati banneri va eslatma
       if (mode === 'today' && lessons.length > 0) {
         if (currentLesson) {
+          const lHue = [...String(currentLesson.subject || '')].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
           html += `
-            <div class="current-lesson-hero">
+            <div class="current-lesson-hero" style="border-left:6px solid hsl(${lHue} 80% 50%);">
               <div class="hero-top-row">
                 <span class="live-pulse-dot"></span>
                 <span class="hero-tag">HOZIRGI DARS</span>
@@ -111,22 +112,39 @@ export const ScheduleView = {
               <div class="hero-subject">${currentLesson.subject}</div>
               <div class="hero-meta">
                 ${currentLesson.teacher ? `<span>${currentLesson.teacher}</span>` : ''}
+                ${currentLesson.room ? `<span class="mono">· ${currentLesson.room}-xona</span>` : ''}
                 ${nextLesson ? `<span style="margin-left:auto;opacity:0.9;">Keyingi: ${nextLesson.subject} (${nextLesson.start_time})</span>` : '<span style="margin-left:auto;opacity:0.9;">Oxirgi dars</span>'}
               </div>
             </div>
           `;
-        } else if (pastLessons.length > 0 && nextLesson) {
+        } else if (nextLesson) {
+          // Vaqt farqini hisoblash
+          let diffMin = null;
+          if (nowTimeStr && nextLesson.start_time) {
+            const [nowH, nowM] = nowTimeStr.split(':').map(Number);
+            const [nxtH, nxtM] = nextLesson.start_time.split(':').map(Number);
+            diffMin = (nxtH * 60 + nxtM) - (nowH * 60 + nowM);
+          }
+
+          if (diffMin !== null && diffMin <= 5 && diffMin >= 0) {
+            html += `
+              <div class="next ring">
+                🔔 <b>${diffMin} daqiqadan so‘ng:</b> ${nextLesson.subject} ${nextLesson.room ? `(${nextLesson.room}-xona)` : ''}ga boring!
+              </div>
+            `;
+          } else {
+            html += `
+              <div class="next">
+                <span>Keyingi dars: <b>${nextLesson.subject}</b></span>
+                <span class="chip mono">${nextLesson.start_time}</span>
+                ${nextLesson.room ? `<span class="mono">· ${nextLesson.room}-xona</span>` : ''}
+              </div>
+            `;
+          }
+        } else if (pastLessons.length === lessons.length) {
           html += `
-            <div class="current-lesson-hero is-break">
-              <div class="hero-top-row">
-                <span class="hero-tag">HOZIR TANAFFUS</span>
-                <span class="hero-time">${Icons.clock} ${nowTimeStr}</span>
-              </div>
-              <div class="hero-subject">Keyingi dars: ${nextLesson.subject}</div>
-              <div class="hero-meta">
-                <span>Boshlanishi: ${nextLesson.start_time} — ${nextLesson.end_time}</span>
-                ${nextLesson.teacher ? `<span>${nextLesson.teacher}</span>` : ''}
-              </div>
+            <div class="next">
+              Bugungi barcha darslar yakunlandi. Maroqli hordiq!
             </div>
           `;
         }
@@ -145,19 +163,16 @@ export const ScheduleView = {
         lessons.forEach((lesson, index) => {
           const isThisCurrent = currentLesson && lesson.id === currentLesson.id;
           const isNext = !currentLesson && nextLesson && lesson.id === nextLesson.id;
+          const hue = [...String(lesson.subject || '')].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
 
           html += `
-            <div class="lesson-card ${isThisCurrent ? 'is-current' : ''} ${isNext ? 'is-next' : ''}">
-              <div class="lesson-index-badge ${isThisCurrent ? 'is-current-badge' : ''}">${index + 1}</div>
+            <div class="lesson-card ${isThisCurrent ? 'is-current' : ''} ${isNext ? 'is-next' : ''}" style="--h:${hue};">
+              <div class="lesson-index-badge ${isThisCurrent ? 'is-current-badge' : ''}">${lesson.lesson_number || index + 1}</div>
               <div class="lesson-body">
-                <div class="lesson-time-wrap">
-                  <span class="icon-inline">${Icons.clock}</span>
-                  <span>${lesson.start_time} — ${lesson.end_time}</span>
-                  ${isThisCurrent ? '<span class="active-now-tag">HOZIRGI DARS</span>' : ''}
-                  ${isNext ? '<span class="next-up-tag">KEYINGI DARS</span>' : ''}
-                </div>
                 <div class="lesson-subject-name">
                   <span>${lesson.subject}</span>
+                  ${isThisCurrent ? '<span class="active-now-tag" style="background:var(--cobalt);color:#fff;padding:2px 8px;border-radius:99px;font-size:10px;margin-left:6px;font-weight:700;">HOZIR</span>' : ''}
+                  ${isNext ? '<span class="next-up-tag" style="background:var(--lemon);color:#111;padding:2px 8px;border-radius:99px;font-size:10px;margin-left:6px;font-weight:700;">KEYINGI</span>' : ''}
                 </div>
                 <div class="lesson-meta-row">
                   ${lesson.teacher ? `
@@ -166,8 +181,15 @@ export const ScheduleView = {
                       <span>${lesson.teacher}</span>
                     </div>
                   ` : ''}
+                  ${lesson.room ? `
+                    <div class="lesson-meta-item">
+                      <span class="icon-inline">${Icons.room}</span>
+                      <span class="mono">${lesson.room}-xona</span>
+                    </div>
+                  ` : ''}
                 </div>
               </div>
+              <div class="chip mono">${lesson.start_time || ''}</div>
             </div>
           `;
         });
@@ -267,14 +289,11 @@ export const ScheduleView = {
 
     let html = `<div class="lessons-list">`;
     dayObj.lessons.forEach((lesson, index) => {
+      const hue = [...String(lesson.subject || '')].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
       html += `
-        <div class="lesson-card">
-          <div class="lesson-index-badge">${index + 1}</div>
+        <div class="lesson-card" style="--h:${hue};">
+          <div class="lesson-index-badge">${lesson.lesson_number || index + 1}</div>
           <div class="lesson-body">
-            <div class="lesson-time-wrap">
-              <span class="icon-inline">${Icons.clock}</span>
-              <span>${lesson.start_time} — ${lesson.end_time}</span>
-            </div>
             <div class="lesson-subject-name">
               <span>${lesson.subject}</span>
             </div>
@@ -285,8 +304,15 @@ export const ScheduleView = {
                   <span>${lesson.teacher}</span>
                 </div>
               ` : ''}
+              ${lesson.room ? `
+                <div class="lesson-meta-item">
+                  <span class="icon-inline">${Icons.room}</span>
+                  <span class="mono">${lesson.room}-xona</span>
+                </div>
+              ` : ''}
             </div>
           </div>
+          <div class="chip mono">${lesson.start_time || ''}</div>
         </div>
       `;
     });
@@ -386,13 +412,15 @@ export const ScheduleView = {
           `;
 
           day.lessons.forEach(l => {
+            const hue = [...String(l.subject || '')].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
             html += `
-              <div class="week-mini-lesson">
+              <div class="week-mini-lesson" style="background:hsl(${hue} 85% 92%);border-left:4px solid hsl(${hue} 80% 45%);border-radius:10px;padding:8px 12px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">
                 <div>
-                  <span class="time">${l.start_time}</span> — 
-                  <strong>${l.group_name || 'Sinf'}</strong> — 
-                  ${l.subject}
+                  <span class="mono" style="font-weight:700;font-size:12px;color:var(--text-main);">${l.start_time}</span>
+                  <span style="background:rgba(0,0,0,0.06);padding:2px 8px;border-radius:6px;font-weight:700;margin:0 4px;font-size:12px;">${l.group_name || 'Sinf'}</span>
+                  <strong style="color:var(--text-main);">${l.subject}</strong>
                 </div>
+                ${l.room ? `<span class="chip mono" style="font-size:11px;">${l.room}-xona</span>` : ''}
               </div>
             `;
           });

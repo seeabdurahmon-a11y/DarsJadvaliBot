@@ -265,6 +265,21 @@ export const App = {
     }
   },
 
+  selectRole(role) {
+    TelegramApp.haptic('medium');
+    if (role === 'student') {
+      this.navigate('schedule');
+    } else if (role === 'teacher') {
+      this.navigate('teacher');
+    } else if (role === 'zavuch') {
+      AdminView.currentTab = 'excel';
+      this.navigate('admin');
+    } else if (role === 'admin' || role === 'super') {
+      AdminView.currentTab = 'schools';
+      this.navigate('admin');
+    }
+  },
+
   refreshCurrentView() {
     this.renderCurrentView();
   },
@@ -272,8 +287,16 @@ export const App = {
   async renderHome() {
     const greetingEl = document.getElementById('home-greeting');
     if (greetingEl) {
-      const name = this.currentUser?.first_name || 'Foydalanuvchi';
-      greetingEl.innerText = `Assalomu alaykum, ${name}!`;
+      const name = this.currentUser?.first_name;
+      greetingEl.innerText = name ? `Assalomu alaykum, ${name}!` : 'Maktab Dars Jadvali';
+    }
+    const bannerPill = document.getElementById('home-school-banner-pill');
+    if (bannerPill) {
+      bannerPill.innerText = `${this.currentSchoolName} (${this.currentSchoolCode})`;
+    }
+    const codePill = document.getElementById('home-school-code-pill');
+    if (codePill) {
+      codePill.innerText = `${this.currentSchoolCode} ▾`;
     }
     this.updateHeaderClassPill();
   },
