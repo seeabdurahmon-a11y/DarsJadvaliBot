@@ -6,11 +6,12 @@
 <title>Bosh admin paneli — Maktab Jadvali</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=DM+Sans:wght@400;600&display=swap">
 <style>
-:root{--bg:#f4f5fb;--card:#fff;--text:#111;--muted:#5b6070;--line:#dfe2ee;--cobalt:#3d5aff;--lemon:#ffd84d;--coral:#ff6b5b;--mint:#6fd8b0;
-box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root{--bg:#f4f5fb;--card:#fff;--text:#111;--muted:#5b6070;--line:#dfe2ee;--cobalt:#3d5aff;--lemon:#ffd84d;--coral:#ff6b5b;--mint:#6fd8b0;--fld-bg:color-mix(in srgb,var(--cobalt) 9%,var(--card));
+color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1117;--card:#1a1d27;--text:#f2f2f6;--muted:#a0a5b8;--line:#2b2f3d}}
-:root[data-theme="dark"]{--bg:#0f1117;--card:#1a1d27;--text:#f2f2f6;--muted:#a0a5b8;--line:#2b2f3d}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1117;--card:#1a1d27;--text:#f2f2f6;--muted:#a0a5b8;--line:#2b2f3d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1117;--card:#1a1d27;--text:#f2f2f6;--muted:#a0a5b8;--line:#2b2f3d;color-scheme:dark}
+:root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 "DM Sans",system-ui,sans-serif}
 .disp{font-family:"Space Grotesk",system-ui,sans-serif;margin:0}.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
@@ -29,6 +30,8 @@ textarea{width:100%;min-height:90px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:16px}
 .scroll{overflow-x:auto}.tb{border-collapse:collapse;width:100%;min-width:640px}.tb th{text-align:left;font-size:.8rem;color:var(--muted);padding:8px}.tb td{padding:8px;border-bottom:1px solid var(--line);font-size:.9rem;vertical-align:top}
 .form{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:10px 0}
+.form label{flex:1 1 180px;min-width:160px}
+.form label input{width:100%}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}.md{background:var(--card);border-radius:20px;padding:20px;max-width:400px;width:100%}.md input{width:100%}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:99px;font-weight:600;z-index:30;max-width:92vw}
 .lg{max-width:420px;margin:30px auto 0;padding:0 16px;text-align:center}
@@ -36,9 +39,29 @@ textarea{width:100%;min-height:90px}
 .lgt{font-size:2rem;color:var(--cobalt);font-family:"Space Grotesk",sans-serif}.lgs{color:var(--muted);margin:4px 0 22px}
 .lgc{background:var(--card);border-radius:26px;padding:26px 24px;text-align:left;box-shadow:0 12px 40px rgba(20,30,80,.12);border:1px solid var(--line)}
 .lgc label{font-size:.95rem;color:var(--text);margin-top:16px}.lgc label:first-child{margin-top:0}
-.fld{display:flex;align-items:center;gap:10px;background:color-mix(in srgb,var(--cobalt) 9%,var(--card));border:1px solid var(--line);border-radius:14px;padding:0 12px;margin-top:8px}
-.fld i{color:var(--muted);display:flex}.fld input{flex:1;border:0;background:transparent;margin:0;padding:14px 0;font-size:1rem;outline:0;min-width:0;color:var(--text)}.fld:focus-within{border-color:var(--cobalt)}
-.eye{background:none;border:0;color:var(--muted);cursor:pointer;display:flex;padding:4px}
+.fld{display:flex;align-items:center;gap:10px;background:var(--fld-bg);border:1px solid var(--line);border-radius:14px;padding:0 12px;margin-top:8px}
+.fld i{color:var(--muted);display:flex;flex-shrink:0}.fld input{flex:1;border:0!important;background:transparent!important;margin:0!important;padding:14px 4px!important;font-size:1rem;outline:0!important;min-width:0;color:var(--text)!important;border-radius:0!important;box-shadow:none!important}
+.fld:focus-within{border-color:var(--cobalt)}
+.fld input:-webkit-autofill,
+.fld input:-webkit-autofill:hover,
+.fld input:-webkit-autofill:focus,
+.fld input:-webkit-autofill:active{
+  -webkit-text-fill-color:var(--text)!important;
+  -webkit-box-shadow:0 0 0 1000px var(--fld-bg) inset!important;
+  box-shadow:0 0 0 1000px var(--fld-bg) inset!important;
+  transition:background-color 5000000s ease-in-out 0s!important;
+  border-radius:0!important;
+}
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active{
+  -webkit-text-fill-color:var(--text)!important;
+  -webkit-box-shadow:0 0 0 1000px var(--card) inset!important;
+  box-shadow:0 0 0 1000px var(--card) inset!important;
+  transition:background-color 5000000s ease-in-out 0s!important;
+}
+.eye{background:none;border:0;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:4px;flex-shrink:0}
 .lgb{width:100%;padding:14px;font-size:1rem;border-radius:14px;margin-top:14px;box-shadow:0 8px 20px rgba(61,90,255,.3);border:0;background:var(--cobalt);color:#fff;font-weight:700;cursor:pointer}
 .err{color:var(--coral);min-height:1.4em;margin:8px 0 0}
 </style>
@@ -62,7 +85,7 @@ const nextCode=()=>'M-'+String(Math.max(0,...S.schools.map(x=>+(/^M-(\d+)$/i.exe
 const genPass=()=>String(crypto.getRandomValues(new Uint32Array(1))[0]%900000+100000);
 const json=()=>JSON.stringify({schools:S.schools.map(({code,name,zav,email,pass})=>({code,name,zav,email,pass}))},null,2);
 
-function login(){return `<div class="lg"><div class="lgi">🛡</div><h1 class="disp lgt">Maktab Jadvali</h1><p class="lgs">Bosh admin — tizimga kirish</p><div class="lgc"><label>Foydalanuvchi nomi<span class="fld"><i>${ic('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')}</i><input id="u" value="${esc(V.pre||'admin')}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></span></label><label>Parol<span class="fld"><i>${ic('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>')}</i><input id="pw" type="password"><button type="button" class="eye" data-a="eye" aria-label="Parolni ko‘rsatish">${ic('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>')}</button></span></label><p class="err">${esc(V.err)}</p><button class="btn lgb" data-a="login">Kirish</button></div><p class="note" style="margin-top:16px">Demo: admin / admin</p></div>`}
+function login(){return `<div class="lg"><div class="lgi">🛡</div><h1 class="disp lgt">Maktab Jadvali</h1><p class="lgs">Bosh admin — tizimga kirish</p><div class="lgc"><label>Foydalanuvchi nomi<span class="fld"><i>${ic('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')}</i><input id="u" value="${esc(V.pre||'admin')}" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false"></span></label><label>Parol<span class="fld"><i>${ic('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>')}</i><input id="pw" type="password" autocomplete="current-password"><button type="button" class="eye" data-a="eye" aria-label="Parolni ko‘rsatish">${ic('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>')}</button></span></label><p class="err">${esc(V.err)}</p><button class="btn lgb" data-a="login">Kirish</button></div></div>`}
 
 function panel(){return `<header><b class="disp">🛡 Bosh admin paneli</b><div style="display:flex;align-items:center;gap:8px;"><button class="btn sm alt" data-a="theme">🌓</button><button class="btn sm alt" data-a="out">Chiqish</button></div></header><main>
 <div class="stats"><div class="st"><b>${S.schools.length}</b>Maktablar</div><div class="st"><b>${S.schools.filter(x=>x.pass.length<6).length}</b>Zaif parollar (&lt; 6)</div></div>
@@ -73,7 +96,7 @@ function panel(){return `<header><b class="disp">🛡 Bosh admin paneli</b><div 
 function R(){$('#app').innerHTML=V.in?panel():login()}
 
 const A={
-eye(){const i=$('#pw');if(i)i.type=i.type==='password'?'text':'password'},
+eye(){const i=$('#pw'),b=$('.eye');if(!i)return;const isPass=i.type==='password';i.type=isPass?'text':'password';if(b)b.innerHTML=isPass?ic('<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'):ic('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>')},
 theme(){const d=document.documentElement,cur=d.getAttribute('data-theme');const nxt=cur==='dark'?'light':'dark';d.setAttribute('data-theme',nxt);try{localStorage.setItem('adm_theme',nxt)}catch(e){}},
 login(){const u=$('#u').value.trim().toLowerCase(),p=$('#pw').value.trim();if((u==='admin'||u==='boshadmin')&&(p===S.pass||p==='admin'||p==='darsjadvoli0751')){V.in=true;V.err='';return R()}V.pre=$('#u').value;V.err='Login yoki parol noto‘g‘ri';R()},
 out(){V.in=false;V.show='';V.pre='';R()},
