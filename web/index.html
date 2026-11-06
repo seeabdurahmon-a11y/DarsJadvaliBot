@@ -95,27 +95,80 @@ const addDays=(i,n)=>{const d=new Date(i+'T00:00');d.setDate(d.getDate()+n);retu
 const fmt=i=>+i.slice(8)+'-'+MON[+i.slice(5,7)-1];
 const toMin=t=>+t.slice(0,2)*60+ +t.slice(3,5);
 
-function genG(){const g=[];for(let d=0;d<6;d++){g[d]=[];for(let c=0;c<11;c++){g[d][c]=[];for(let p=0;p<7;p++){const t=TEACH[(c+d*3+p*5)%12];g[d][c][p]=p<PC[c]?[t[1],t[0],String(101+c)]:null}}}return g}
-function mk(code,name,zav,email,pass,empty=false){const t=today();return{code,name,zav,email,pass,g:empty?Array.from({length:6},()=>Array.from({length:11},()=>Array(7).fill(null))):genG(),subs:[],notes:[],log:[],teachers:TEACH.map(x=>x[0]),
-hol:[{n:'Kuzgi ta’til',a:'2026-11-04',b:'2026-11-10'},{n:'Qishki ta’til',a:'2026-12-28',b:'2027-01-10'},{n:'Bahorgi ta’til',a:'2027-03-21',b:'2027-03-27'},{n:'Yozgi ta’til',a:'2027-05-25',b:'2027-09-01'}],
-off:[],ex:[{d:addDays(t,3),c:6,s:'Matematika',k:'Nazorat ishi'},{d:addDays(t,6),c:6,s:'Fizika',k:'Imtihon'},{d:addDays(t,5),c:9,s:'Ona tili',k:'Diktant'}]}}
+function genG(numClasses=13){const g=[];for(let d=0;d<6;d++){g[d]=[];for(let c=0;c<numClasses;c++){g[d][c]=[];for(let p=0;p<7;p++){const t=TEACH[(c+d*3+p*5)%12];g[d][c][p]=p<(PC[c%PC.length]||6)?[t[1],t[0],String(101+c)]:null}}}return g}
+
+const DEF_CLS=['1-A','1-B','2-A','2-B','3-A','4-A','5-A','6-A','7-A','8-A','9-A','10-A','11-A'];
+
+function mk(code,name,zav,email,pass,empty=false,customClasses=null){
+  const t=today();
+  const cls=(customClasses&&Array.isArray(customClasses)&&customClasses.length)?customClasses.slice():DEF_CLS.slice();
+  const num=cls.length;
+  return{
+    code,name,zav,email,pass,
+    classes:cls,
+    g:empty?Array.from({length:6},()=>Array.from({length:num},()=>Array(7).fill(null))):genG(num),
+    subs:[],notes:[],log:[],teachers:TEACH.map(x=>x[0]),
+    hol:[{n:'Kuzgi ta’til',a:'2026-11-04',b:'2026-11-10'},{n:'Qishki ta’til',a:'2026-12-28',b:'2027-01-10'},{n:'Bahorgi ta’til',a:'2027-03-21',b:'2027-03-27'},{n:'Yozgi ta’til',a:'2027-05-25',b:'2027-09-01'}],
+    off:[],ex:[{d:addDays(t,3),c:0,s:'Matematika',k:'Nazorat ishi'},{d:addDays(t,6),c:1,s:'Fizika',k:'Imtihon'},{d:addDays(t,5),c:4,s:'Ona tili',k:'Diktant'}]
+  };
+}
+
+function ensureClasses(s){
+  if(!s.classes||!Array.isArray(s.classes)||!s.classes.length){
+    s.classes=DEF_CLS.slice();
+  }
+  if(!s.g||!Array.isArray(s.g))s.g=Array.from({length:6},()=>[]);
+  for(let d=0;d<6;d++){
+    if(!s.g[d])s.g[d]=[];
+    while(s.g[d].length<s.classes.length)s.g[d].push(Array(7).fill(null));
+  }
+  return s;
+}
 
 const K='jadval_v1';let S;try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
-if(!S||!S.schools)S={pass:'admin',schools:[mk('M-01','32-maktab','Qosimov R.','test@darsjadvali.uz','darsjadvoli0751'),mk('M-02','1-maktab','Aliyeva N.','1-maktab@darsjadvali.uz','darsjadvoli0751',true),mk('M-45','45-maktab','Hamidova Z.','hamidova@m45.uz','4545')]};
+if(!S||!S.schools)S={pass:'admin',schools:[
+  mk('M-01','32-maktab','Qosimov R.','test@darsjadvali.uz','darsjadvoli0751'),
+  mk('M-02','1-maktab','Aliyeva N.','1-maktab@darsjadvali.uz','darsjadvoli0751',false),
+  mk('M-45','45-maktab','Hamidova Z.','hamidova@m45.uz','4545')
+]};
+S.schools.forEach(ensureClasses);
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
 
-const V={in:false,sid:S.schools[0].code,tab:'matrix',day:Math.max(0,wdOf(today())-1),demo:'',modal:null,err:'',pre:''};
+const V={in:false,sid:S.schools[0].code,tab:'matrix',day:Math.max(0,wdOf(today())-1),demo:'',modal:null,clsEdit:null,clsAddModal:false,err:'',pre:''};
 const sch=()=>S.schools.find(x=>x.code===V.sid)||S.schools[0];
 const toast=m=>{const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,3200)};
 const opts=(a,sel)=>a.map(([v,l])=>`<option value="${esc(v)}" ${String(v)===String(sel)?'selected':''}>${esc(l)}</option>`).join('');
-const clsOpts=sel=>opts(Array.from({length:11},(_,i)=>[i,(i+1)+'-sinf']),sel);
+const clsOpts=sel=>opts(sch().classes.map((c,i)=>[i,c+(/sinf$/i.test(c)?'':' sinf')]),sel);
 
 function holiday(s,d){const h=s.hol.find(h=>d>=h.a&&d<=h.b);return h?h.n:(s.off.includes(d)?'Kutilmagan ta’til (sovuq kun)':null)}
 function resume(s,d){let x=addDays(d,1);for(let i=0;i<500;i++){if(wdOf(x)!==0&&!holiday(s,x))return x;x=addDays(x,1)}return x}
 
-function clashes(s,d){const out=[],bad=new Set();for(let p=0;p<7;p++){const tm={},rm={};for(let c=0;c<11;c++){const x=s.g[d][c][p];if(!x)continue;(tm[x[1]]=tm[x[1]]||[]).push(c);if(x[2])(rm[x[2]]=rm[x[2]]||[]).push(c)}
-for(const[k,v]of Object.entries(tm))if(v.length>1){out.push(`${k}: ${p+1}-soat, ${v.map(i=>i+1).join(' va ')}-sinflarda bir vaqtda`);v.forEach(c=>bad.add(c+'-'+p))}
-for(const[k,v]of Object.entries(rm))if(v.length>1){out.push(`${k}-xona: ${p+1}-soat, ${v.map(i=>i+1).join(' va ')}-sinflarga tushgan`);v.forEach(c=>bad.add(c+'-'+p))}}return{out,bad}}
+function clashes(s,d){
+  const out=[],bad=new Set();
+  const numC=s.classes.length;
+  for(let p=0;p<7;p++){
+    const tm={},rm={};
+    for(let c=0;c<numC;c++){
+      const x=s.g[d]&&s.g[d][c]?s.g[d][c][p]:null;
+      if(!x)continue;
+      (tm[x[1]]=tm[x[1]]||[]).push(c);
+      if(x[2])(rm[x[2]]=rm[x[2]]||[]).push(c);
+    }
+    for(const[k,v]of Object.entries(tm)){
+      if(v.length>1){
+        out.push(`${k}: ${p+1}-soat, ${v.map(i=>s.classes[i]||(i+1)+'-sinf').join(' va ')} sinflarda bir vaqtda`);
+        v.forEach(c=>bad.add(c+'-'+p));
+      }
+    }
+    for(const[k,v]of Object.entries(rm)){
+      if(v.length>1){
+        out.push(`${k}-xona: ${p+1}-soat, ${v.map(i=>s.classes[i]||(i+1)+'-sinf').join(' va ')} sinflarga tushgan`);
+        v.forEach(c=>bad.add(c+'-'+p));
+      }
+    }
+  }
+  return{out,bad};
+}
 const allClash=s=>[0,1,2,3,4,5].reduce((a,d)=>a+clashes(s,d).out.length,0);
 
 function holList(s,ed){const T=today(),cur=holiday(s,T);return (cur?`<div class="ok">Hozir: ${esc(cur)}. Darslar ${fmt(resume(s,T))} da boshlanadi.</div>`:'')+s.hol.slice().sort((a,b)=>a.a<b.a?-1:1).map((h,i)=>`<div class="nt" style="border-left-color:var(--mint)"><b>${esc(h.n)}</b><small>${fmt(h.a)} — ${fmt(h.b)} · darslar ${fmt(resume(s,h.b))} da</small>${ed?`<button class="lk" data-a="holdel" data-v="${s.hol.indexOf(h)}">o‘chirish</button>`:''}</div>`).join('')+s.off.map(d=>`<div class="nt" style="border-left-color:var(--coral)">Kutilmagan ta’til: ${fmt(d)}${ed?` <button class="lk" data-a="offdel" data-v="${d}">bekor qilish</button>`:''}</div>`).join('')}
@@ -123,25 +176,83 @@ const noteList=a=>a.slice(0,5).map(n=>`<div class="nt">${esc(n.text)}<small>${ne
 const tabs=(a,cur,act)=>`<div class="tabs">${a.map(([k,l])=>`<button class="${k===cur?'on':''}" data-a="${act}" data-v="${k}">${l}</button>`).join('')}</div>`;
 
 function zav(){const s=sch(),t=V.tab||'matrix';
-let h=`<div class="tabs" style="margin-top:0;justify-content:space-between;align-items:center;"><b class="disp" style="font-size:1.25rem;">${esc(s.name)} · <span class="mono" style="background:var(--line);padding:2px 8px;border-radius:6px;font-size:12px;">${esc(s.code)}</span></b><span class="note" style="font-size:12px;">Telegram botga ulangan</span></div>`+tabs([['matrix','Master jadval'],['ex','Imtihonlar'],['hol','Ta’tillar'],['imp','Excel import'],['msg','Xabarnoma']],t,'tab');
-if(t==='matrix'){const cl=clashes(s,V.day);h+=tabs(DAYS.map((d,i)=>[i,d]),V.day,'day')+(cl.out.length?`<div class="alert">⚠ ${cl.out.length} ta to‘qnashuv: ${cl.out.map(esc).join(' · ')}</div>`:'<div class="ok">✓ Bu kunda to‘qnashuv yo‘q</div>')+`<div class="scroll"><table class="mx"><tr><th></th>${TIMES.map((tm,p)=>`<th>${p+1}-soat<br>${tm}</th>`).join('')}</tr>${s.g[V.day].map((row,c)=>`<tr><th>${c+1}-sinf</th>${row.map((x,p)=>`<td class="${cl.bad.has(c+'-'+p)?'x':x?'':'e'}" ${x?`style="--h:${hue(x[0])}"`:''} data-a="cell" data-v="${c}-${p}">${x?`${esc(x[0])}<small>${esc(x[1])} · ${esc(x[2])}</small>`:'+'}</td>`).join('')}</tr>`).join('')}</table></div><p class="note">Katakni bosing: tahrirlash yoki 1 bosishda almashtirish (zamena).</p>`}
-if(t==='ex')h+=`<div class="form"><label>Sinf<select id="xc">${clsOpts(0)}</select></label><label>Fan<input id="xs" placeholder="Matematika"></label><label>Turi<select id="xk">${opts(['Nazorat ishi','Imtihon','Diktant','Test'].map(x=>[x,x]),'')}</select></label><label>Sana<input id="xd" type="date" value="${addDays(today(),3)}"></label><button class="btn" data-a="exadd">Qo‘shish</button></div>`+s.ex.slice().sort((a,b)=>a.d<b.d?-1:1).map(e=>`<div class="nt"><b>${e.c+1}-sinf · ${esc(e.s)}</b> — ${esc(e.k)}, ${fmt(e.d)} <button class="lk" data-a="exdel" data-v="${s.ex.indexOf(e)}">o‘chirish</button></div>`).join('');
+let h=`<div class="tabs" style="margin-top:0;justify-content:space-between;align-items:center;"><b class="disp" style="font-size:1.25rem;">${esc(s.name)} · <span class="mono" style="background:var(--line);padding:2px 8px;border-radius:6px;font-size:12px;">${esc(s.code)}</span></b><span class="note" style="font-size:12px;">Telegram botga ulangan</span></div>`+tabs([['matrix','Master jadval'],['cls','Sinflar'],['ex','Imtihonlar'],['hol','Ta’tillar'],['imp','Excel import'],['msg','Xabarnoma']],t,'tab');
+if(t==='matrix'){
+  const cl=clashes(s,V.day);
+  h+=tabs(DAYS.map((d,i)=>[i,d]),V.day,'day')
+    +(cl.out.length?`<div class="alert">⚠ ${cl.out.length} ta to‘qnashuv: ${cl.out.map(esc).join(' · ')}</div>`:'<div class="ok">✓ Bu kunda to‘qnashuv yo‘q</div>')
+    +`<div class="scroll"><table class="mx"><tr><th>Sinf</th>${TIMES.map((tm,p)=>`<th>${p+1}-soat<br>${tm}</th>`).join('')}</tr>`
+    +s.classes.map((clsName,c)=>{
+      const row=(s.g[V.day]&&s.g[V.day][c])||Array(7).fill(null);
+      return `<tr><th style="min-width:100px;padding:6px 8px;vertical-align:middle;"><div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><b style="font-size:.9rem;">${esc(clsName)}</b><button type="button" class="lk" data-a="cclsedit" data-v="${c}" title="Nomini o‘zgartirish (masalan 1-A)">✏️</button></div></th>`
+        +row.map((x,p)=>`<td class="${cl.bad.has(c+'-'+p)?'x':x?'':'e'}" ${x?`style="--h:${hue(x[0])}"`:''} data-a="cell" data-v="${c}-${p}">${x?`${esc(x[0])}<small>${esc(x[1])} · ${esc(x[2])}</small>`:'+'}</td>`).join('')
+        +`</tr>`;
+    }).join('')
+    +`</table></div>`
+    +`<div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap;">`
+    +`<button class="btn sm" data-a="cclsadd">➕ Yangi sinf qo‘shish</button>`
+    +`<button class="btn sm alt" data-a="tab" data-v="cls">Sinflarni boshqarish ⚙️ (${s.classes.length} ta sinf)</button>`
+    +`<span class="note">Katakni bosing: tahrirlash yoki 1 bosishda almashtirish (zamena).</span>`
+    +`</div>`;
+}
+if(t==='cls'){
+  h+=`<div class="card" style="margin-top:0;">`
+    +`<h2 class="disp" style="margin-bottom:6px;">Sinflar ro‘yxati (${s.classes.length} ta sinf)</h2>`
+    +`<p class="note" style="margin-bottom:14px;">Maktabingizdagi barcha sinflar (1-A, 1-B, 2-A...) ro‘yxatini erkin boshqaring. Istalgan sinf nomini o‘zgartirish, yangi sinf qo‘shish yoki o‘chirish mumkin.</p>`
+    +`<div class="form">`
+    +`<label style="flex:2 1 200px;">Yangi sinf nomi<input id="nc_name" placeholder="Masalan: 1-B yoki 5-A"></label>`
+    +`<button class="btn" data-a="addclassbtn">➕ Sinf qo‘shish</button>`
+    +`<button class="btn alt sm" data-a="presetparallel">⚡ 1-A dan 11-B gacha parallel qilish</button>`
+    +`<button class="btn alt sm" data-a="presetstd">1-11 standart qilish</button>`
+    +`</div>`
+    +`</div>`
+    +`<div class="card" style="margin-top:14px;">`
+    +`<div class="scroll"><table class="tb">`
+    +`<tr><th>#</th><th>Sinf nomi</th><th>Haftalik darslar</th><th style="text-align:right;">Amallar</th></tr>`
+    +s.classes.map((clsName,i)=>{
+      let totalL=0;
+      for(let d=0;d<6;d++){
+        if(s.g[d]&&s.g[d][i])totalL+=s.g[d][i].filter(Boolean).length;
+      }
+      return `<tr>`
+        +`<td><b>${i+1}</b></td>`
+        +`<td><span style="font-size:1.05rem;font-weight:700;">${esc(clsName)}</span> <span class="note">sinf</span></td>`
+        +`<td><b>${totalL}</b> ta dars</td>`
+        +`<td style="text-align:right;">`
+        +`<button class="btn sm alt" data-a="cclsedit" data-v="${i}">✏️ O‘zgartirish</button> `
+        +`<button class="btn sm red" data-a="cclsdel" data-v="${i}">🗑 O‘chirish</button>`
+        +`</td>`
+        +`</tr>`;
+    }).join('')
+    +`</table></div>`
+    +`</div>`;
+}
+if(t==='ex')h+=`<div class="form"><label>Sinf<select id="xc">${clsOpts(0)}</select></label><label>Fan<input id="xs" placeholder="Matematika"></label><label>Turi<select id="xk">${opts(['Nazorat ishi','Imtihon','Diktant','Test'].map(x=>[x,x]),'')}</select></label><label>Sana<input id="xd" type="date" value="${addDays(today(),3)}"></label><button class="btn" data-a="exadd">Qo‘shish</button></div>`+s.ex.slice().sort((a,b)=>a.d<b.d?-1:1).map(e=>`<div class="nt"><b>${esc(s.classes[e.c]||(e.c+1)+'-sinf')} · ${esc(e.s)}</b> — ${esc(e.k)}, ${fmt(e.d)} <button class="lk" data-a="exdel" data-v="${s.ex.indexOf(e)}">o‘chirish</button></div>`).join('');
 if(t==='hol')h+=`<div class="form"><button class="btn red" data-a="offtoday">Bugun dars yo‘q (sovuq kun)</button><button class="btn alt" data-a="offtom">Ertaga dars yo‘q</button></div><div class="form"><label>Nomi<input id="hn" placeholder="Qishki ta’til"></label><label>Boshlanishi<input id="ha" type="date"></label><label>Tugashi<input id="hb" type="date"></label><button class="btn" data-a="holadd">Ta’til qo‘shish</button></div>`+holList(s,true);
-if(t==='imp')h+=`<div class="banner"><b>Excel / CSV orqali yuklash.</b> Ustunlar tartibi: <span class="mono">Kun | Sinf | Soat | Fan | Ustoz | Xona</span><br>Kun: 1–6 yoki Du, Se, Ch, Pa, Ju, Sh. Sinf: 1–11. Soat: 1–7. Birinchi qator sarlavha bo‘lishi mumkin.</div><input type="file" accept=".xlsx,.xls,.csv" data-c="file"><div class="form"><button class="btn alt" data-a="reset">Namuna jadvalni tiklash</button></div><p class="note">Hozir tizimda ${allClash(s)} ta to‘qnashuv bor.</p>`;
-if(t==='msg')h+=`<div class="form"><button class="btn" data-a="bcast">06:00 ertalabki jadvalni yuborish (sinov)</button></div><label>Xabar / e’lon<textarea id="mt" placeholder="Eslatma matni..."></textarea></label><div class="form"><label>Kimga<select id="mc">${opts([['all','Barcha sinflar'],...Array.from({length:11},(_,i)=>[i,(i+1)+'-sinf'])],'all')}</select></label><button class="btn" data-a="send">Yuborish</button></div><p class="note">Avtomatik qoidalar: har kuni 06:00 da Telegram orqali tarqatish; yakshanba va ta’tillarda jim turish; dars boshlanishidan 5 daqiqa oldin eslatma.</p><h3 class="disp">Jurnal</h3>${s.log.slice(0,8).map(l=>`<div class="nt">${esc(l.text)}<small>${new Date(l.ts).toLocaleString('uz-UZ')}</small></div>`).join('')||'<p class="note">Hali yuborilmagan</p>'}<h3 class="disp">Yuborilgan xabarlar</h3>`+noteList(s.notes);
+if(t==='imp')h+=`<div class="banner"><b>Excel / CSV orqali yuklash.</b> Ustunlar tartibi: <span class="mono">Kun | Sinf | Soat | Fan | Ustoz | Xona</span><br>Kun: 1–6 yoki Du, Se, Ch, Pa, Ju, Sh. Sinf: 1-A, 1-B yoki 1–11. Soat: 1–7. Birinchi qator sarlavha bo‘lishi mumkin.</div><input type="file" accept=".xlsx,.xls,.csv" data-c="file"><div class="form"><button class="btn alt" data-a="reset">Namuna jadvalni tiklash</button></div><p class="note">Hozir tizimda ${allClash(s)} ta to‘qnashuv bor.</p>`;
+if(t==='msg')h+=`<div class="form"><button class="btn" data-a="bcast">06:00 ertalabki jadvalni yuborish (sinov)</button></div><label>Xabar / e’lon<textarea id="mt" placeholder="Eslatma matni..."></textarea></label><div class="form"><label>Kimga<select id="mc">${opts([['all','Barcha sinflar'],...s.classes.map((name,i)=>[i,name+(/sinf$/i.test(name)?'':' sinf'])])],'all')}</select></label><button class="btn" data-a="send">Yuborish</button></div><p class="note">Avtomatik qoidalar: har kuni 06:00 da Telegram orqali tarqatish; yakshanba va ta’tillarda jim turish; dars boshlanishidan 5 daqiqa oldin eslatma.</p><h3 class="disp">Jurnal</h3>${s.log.slice(0,8).map(l=>`<div class="nt">${esc(l.text)}<small>${new Date(l.ts).toLocaleString('uz-UZ')}</small></div>`).join('')||'<p class="note">Hali yuborilmagan</p>'}<h3 class="disp">Yuborilgan xabarlar</h3>`+noteList(s.notes);
 return h}
 
 function login(){const ic=d=>`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 return `<div class="lg"><img src="/img/schedule-logo.jpg" alt="Maktab Jadvali" class="lgi-img"><h1 class="disp lgt">Maktab Jadvali</h1><p class="lgs">Zavuch boshqaruv paneli</p><div class="lgc"><label>Foydalanuvchi nomi<span class="fld"><i>${ic('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')}</i><input id="u" value="${esc(V.pre||'')}" placeholder="Maktab kodi yoki email" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false"></span></label><label>Parol<span class="fld"><i>${ic('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>')}</i><input id="pw" type="password" autocomplete="current-password"><button type="button" class="eye" data-a="eye" aria-label="Parolni ko‘rsatish">${ic('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>')}</button></span></label><p class="err">${esc(V.err)}</p><button class="btn lgb" data-a="login">Kirish</button></div></div>`}
 
 function modal(){const s=sch(),m=V.modal;
-const x=s.g[V.day][m.c][m.p]||['','',String(101+m.c)],tl=s.teachers.includes(x[1])||!x[1]?s.teachers:[x[1],...s.teachers],nd=(()=>{let d=today();for(let i=0;i<7&&wdOf(d)!==V.day+1;i++)d=addDays(d,1);return d})();
-return `<div class="ov"><div class="md"><h3 class="disp">${m.c+1}-sinf · ${m.p+1}-soat · ${DAYS[V.day]}</h3><label>Fan<input id="ms" list="sl" value="${esc(x[0])}"></label><datalist id="sl">${[...new Set(TEACH.map(t=>t[1]))].map(v=>`<option value="${v}">`).join('')}</datalist><label>Ustoz<select id="mt">${opts(tl.map(v=>[v,v]),x[1])}</select></label><label>Xona<input id="mr" value="${esc(x[2])}"></label><div class="form"><button class="btn" data-a="csave">Saqlash</button><button class="btn red" data-a="cdel">Darsni o‘chirish</button></div><hr><b>Darsni almashtirish (zamena)</b><label>Sana<input id="sd" type="date" value="${nd}"></label><label>Yangi ustoz<select id="st">${opts(s.teachers.map(v=>[v,v]),'')}</select></label><label>Yangi fan (ixtiyoriy)<input id="ss" list="sl"></label><div class="form"><button class="btn" data-a="dosub">Almashtirish va Telegramga yuborish</button><button class="btn alt" data-a="close">Yopish</button></div></div></div>`}
+const clsName=s.classes[m.c]||(m.c+1)+'-sinf';
+const x=s.g[V.day]&&s.g[V.day][m.c]?s.g[V.day][m.c][m.p]:null||['','',String(101+m.c)],tl=s.teachers.includes(x[1])||!x[1]?s.teachers:[x[1],...s.teachers],nd=(()=>{let d=today();for(let i=0;i<7&&wdOf(d)!==V.day+1;i++)d=addDays(d,1);return d})();
+return `<div class="ov"><div class="md"><h3 class="disp">${esc(clsName)} · ${m.p+1}-soat · ${DAYS[V.day]}</h3><label>Fan<input id="ms" list="sl" value="${esc(x[0])}"></label><datalist id="sl">${[...new Set(TEACH.map(t=>t[1]))].map(v=>`<option value="${v}">`).join('')}</datalist><label>Ustoz<select id="mt">${opts(tl.map(v=>[v,v]),x[1])}</select></label><label>Xona<input id="mr" value="${esc(x[2])}"></label><div class="form"><button class="btn" data-a="csave">Saqlash</button><button class="btn red" data-a="cdel">Darsni o‘chirish</button></div><hr><b>Darsni almashtirish (zamena)</b><label>Sana<input id="sd" type="date" value="${nd}"></label><label>Yangi ustoz<select id="st">${opts(s.teachers.map(v=>[v,v]),'')}</select></label><label>Yangi fan (ixtiyoriy)<input id="ss" list="sl"></label><div class="form"><button class="btn" data-a="dosub">Almashtirish va Telegramga yuborish</button><button class="btn alt" data-a="close">Yopish</button></div></div></div>`}
 
 function R(){
 const hd=`<header><div style="display:flex;align-items:center;gap:10px;"><img src="/img/schedule-logo.jpg" alt="Logo" style="width:30px;height:30px;border-radius:9px;object-fit:cover;box-shadow:0 2px 8px rgba(61,90,255,.2);"><b class="disp">Maktab Jadvali</b></div><div style="display:flex;align-items:center;gap:8px;"><button class="btn sm alt" data-a="theme" title="Rejimni almashtirish">🌓</button>${V.in?'<button class="btn sm alt" data-a="out">Chiqish</button>':''}</div></header>`;
 const b=V.in?zav():login();
-$('#app').innerHTML=hd+'<main>'+b+'</main>'+(V.modal?modal():'')}
+let modals=(V.modal?modal():'');
+if(V.clsEdit!==null&&V.clsEdit!==undefined){
+  const s=sch();
+  modals+=`<div class="ov"><div class="md"><h3 class="disp">Sinf nomini o‘zgartirish</h3><label style="margin-top:10px;">Sinf nomi (masalan: 1-A, 1-B, 5-A)<input id="edit_cls_input" value="${esc(s.classes[V.clsEdit])}" autofocus></label><div class="form" style="margin-top:16px;"><button class="btn" data-a="saveclsname">Saqlash</button><button class="btn alt" data-a="closeclsmodal">Bekor</button></div></div></div>`;
+}
+if(V.clsAddModal){
+  modals+=`<div class="ov"><div class="md"><h3 class="disp">Yangi sinf qo‘shish</h3><label style="margin-top:10px;">Sinf nomi (masalan: 1-B, 2-A)<input id="add_cls_input" placeholder="1-B" autofocus></label><div class="form" style="margin-top:16px;"><button class="btn" data-a="saveaddcls">Qo‘shish</button><button class="btn alt" data-a="closeclsmodal">Bekor</button></div></div></div>`;
+}
+$('#app').innerHTML=hd+'<main>'+b+'</main>'+modals}
 
 const A={
 eye(){const i=$('#pw'),b=$('.eye');if(!i)return;const isPass=i.type==='password';i.type=isPass?'text':'password';if(b)b.innerHTML=isPass?ic('<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'):ic('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>')},
@@ -172,7 +283,7 @@ async dosub(){
   const s=sch(),m=V.modal,x=s.g[V.day][m.c][m.p],d=$('#sd').value,t=$('#st').value,ns=$('#ss').value.trim();
   if(!x)return toast('Bu katakda dars yo‘q');if(!d||wdOf(d)!==V.day+1)return toast('Sana '+DAYS[V.day]+' kuniga to‘g‘ri kelishi kerak');
   s.subs=s.subs.filter(z=>!(z.d===d&&z.c===m.c&&z.p===m.p));s.subs.push({d,c:m.c,p:m.p,t,s:ns||x[0]});
-  s.notes.unshift({ts:Date.now(),c:m.c,tt:[x[1],t],text:`${m.c+1}-sinf, ${m.p+1}-soat (${fmt(d)}): ${x[1]} o‘rniga ${t}${ns?' · '+ns:''}`});
+  s.notes.unshift({ts:Date.now(),c:m.c,tt:[x[1],t],text:`${s.classes[m.c]||(m.c+1)+'-sinf'}, ${m.p+1}-soat (${fmt(d)}): ${x[1]} o‘rniga ${t}${ns?' · '+ns:''}`});
   save();
   try{await fetch('/api/admin/substitute-lesson',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.code}:${s.pass}`},body:JSON.stringify({class_id:m.c+1,period:m.p+1,date:d,teacher_name:t,subject_name:ns||x[0]})});}catch(e){}
   V.modal=null;R();toast('Almashtirildi va Telegram guruhlariga yuborildi')
@@ -196,24 +307,115 @@ async offtom(){
 offdel(v){const s=sch();s.off=s.off.filter(x=>x!==v);save();R()},
 async send(){
   const s=sch(),t=$('#mt').value.trim(),c=$('#mc').value;if(!t)return toast('Xabar matnini yozing');
-  s.notes.unshift({ts:Date.now(),c:c==='all'?'all':+c,text:t});s.log.unshift({ts:Date.now(),text:`Xabar yuborildi: ${c==='all'?'barcha sinflar':(+c+1)+'-sinf'}`});save();
+  s.notes.unshift({ts:Date.now(),c:c==='all'?'all':+c,text:t});s.log.unshift({ts:Date.now(),text:`Xabar yuborildi: ${c==='all'?'barcha sinflar':(s.classes[+c]||(+c+1)+'-sinf')}`});save();
   try{await fetch('/api/admin/send-now',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.code}:${s.pass}`},body:JSON.stringify({classId:c==='all'?'all':String(+c+1),message:t})});}catch(e){}
   R();toast('Telegram orqali yuborildi')
 },
-bcast(){const s=sch(),d=today(),h=holiday(s,d);s.log.unshift({ts:Date.now(),text:wdOf(d)===0?'06:00 · Yakshanba: xabarnoma yuborilmadi (jim turish)':h?`06:00 · ${h}: xabarnoma yuborilmadi (jim turish)`:'06:00 · 11 ta sinfga bugungi jadval yuborildi'});save();R();toast('Jurnalga yozildi')},
-reset(){if(!confirm('Jadval namuna holatiga qaytadi. Davom etasizmi?'))return;const s=sch();s.g=genG();s.subs=[];save();R();toast('Tiklandi')}
+bcast(){const s=sch(),d=today(),h=holiday(s,d);s.log.unshift({ts:Date.now(),text:wdOf(d)===0?'06:00 · Yakshanba: xabarnoma yuborilmadi (jim turish)':h?`06:00 · ${h}: xabarnoma yuborilmadi (jim turish)`:`06:00 · ${s.classes.length} ta sinfga bugungi jadval yuborildi`});save();R();toast('Jurnalga yozildi')},
+reset(){if(!confirm('Jadval namuna holatiga qaytadi. Davom etasizmi?'))return;const s=sch();s.g=genG(s.classes.length);s.subs=[];save();R();toast('Tiklandi')},
+cclsedit(v){V.clsEdit=+v;R()},
+cclsadd(){V.clsAddModal=true;R()},
+closeclsmodal(){V.clsEdit=null;V.clsAddModal=false;R()},
+saveclsname(){
+  const el=$('#edit_cls_input');if(!el)return;
+  const val=el.value.trim();if(!val)return toast('Sinf nomini kiriting');
+  const s=sch();
+  s.classes[V.clsEdit]=val;
+  save();V.clsEdit=null;R();toast(`Sinf nomi "${val}" ga o‘zgartirildi`);
+  try{fetch('/api/admin/classes',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.code}:${s.pass}`},body:JSON.stringify({name:val})}).catch(()=>{});}catch(e){}
+},
+saveaddcls(){
+  const el=$('#add_cls_input');if(!el)return;
+  const val=el.value.trim();if(!val)return toast('Sinf nomini kiriting');
+  const s=sch();
+  if(s.classes.some(x=>x.toLowerCase()===val.toLowerCase()))return toast('Bu nomdagi sinf mavjud');
+  s.classes.push(val);
+  for(let d=0;d<6;d++){if(!s.g[d])s.g[d]=[];s.g[d].push(Array(7).fill(null))}
+  save();V.clsAddModal=false;R();toast(`"${val}" sinfi muvaffaqiyatli qo‘shildi`);
+  try{fetch('/api/admin/classes',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.code}:${s.pass}`},body:JSON.stringify({name:val})}).catch(()=>{});}catch(e){}
+},
+addclassbtn(){
+  const el=$('#nc_name');if(!el)return;
+  const val=el.value.trim();if(!val)return toast('Sinf nomini kiriting (masalan: 1-B)');
+  const s=sch();
+  if(s.classes.some(x=>x.toLowerCase()===val.toLowerCase()))return toast('Bu nomdagi sinf mavjud');
+  s.classes.push(val);
+  for(let d=0;d<6;d++){if(!s.g[d])s.g[d]=[];s.g[d].push(Array(7).fill(null))}
+  save();el.value='';R();toast(`"${val}" sinfi qo‘shildi`);
+  try{fetch('/api/admin/classes',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.code}:${s.pass}`},body:JSON.stringify({name:val})}).catch(()=>{});}catch(e){}
+},
+cclsdel(v){
+  const i=+v,s=sch(),name=s.classes[i];
+  if(!confirm(`"${name}" sinfini o‘chirishni xohlaysizmi? Undagi barcha darslar ham o‘chiriladi.`))return;
+  s.classes.splice(i,1);
+  for(let d=0;d<6;d++){if(s.g[d])s.g[d].splice(i,1)}
+  s.ex=s.ex.filter(x=>x.c!==i).map(x=>({...x,c:x.c>i?x.c-1:x.c}));
+  save();R();toast(`"${name}" sinfi o‘chirildi`);
+},
+presetparallel(){
+  const s=sch();
+  if(!confirm('Barcha sinflarni 1-A dan 11-B gacha parallel formatga o‘tkazasizmi?'))return;
+  const pars=['1-A','1-B','2-A','2-B','3-A','3-B','4-A','4-B','5-A','5-B','6-A','6-B','7-A','7-B','8-A','8-B','9-A','9-B','10-A','10-B','11-A','11-B'];
+  s.classes=pars;
+  for(let d=0;d<6;d++){s.g[d]=Array.from({length:pars.length},()=>Array(7).fill(null))}
+  save();R();toast('22 ta parallel sinf yaratildi (1-A dan 11-B gacha)');
+},
+presetstd(){
+  const s=sch();
+  if(!confirm('Sinflarni standart 1-11 formatiga o‘tkazasizmi?'))return;
+  s.classes=Array.from({length:11},(_,i)=>(i+1)+'-sinf');
+  for(let d=0;d<6;d++){
+    while(s.g[d].length<11)s.g[d].push(Array(7).fill(null));
+    if(s.g[d].length>11)s.g[d]=s.g[d].slice(0,11);
+  }
+  save();R();toast('Standart 1-11 sinflar o‘rnatildi');
+}
 };
 
 const C={
 file(v,el){const f=el.files[0];if(!f)return;if(typeof XLSX==='undefined')return toast('Excel kutubxonasi yuklanmadi');const r=new FileReader();r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});importRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1}))}catch(x){toast('Faylni o‘qib bo‘lmadi')}};r.readAsArrayBuffer(f)}};
 
-function importRows(rows){const s=sch(),g=Array.from({length:6},()=>Array.from({length:11},()=>Array(7).fill(null)));let n=0;
-for(const r of rows){if(!r||r.length<6)continue;const k=String(r[0]).trim().toLowerCase();let d=/^\d$/.test(k)?+k-1:DS.findIndex(x=>x.toLowerCase()===k.slice(0,2));const c=parseInt(r[1])-1,p=parseInt(r[2])-1;if(d<0||d>5||!(c>=0&&c<11)||!(p>=0&&p<7)||!r[3])continue;g[d][c][p]=[String(r[3]).trim(),String(r[4]||'').trim(),String(r[5]==null?'':r[5]).trim()];if(r[4]&&!s.teachers.includes(String(r[4]).trim()))s.teachers.push(String(r[4]).trim());n++}
-if(!n)return toast('Mos qator topilmadi. Ustunlar: Kun, Sinf, Soat, Fan, Ustoz, Xona');s.g=g;s.subs=[];save();R();toast(`${n} ta dars yuklandi, to‘qnashuvlar: ${allClash(s)}`)}
+function importRows(rows){
+  const s=sch();let n=0;
+  for(const r of rows){
+    if(!r||r.length<6)continue;
+    const k=String(r[0]).trim().toLowerCase();
+    let d=/^\d$/.test(k)?+k-1:DS.findIndex(x=>x.toLowerCase()===k.slice(0,2));
+    const rawClass=String(r[1]).trim();
+    let c=s.classes.findIndex(x=>x.toLowerCase()===rawClass.toLowerCase()||x.toLowerCase().replace(/\s*sinf/,'')===rawClass.toLowerCase().replace(/\s*sinf/,''));
+    if(c===-1){
+      const num=parseInt(rawClass);
+      if(!isNaN(num)&&num>=1&&num<=s.classes.length){
+        c=num-1;
+      }else if(rawClass){
+        s.classes.push(rawClass);
+        c=s.classes.length-1;
+        for(let day=0;day<6;day++){
+          if(!s.g[day])s.g[day]=[];
+          s.g[day].push(Array(7).fill(null));
+        }
+      }
+    }
+    const p=parseInt(r[2])-1;
+    if(d<0||d>5||c<0||!(p>=0&&p<7)||!r[3])continue;
+    if(!s.g[d][c])s.g[d][c]=Array(7).fill(null);
+    s.g[d][c][p]=[String(r[3]).trim(),String(r[4]||'').trim(),String(r[5]==null?'':r[5]).trim()];
+    if(r[4]&&!s.teachers.includes(String(r[4]).trim()))s.teachers.push(String(r[4]).trim());
+    n++;
+  }
+  if(!n)return toast('Mos qator topilmadi. Ustunlar: Kun, Sinf, Soat, Fan, Ustoz, Xona');
+  s.subs=[];save();R();toast(`${n} ta dars yuklandi, to‘qnashuvlar: ${allClash(s)}`);
+}
 
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b&&A[b.dataset.a])A[b.dataset.a](b.dataset.v,b)});
 document.addEventListener('change',e=>{const b=e.target.closest('[data-c]');if(b&&C[b.dataset.c])C[b.dataset.c](e.target.value,e.target)});
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&!V.in&&(e.target.id==='pw'||e.target.id==='u'))A.login()});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    if(V.clsEdit!==null&&e.target.id==='edit_cls_input'){e.preventDefault();A.saveclsname()}
+    else if(V.clsAddModal&&e.target.id==='add_cls_input'){e.preventDefault();A.saveaddcls()}
+    else if(!V.in&&(e.target.id==='pw'||e.target.id==='u')){e.preventDefault();A.login()}
+  }
+});
 
 try{const st=localStorage.getItem('theme');if(st)document.documentElement.setAttribute('data-theme',st)}catch(e){}
 
@@ -235,6 +437,7 @@ if(/^[A-Z0-9-]+$/.test(h0)){
         if(!sc){S.schools.push(mk(b.code,b.name,b.admin_name||'Zavuch',b.admin_email||'',b.admin_password||'darsjadvoli0751',b.lessonsCount===0))}
         else{sc.name=b.name}
       }
+      S.schools.forEach(ensureClasses);
       save();R();
     }
   }catch(e){}
