@@ -582,11 +582,15 @@ file(v,el){const f=el.files[0];if(!f)return;if(typeof XLSX==='undefined')return 
 
 function importRows(rows){
   const s=sch();let n=0;
+  const existingClasses=s.classes.slice();
+  const fileClasses=new Set();
+
   for(const r of rows){
     if(!r||r.length<6)continue;
     const k=String(r[0]).trim().toLowerCase();
     let d=/^\d$/.test(k)?+k-1:DS.findIndex(x=>x.toLowerCase()===k.slice(0,2));
     const rawClass=String(r[1]).trim();
+    if(!rawClass)continue;
     let c=s.classes.findIndex(x=>x.toLowerCase()===rawClass.toLowerCase()||x.toLowerCase().replace(/\s*sinf/,'')===rawClass.toLowerCase().replace(/\s*sinf/,''));
     if(c===-1){
       const num=parseInt(rawClass);
@@ -606,10 +610,31 @@ function importRows(rows){
     if(!s.g[d][c])s.g[d][c]=Array(7).fill(null);
     s.g[d][c][p]=[String(r[3]).trim(),String(r[4]||'').trim(),String(r[5]==null?'':r[5]).trim()];
     if(r[4]&&!s.teachers.includes(String(r[4]).trim()))s.teachers.push(String(r[4]).trim());
+    fileClasses.add(s.classes[c]);
     n++;
   }
   if(!n)return toast('Mos qator topilmadi. Ustunlar: Kun, Sinf, Soat, Fan, Ustoz, Xona');
-  s.subs=[];save();R();toast(`${n} ta dars yuklandi, to‘qnashuvlar: ${allClash(s)}`);
+  s.subs=[];
+  save();
+
+  // Bazada mavjud bo'lgan, ammo yangi faylda topilmagan sinflarni aniqlaymiz
+  const missingClasses=existingClasses.filter(cls=>!fileClasses.has(cls));
+
+  R();
+  const clashesCount=allClash(s);
+
+  if(missingClasses.length>0){
+    const missingStr=missingClasses.join(', ');
+    s.log.unshift({ts:Date.now(),text:`Excel yuklandi: ${missingClasses.length} ta sinf yangi faylda yo‘q (${missingClasses.slice(0,3).join(', ')}${missingClasses.length>3?'...':''})`});
+    s.notes.unshift({ts:Date.now(),c:'all',text:`⚠️ Yangi yuklangan faylda ${missingClasses.length} ta sinf yo‘q: ${missingStr}`});
+    save();
+    toast(`⚠️ ${n} ta dars yuklandi. ${missingClasses.length} ta sinf yangi faylda topilmadi!`);
+    setTimeout(()=>{
+      alert(`⚠️ Eslatma: Bazadagi quyidagi ${missingClasses.length} ta sinf yangi yuklangan faylda topilmadi:\n\n${missingStr}\n\nUshbu sinflarning avvalgi dars ma'lumotlari xavfsiz saqlanib qoldi.`);
+    }, 250);
+  } else {
+    toast(`✓ ${n} ta dars yuklandi, barcha sinflar mavjud. To‘qnashuvlar: ${clashesCount}`);
+  }
 }
 
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b&&A[b.dataset.a])A[b.dataset.a](b.dataset.v,b)});

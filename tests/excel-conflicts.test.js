@@ -160,3 +160,32 @@ test('Excel & Conflicts 4: swapLessons correctly exchanges subject, teacher, and
 
   closeDatabase();
 });
+
+test('Excel & Conflicts 5: Missing classes in new timetable import are detected and reported', () => {
+  const db = setupTestDb();
+
+  const school = schoolsRepo.getSchoolById(1) || schoolsRepo.addSchool({ name: '32-maktab', code: '32-MAKTAB' });
+  db.prepare('DELETE FROM groups WHERE school_id = ?').run(school.id);
+
+  const g5A = groupsRepo.addGroup({ school_id: school.id, name: '5-A sinf' });
+  const g11D = groupsRepo.addGroup({ school_id: school.id, name: '11-D sinf' });
+
+  // Simulate new timetable file that only contains lessons for 5-A, missing 11-D
+  const importedClasses = [
+    {
+      name: '5-A',
+      lessons: [{ subject: 'Matematika', day_of_week: 1, start_time: '08:00', end_time: '08:45' }]
+    }
+  ];
+
+  const existingGroups = groupsRepo.getAllGroups(true, school.id);
+  const importedNormNames = new Set(importedClasses.map(c => groupsRepo.normalizeClassName(c.name)));
+  const missingClasses = existingGroups
+    .filter(g => !importedNormNames.has(groupsRepo.normalizeClassName(g.name)))
+    .map(g => g.name);
+
+  assert.equal(missingClasses.length, 1, '1 ta sinf yetishmayotgan deb topilishi kerak');
+  assert.equal(missingClasses[0], '11-D sinf', '11-D sinf yetishmayotganligi aniqlanishi kerak');
+
+  closeDatabase();
+});

@@ -342,11 +342,18 @@ adminRouter.post('/import-timetable', (req, res) => {
       }
     }
 
+    const existingGroups = groupsRepo.getAllGroups(true, schoolId);
+    const importedNormNames = new Set(classes.map(c => groupsRepo.normalizeClassName(c.name)));
+    const missingClasses = existingGroups
+      .filter(g => !importedNormNames.has(groupsRepo.normalizeClassName(g.name)))
+      .map(g => g.name);
+
     res.json({
       success: true,
-      message: `Muvaffaqiyatli import qilindi: ${insertedClasses} ta sinf, ${insertedLessons} ta dars`,
+      message: `Muvaffaqiyatli import qilindi: ${insertedClasses} ta sinf, ${insertedLessons} ta dars${missingClasses.length ? ` (⚠️ ${missingClasses.length} ta sinf yangi faylda yo‘q: ${missingClasses.join(', ')})` : ''}`,
       insertedClasses,
-      insertedLessons
+      insertedLessons,
+      missingClasses
     });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
