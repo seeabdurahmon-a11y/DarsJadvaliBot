@@ -141,6 +141,36 @@ function genG(numClasses=40){
   return g;
 }
 
+function clashes(s,d){
+  const out=[],bad=new Set();
+  const numC=s.classes.length;
+  for(let p=0;p<7;p++){
+    const tm={},rm={};
+    for(let c=0;c<numC;c++){
+      const x=s.g[d]&&s.g[d][c]?s.g[d][c][p]:null;
+      if(!x)continue;
+      (tm[x[1]]=tm[x[1]]||[]).push(c);
+      if(x[2])(rm[x[2]]=rm[x[2]]||[]).push(c);
+    }
+    for(const[k,v]of Object.entries(tm)){
+      if(v.length>1){
+        const clsNames=v.map(i=>(s.classes[i]?s.classes[i].replace(/\s*sinf$/i,''):(i+1))+'-sinf');
+        out.push(`${k}: ${p+1}-soat, ${clsNames.join(' va ')}larda bir vaqtda`);
+        v.forEach(c=>bad.add(c+'-'+p));
+      }
+    }
+    for(const[k,v]of Object.entries(rm)){
+      if(v.length>1){
+        const clsNames=v.map(i=>(s.classes[i]?s.classes[i].replace(/\s*sinf$/i,''):(i+1))+'-sinf');
+        out.push(`${k}-xona: ${p+1}-soat, ${clsNames.join(' va ')}larga tushgan`);
+        v.forEach(c=>bad.add(c+'-'+p));
+      }
+    }
+  }
+  return{out,bad};
+}
+function allClash(s){return [0,1,2,3,4,5].reduce((a,d)=>a+clashes(s,d).out.length,0);}
+
 function resolveClashes(s){
   let count=0;
   const pool=[...new Set([...(s.teachers||[]),...TEACH_NAMES])];
@@ -286,36 +316,6 @@ const clsOpts=sel=>opts(sch().classes.map((c,i)=>[i,c+(/sinf$/i.test(c)?'':' sin
 
 function holiday(s,d){const h=s.hol.find(h=>d>=h.a&&d<=h.b);return h?h.n:(s.off.includes(d)?'Kutilmagan ta’til (sovuq kun)':null)}
 function resume(s,d){let x=addDays(d,1);for(let i=0;i<500;i++){if(wdOf(x)!==0&&!holiday(s,x))return x;x=addDays(x,1)}return x}
-
-function clashes(s,d){
-  const out=[],bad=new Set();
-  const numC=s.classes.length;
-  for(let p=0;p<7;p++){
-    const tm={},rm={};
-    for(let c=0;c<numC;c++){
-      const x=s.g[d]&&s.g[d][c]?s.g[d][c][p]:null;
-      if(!x)continue;
-      (tm[x[1]]=tm[x[1]]||[]).push(c);
-      if(x[2])(rm[x[2]]=rm[x[2]]||[]).push(c);
-    }
-    for(const[k,v]of Object.entries(tm)){
-      if(v.length>1){
-        const clsNames=v.map(i=>(s.classes[i]?s.classes[i].replace(/\s*sinf$/i,''):(i+1))+'-sinf');
-        out.push(`${k}: ${p+1}-soat, ${clsNames.join(' va ')}larda bir vaqtda`);
-        v.forEach(c=>bad.add(c+'-'+p));
-      }
-    }
-    for(const[k,v]of Object.entries(rm)){
-      if(v.length>1){
-        const clsNames=v.map(i=>(s.classes[i]?s.classes[i].replace(/\s*sinf$/i,''):(i+1))+'-sinf');
-        out.push(`${k}-xona: ${p+1}-soat, ${clsNames.join(' va ')}larga tushgan`);
-        v.forEach(c=>bad.add(c+'-'+p));
-      }
-    }
-  }
-  return{out,bad};
-}
-const allClash=s=>[0,1,2,3,4,5].reduce((a,d)=>a+clashes(s,d).out.length,0);
 
 function holList(s,ed){const T=today(),cur=holiday(s,T);return (cur?`<div class="ok">Hozir: ${esc(cur)}. Darslar ${fmt(resume(s,T))} da boshlanadi.</div>`:'')+s.hol.slice().sort((a,b)=>a.a<b.a?-1:1).map((h,i)=>`<div class="nt" style="border-left-color:var(--mint)"><b>${esc(h.n)}</b><small>${fmt(h.a)} — ${fmt(h.b)} · darslar ${fmt(resume(s,h.b))} da</small>${ed?`<button class="lk" data-a="holdel" data-v="${s.hol.indexOf(h)}">o‘chirish</button>`:''}</div>`).join('')+s.off.map(d=>`<div class="nt" style="border-left-color:var(--coral)">Kutilmagan ta’til: ${fmt(d)}${ed?` <button class="lk" data-a="offdel" data-v="${d}">bekor qilish</button>`:''}</div>`).join('')}
 const noteList=a=>a.slice(0,5).map(n=>`<div class="nt">${esc(n.text)}<small>${new Date(n.ts).toLocaleString('uz-UZ')}</small></div>`).join('')||'<p class="note">Xabarlar yo‘q</p>';
