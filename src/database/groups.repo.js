@@ -76,12 +76,19 @@ export const groupsRepo = {
       }
     }
 
-    // 4. Substring comparison
-    if (norm.length >= 2) {
+    // 4. Exact number + letter match (e.g. "11 D" -> "11-D", not "1-D")
+    const inputParts = clean.match(/^(\d{1,2})\s*[-_ ]?\s*([a-zA-Zа-яА-ЯёЁўқғҳЎҚҒҲ]?)/i);
+    if (inputParts) {
+      const inputNum = parseInt(inputParts[1], 10);
+      const inputLetter = (inputParts[2] || '').toLowerCase();
       for (const g of all) {
-        const gNorm = this.normalizeClassName(g.name);
-        if (gNorm.includes(norm) || norm.includes(gNorm)) {
-          return g;
+        const gParts = g.name.match(/^(\d{1,2})\s*[-_ ]?\s*([a-zA-Zа-яА-ЯёЁўқғҳЎҚҒҲ]?)/i);
+        if (gParts) {
+          const gNum = parseInt(gParts[1], 10);
+          const gLetter = (gParts[2] || '').toLowerCase();
+          if (gNum === inputNum && gLetter === inputLetter) {
+            return g;
+          }
         }
       }
     }

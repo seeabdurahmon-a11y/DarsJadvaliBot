@@ -401,12 +401,16 @@ if(t==='imp')h+=`<div class="banner">
   <button class="btn" data-a="dl_template">📥 Excel shablonni yuklab olish (.xlsx)</button>
   <button class="btn alt" data-a="dl_template_csv">📥 CSV shablonni yuklab olish (.csv)</button>
 </div>
-<label style="margin-top:16px;"><b>Excel yoki CSV faylingizni tanlang:</b>
-  <input type="file" accept=".xlsx,.xls,.csv" data-c="file" style="margin-top:6px;">
-</label>
-<div class="form" style="margin-top:16px;">
-  <button class="btn" data-a="synctoserver" style="background:#059669;color:#fff;font-weight:700;">🔄 Jadvalni Bot va Serverga saqlash</button>
-  <button class="btn alt sm" data-a="clearsched">🧹 Barcha darslarni tozalash (bo'sh jadval)</button>
+<div class="card" style="margin-top:16px;border:2px solid var(--line);border-radius:16px;padding:16px;background:var(--card);">
+  <label style="font-size:1rem;margin-bottom:8px;"><b>📁 Excel yoki CSV faylingizni tanlang:</b></label>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+    <input type="file" accept=".xlsx,.xls,.csv" data-c="file" style="flex:2 1 240px;margin-top:0;">
+    <button class="btn" data-a="synctoserver" style="background:#059669;color:#fff;font-weight:700;display:inline-flex;align-items:center;gap:6px;">💾 Bot va Serverga saqlash</button>
+    <button class="btn red sm" data-a="clearsched" title="Barcha darslarni o'chirish">🧹 Barcha darslarni tozalash</button>
+  </div>
+  <small style="margin-top:8px;color:var(--muted)">Fayl tanlanganda tizim uni avtomatik o'qiydi (Matritsa yoki Ro'yxat formati). "Bot va Serverga saqlash" tugmasini bosganda barcha sinflar Telegram botga yoziladi.</small>
+</div>
+<div class="form" style="margin-top:14px;">
   <button class="btn alt sm" data-a="reset">Namuna jadvalni tiklash</button>
   ${allClash(s)?`<button class="btn sm" data-a="autoresolve" style="background:var(--coral);color:#111;">⚡ To'qnashuvlarni avtomatik tuzatish (${allClash(s)} ta)</button>`:''}
 </div>
@@ -646,6 +650,89 @@ file(v,el){const f=el.files[0];if(!f)return;if(typeof XLSX==='undefined')return 
 
 function importRows(rows){
   const s=sch();let n=0;
+
+  // 1. Matritsa formati (Sinflar ustunlarda: 1A, 1B, 1D... Kun va Soat qatorlarda)
+  let matrixClassRow = -1;
+  const matrixClassCols = [];
+  for (let r = 0; r < Math.min(10, rows.length); r++) {
+    const row = rows[r];
+    if (!row) continue;
+    let clsFound = 0;
+    for (let c = 0; c < row.length; c++) {
+      const val = String(row[c] || '').trim();
+      if (/^(\d{1,2})\s*[-_ ]?\s*([a-zA-Zа-яА-ЯёЁ])$/i.test(val)) {
+        clsFound++;
+      }
+    }
+    if (clsFound >= 3) {
+      matrixClassRow = r;
+      for (let c = 0; c < row.length; c++) {
+        const val = String(row[c] || '').trim();
+        const m = val.match(/^(\d{1,2})\s*[-_ ]?\s*([a-zA-Zа-яА-ЯёЁ])$/i);
+        if (m) {
+          matrixClassCols.push({ colIdx: c, className: `${m[1]}-${m[2].toUpperCase()}` });
+        }
+      }
+      break;
+    }
+  }
+
+  if (matrixClassRow !== -1 && matrixClassCols.length >= 3) {
+    const newClasses = matrixClassCols.map(x => x.className);
+    s.classes = newClasses;
+    s.g = Array.from({ length: 6 }, () =>
+      Array.from({ length: newClasses.length }, () => Array(7).fill(null))
+    );
+
+    const DAY_MAP = {
+      'du': 0, 'dushanba': 0, '1': 0,
+      'se': 1, 'seshanba': 1, '2': 1,
+      'ch': 2, 'chorshanba': 2, '3': 2,
+      'pa': 3, 'payshanba': 3, '4': 3,
+      'ju': 4, 'juma': 4, '5': 4,
+      'sh': 5, 'shanba': 5, '6': 5
+    };
+
+    let curDay = 0;
+    for (let r = matrixClassRow + 1; r < rows.length; r++) {
+      const row = rows[r];
+      if (!row || !row.length) continue;
+
+      const dStr = String(row[0] || '').trim().toLowerCase();
+      if (dStr && DAY_MAP[dStr] !== undefined) {
+        curDay = DAY_MAP[dStr];
+      }
+
+      const pVal = parseInt(row[1], 10);
+      if (isNaN(pVal) || pVal < 1 || pVal > 7) continue;
+      const p = pVal - 1;
+
+      for (let i = 0; i < matrixClassCols.length; i++) {
+        const colIdx = matrixClassCols[i].colIdx;
+        const subjRaw = String(row[colIdx] || '').trim();
+        if (!subjRaw || subjRaw === '-' || subjRaw === '.') continue;
+
+        const teacher = TEACH_NAMES[i % TEACH_NAMES.length] || "O'qituvchi";
+        const room = String(101 + i);
+        s.g[curDay][i][p] = [subjRaw, teacher, room];
+        n++;
+      }
+    }
+
+    s.subs = [];
+    save();
+    R();
+
+    toast(`✓ ${n} ta dars muvaffaqiyatli yuklandi (${newClasses.length} ta sinf)`);
+    setTimeout(() => {
+      if (confirm(`✅ "${newClasses.length}" ta sinf va ${n} ta dars jadvali muvaffaqiyatli o'qildi!\n\nUni hoziroq Telegram bot va asosiy server bilan sinxronlashtirib saqlaysizmi?`)) {
+        A.synctoserver();
+      }
+    }, 350);
+    return;
+  }
+
+  // 2. Standart ustunlar formati (Kun | Sinf | Soat | Fan | Ustoz | Xona)
   const existingClasses=s.classes.slice();
   const fileClasses=new Set();
 
