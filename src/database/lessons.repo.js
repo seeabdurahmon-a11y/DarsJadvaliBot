@@ -138,6 +138,15 @@ export const lessonsRepo = {
     return db.prepare(`DELETE FROM lessons WHERE group_id = ?`).run(groupId);
   },
 
+  deleteLessonsBySchoolId(schoolId) {
+    const db = getDatabase();
+    return db.prepare(`
+      DELETE FROM lessons 
+      WHERE school_id = ? 
+         OR group_id IN (SELECT id FROM groups WHERE school_id = ?)
+    `).run(schoolId, schoolId);
+  },
+
   getAllLessons(groupId = null, schoolId = null) {
     const db = getDatabase();
     let query = `

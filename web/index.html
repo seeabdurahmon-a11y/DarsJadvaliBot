@@ -91,9 +91,9 @@ const TEACH=[['Karimova D.','Matematika'],['Yusupov A.','Adabiyot'],['Rahimova S
 const TEACH_NAMES=[
   'Karimova D.','Yusupov A.','Rahimova S.','Tursunov B.','Qodirov O.','Nazarova M.','Aliyev R.','Saidova N.',
   'Ergashev T.','Hasanova L.','Mirzayev J.','Ismoilova G.','Boboyev F.','Xoliqova N.','Omonov K.','Abdullayev M.',
-  'Toshmatov Sh.','Sultonova D.','Jalilov E.','Po‘latov I.','Xudoyberdiyev U.','Rustamova Z.','Madaminov A.','Berdiyeva G.',
+  'Toshmatov Sh.','Sultonova D.','Jalilov E.',"Po'latov I.",'Xudoyberdiyev U.','Rustamova Z.','Madaminov A.','Berdiyeva G.',
   'Yoqubov S.','Sobirova M.','Xasanov B.','Sharipov F.','Mamatqulov N.','Eshmatova D.','Axmedov J.','Normatov R.',
-  'Qosimova O.','Davlatov T.','G‘aniyeva S.','Zokirov A.','Komilova M.','Nematov K.','Vohidova L.','Fayziyev R.'
+  'Qosimova O.','Davlatov T.',"G'aniyeva S.",'Zokirov A.','Komilova M.','Nematov K.','Vohidova L.','Fayziyev R.'
 ];
 const ALL_PARALLEL_CLS=[
   '1-A','1-B','1-D','1-G',
@@ -120,7 +120,7 @@ function genG(numClasses=40){
   const g=[];
   const pool=[];
   for(let i=0;i<Math.max(numClasses,TEACH_NAMES.length);i++){
-    const name=TEACH_NAMES[i]||('O‘qituvchi '+(i+1));
+    const name=TEACH_NAMES[i]||("O'qituvchi "+(i+1));
     const subj=TEACH[i%TEACH.length][1];
     pool.push([name,subj]);
   }
@@ -268,7 +268,7 @@ function mk(code,name,zav,email,pass,empty=false,customClasses=null){
     classes:cls,
     g:empty?Array.from({length:6},()=>Array.from({length:num},()=>Array(7).fill(null))):genG(num),
     subs:[],notes:[],log:[],teachers:TEACH_NAMES.slice(),
-    hol:[{n:'Kuzgi ta’til',a:'2026-11-04',b:'2026-11-10'},{n:'Qishki ta’til',a:'2026-12-28',b:'2027-01-10'},{n:'Bahorgi ta’til',a:'2027-03-21',b:'2027-03-27'},{n:'Yozgi ta’til',a:'2027-05-25',b:'2027-09-01'}],
+    hol:[{n:"Kuzgi ta'til",a:'2026-11-04',b:'2026-11-10'},{n:"Qishki ta'til",a:'2026-12-28',b:'2027-01-10'},{n:"Bahorgi ta'til",a:'2027-03-21',b:'2027-03-27'},{n:"Yozgi ta'til",a:'2027-05-25',b:'2027-09-01'}],
     off:[],ex:[{d:addDays(t,3),c:0,s:'Matematika',k:'Nazorat ishi'},{d:addDays(t,6),c:1,s:'Fizika',k:'Imtihon'},{d:addDays(t,5),c:4,s:'Ona tili',k:'Diktant'}]
   };
 }
@@ -291,7 +291,7 @@ if(!S||!S.schools)S={pass:'admin',schools:[
   mk('M-02','1-maktab','Aliyeva N.','1-maktab@darsjadvali.uz','darsjadvoli0751',false,ALL_PARALLEL_CLS.slice()),
   mk('M-45','45-maktab','Hamidova Z.','hamidova@m45.uz','4545')
 ]};
-// M-01 va M-02 maktablari uchun 40 ta to‘liq parallel sinflarni ta'minlaymiz
+// M-01 va M-02 maktablari uchun 40 ta to'liq parallel sinflarni ta'minlaymiz
 const m01=S.schools.find(x=>x.code==='M-01');
 if(m01&&m01.classes.length<20){
   m01.classes=ALL_PARALLEL_CLS.slice();
@@ -314,37 +314,44 @@ const toast=m=>{const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(
 const opts=(a,sel)=>a.map(([v,l])=>`<option value="${esc(v)}" ${String(v)===String(sel)?'selected':''}>${esc(l)}</option>`).join('');
 const clsOpts=sel=>opts(sch().classes.map((c,i)=>[i,c+(/sinf$/i.test(c)?'':' sinf')]),sel);
 
-function holiday(s,d){const h=s.hol.find(h=>d>=h.a&&d<=h.b);return h?h.n:(s.off.includes(d)?'Kutilmagan ta’til (sovuq kun)':null)}
+function holiday(s,d){const h=s.hol.find(h=>d>=h.a&&d<=h.b);return h?h.n:(s.off.includes(d)?"Kutilmagan ta'til (sovuq kun)":null)}
 function resume(s,d){let x=addDays(d,1);for(let i=0;i<500;i++){if(wdOf(x)!==0&&!holiday(s,x))return x;x=addDays(x,1)}return x}
 
-function holList(s,ed){const T=today(),cur=holiday(s,T);return (cur?`<div class="ok">Hozir: ${esc(cur)}. Darslar ${fmt(resume(s,T))} da boshlanadi.</div>`:'')+s.hol.slice().sort((a,b)=>a.a<b.a?-1:1).map((h,i)=>`<div class="nt" style="border-left-color:var(--mint)"><b>${esc(h.n)}</b><small>${fmt(h.a)} — ${fmt(h.b)} · darslar ${fmt(resume(s,h.b))} da</small>${ed?`<button class="lk" data-a="holdel" data-v="${s.hol.indexOf(h)}">o‘chirish</button>`:''}</div>`).join('')+s.off.map(d=>`<div class="nt" style="border-left-color:var(--coral)">Kutilmagan ta’til: ${fmt(d)}${ed?` <button class="lk" data-a="offdel" data-v="${d}">bekor qilish</button>`:''}</div>`).join('')}
-const noteList=a=>a.slice(0,5).map(n=>`<div class="nt">${esc(n.text)}<small>${new Date(n.ts).toLocaleString('uz-UZ')}</small></div>`).join('')||'<p class="note">Xabarlar yo‘q</p>';
+function holList(s,ed){const T=today(),cur=holiday(s,T);return (cur?`<div class="ok">Hozir: ${esc(cur)}. Darslar ${fmt(resume(s,T))} da boshlanadi.</div>`:'')+s.hol.slice().sort((a,b)=>a.a<b.a?-1:1).map((h,i)=>`<div class="nt" style="border-left-color:var(--mint)"><b>${esc(h.n)}</b><small>${fmt(h.a)} — ${fmt(h.b)} · darslar ${fmt(resume(s,h.b))} da</small>${ed?`<button class="lk" data-a="holdel" data-v="${s.hol.indexOf(h)}">o'chirish</button>`:''}</div>`).join('')+s.off.map(d=>`<div class="nt" style="border-left-color:var(--coral)">Kutilmagan ta'til: ${fmt(d)}${ed?` <button class="lk" data-a="offdel" data-v="${d}">bekor qilish</button>`:''}</div>`).join('')}
+const noteList=a=>a.slice(0,5).map(n=>`<div class="nt">${esc(n.text)}<small>${new Date(n.ts).toLocaleString('uz-UZ')}</small></div>`).join('')||`<p class="note">Xabarlar yo'q</p>`;
 const tabs=(a,cur,act)=>`<div class="tabs">${a.map(([k,l])=>`<button class="${k===cur?'on':''}" data-a="${act}" data-v="${k}">${l}</button>`).join('')}</div>`;
 
 function zav(){const s=sch(),t=V.tab||'matrix';
-let h=`<div class="tabs" style="margin-top:0;justify-content:space-between;align-items:center;"><b class="disp" style="font-size:1.25rem;">${esc(s.name)} · <span class="mono" style="background:var(--line);padding:2px 8px;border-radius:6px;font-size:12px;">${esc(s.code)}</span></b><span class="note" style="font-size:12px;">Telegram botga ulangan</span></div>`+tabs([['matrix','Master jadval'],['cls','Sinflar'],['ex','Imtihonlar'],['hol','Ta’tillar'],['imp','Excel import'],['msg','Xabarnoma']],t,'tab');
+let h=`<div class="tabs" style="margin-top:0;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">`
+  +`<b class="disp" style="font-size:1.25rem;">${esc(s.name)} · <span class="mono" style="background:var(--line);padding:2px 8px;border-radius:6px;font-size:12px;">${esc(s.code)}</span></b>`
+  +`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">`
+  +`<button class="btn sm" data-a="synctoserver" id="btn_sync_server" style="background:#059669;color:#fff;font-weight:700;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(5,150,105,0.3);">🔄 Bot va Serverga saqlash</button>`
+  +`<button class="btn sm alt" data-a="pullfromserver" title="Serverdagi real jadvalni saytga yuklab olish">📥 Serverdan olish</button>`
+  +`</div>`
+  +`</div>`
+  +tabs([['matrix','Master jadval'],['cls','Sinflar'],['ex','Imtihonlar'],['hol',"Ta'tillar"],['imp','Excel import'],['msg','Xabarnoma']],t,'tab');
 if(t==='matrix'){
   const cl=clashes(s,V.day);
   const totalCl=allClash(s);
   h+=tabs(DAYS.map((d,i)=>[i,d]),V.day,'day')
     +(cl.out.length?`
       <div class="alert" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-        <div><b>⚠ Bugun ${cl.out.length} ta to‘qnashuv bor (haftada jami: ${totalCl} ta):</b><br><small style="margin-top:4px;">${cl.out.slice(0,3).map(esc).join(' · ')}${cl.out.length>3?` va yana ${cl.out.length-3} ta...`:''}</small></div>
+        <div><b>⚠ Bugun ${cl.out.length} ta to'qnashuv bor (haftada jami: ${totalCl} ta):</b><br><small style="margin-top:4px;">${cl.out.slice(0,3).map(esc).join(' · ')}${cl.out.length>3?` va yana ${cl.out.length-3} ta...`:''}</small></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn sm" data-a="autoresolve" style="background:#111;color:#fff;">⚡ Avtomatik to‘g‘rilash</button>
-          <button class="btn sm alt" data-a="clearsched">🧹 Bo‘sh jadval</button>
+          <button class="btn sm" data-a="autoresolve" style="background:#111;color:#fff;">⚡ Avtomatik to'g'rilash</button>
+          <button class="btn sm alt" data-a="clearsched">🧹 Bo'sh jadval</button>
         </div>
-      </div>`:'<div class="ok" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;"><span>✓ Bu kunda to‘qnashuv yo‘q</span><button class="btn sm alt" data-a="clearsched">🧹 Darslarni tozalash</button></div>')
+      </div>`:`<div class="ok" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;"><span>✓ Bu kunda to'qnashuv yo'q</span><button class="btn sm alt" data-a="clearsched">🧹 Darslarni tozalash</button></div>`)
     +`<div class="scroll"><table class="mx"><tr><th>Sinf</th>${TIMES.map((tm,p)=>`<th>${p+1}-soat<br>${tm}</th>`).join('')}</tr>`
     +s.classes.map((clsName,c)=>{
       const row=(s.g[V.day]&&s.g[V.day][c])||Array(7).fill(null);
-      return `<tr><th style="min-width:100px;padding:6px 8px;vertical-align:middle;"><div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><b style="font-size:.9rem;">${esc(clsName)}</b><button type="button" class="lk" data-a="cclsedit" data-v="${c}" title="Nomini o‘zgartirish (masalan 1-A)">✏️</button></div></th>`
+      return `<tr><th style="min-width:100px;padding:6px 8px;vertical-align:middle;"><div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><b style="font-size:.9rem;">${esc(clsName)}</b><button type="button" class="lk" data-a="cclsedit" data-v="${c}" title="Nomini o'zgartirish (masalan 1-A)">✏️</button></div></th>`
         +row.map((x,p)=>`<td class="${cl.bad.has(c+'-'+p)?'x':x?'':'e'}" ${x?`style="--h:${hue(x[0])}"`:''} data-a="cell" data-v="${c}-${p}">${x?`${esc(x[0])}<small>${esc(x[1])} · ${esc(x[2])}</small>`:'+'}</td>`).join('')
         +`</tr>`;
     }).join('')
     +`</table></div>`
     +`<div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap;">`
-    +`<button class="btn sm" data-a="cclsadd">➕ Yangi sinf qo‘shish</button>`
+    +`<button class="btn sm" data-a="cclsadd">➕ Yangi sinf qo'shish</button>`
     +`<button class="btn sm alt" data-a="tab" data-v="cls">Sinflarni boshqarish ⚙️ (${s.classes.length} ta sinf)</button>`
     +`<button class="btn sm alt" data-a="clearsched">🧹 Darslarni tozalash</button>`
     +`<span class="note">Katakni bosing: tahrirlash yoki 1 bosishda almashtirish (zamena).</span>`
@@ -352,11 +359,11 @@ if(t==='matrix'){
 }
 if(t==='cls'){
   h+=`<div class="card" style="margin-top:0;">`
-    +`<h2 class="disp" style="margin-bottom:6px;">Sinflar ro‘yxati (${s.classes.length} ta sinf)</h2>`
-    +`<p class="note" style="margin-bottom:14px;">Maktabingizdagi barcha sinflar (1-A, 1-B, 11-D...) ro‘yxatini erkin boshqaring. Istalgan sinf nomini o‘zgartirish, yangi sinf qo‘shish yoki o‘chirish mumkin.</p>`
+    +`<h2 class="disp" style="margin-bottom:6px;">Sinflar ro'yxati (${s.classes.length} ta sinf)</h2>`
+    +`<p class="note" style="margin-bottom:14px;">Maktabingizdagi barcha sinflar (1-A, 1-B, 11-D...) ro'yxatini erkin boshqaring. Istalgan sinf nomini o'zgartirish, yangi sinf qo'shish yoki o'chirish mumkin.</p>`
     +`<div class="form">`
     +`<label style="flex:2 1 200px;">Yangi sinf nomi<input id="nc_name" placeholder="Masalan: 11-D yoki 5-A"></label>`
-    +`<button class="btn" data-a="addclassbtn">➕ Sinf qo‘shish</button>`
+    +`<button class="btn" data-a="addclassbtn">➕ Sinf qo'shish</button>`
     +`<button class="btn alt sm" data-a="presetparallel40">⚡ 1-A dan 11-G gacha (40 ta sinf: 11-D bilan)</button>`
     +`<button class="btn alt sm" data-a="presetparallel">1-A dan 11-B gacha (22 ta sinf)</button>`
     +`<button class="btn alt sm" data-a="presetstd">1-11 standart (11 ta sinf)</button>`
@@ -375,20 +382,20 @@ if(t==='cls'){
         +`<td><span style="font-size:1.05rem;font-weight:700;">${esc(clsName)}</span> <span class="note">sinf</span></td>`
         +`<td><b>${totalL}</b> ta dars</td>`
         +`<td style="text-align:right;">`
-        +`<button class="btn sm alt" data-a="cclsedit" data-v="${i}">✏️ O‘zgartirish</button> `
-        +`<button class="btn sm red" data-a="cclsdel" data-v="${i}">🗑 O‘chirish</button>`
+        +`<button class="btn sm alt" data-a="cclsedit" data-v="${i}">✏️ O'zgartirish</button> `
+        +`<button class="btn sm red" data-a="cclsdel" data-v="${i}">🗑 O'chirish</button>`
         +`</td>`
         +`</tr>`;
     }).join('')
     +`</table></div>`
     +`</div>`;
 }
-if(t==='ex')h+=`<div class="form"><label>Sinf<select id="xc">${clsOpts(0)}</select></label><label>Fan<input id="xs" placeholder="Matematika"></label><label>Turi<select id="xk">${opts(['Nazorat ishi','Imtihon','Diktant','Test'].map(x=>[x,x]),'')}</select></label><label>Sana<input id="xd" type="date" value="${addDays(today(),3)}"></label><button class="btn" data-a="exadd">Qo‘shish</button></div>`+s.ex.slice().sort((a,b)=>a.d<b.d?-1:1).map(e=>`<div class="nt"><b>${esc(s.classes[e.c]||(e.c+1)+'-sinf')} · ${esc(e.s)}</b> — ${esc(e.k)}, ${fmt(e.d)} <button class="lk" data-a="exdel" data-v="${s.ex.indexOf(e)}">o‘chirish</button></div>`).join('');
-if(t==='hol')h+=`<div class="form"><button class="btn red" data-a="offtoday">Bugun dars yo‘q (sovuq kun)</button><button class="btn alt" data-a="offtom">Ertaga dars yo‘q</button></div><div class="form"><label>Nomi<input id="hn" placeholder="Qishki ta’til"></label><label>Boshlanishi<input id="ha" type="date"></label><label>Tugashi<input id="hb" type="date"></label><button class="btn" data-a="holadd">Ta’til qo‘shish</button></div>`+holList(s,true);
+if(t==='ex')h+=`<div class="form"><label>Sinf<select id="xc">${clsOpts(0)}</select></label><label>Fan<input id="xs" placeholder="Matematika"></label><label>Turi<select id="xk">${opts(['Nazorat ishi','Imtihon','Diktant','Test'].map(x=>[x,x]),'')}</select></label><label>Sana<input id="xd" type="date" value="${addDays(today(),3)}"></label><button class="btn" data-a="exadd">Qo'shish</button></div>`+s.ex.slice().sort((a,b)=>a.d<b.d?-1:1).map(e=>`<div class="nt"><b>${esc(s.classes[e.c]||(e.c+1)+'-sinf')} · ${esc(e.s)}</b> — ${esc(e.k)}, ${fmt(e.d)} <button class="lk" data-a="exdel" data-v="${s.ex.indexOf(e)}">o'chirish</button></div>`).join('');
+if(t==='hol')h+=`<div class="form"><button class="btn red" data-a="offtoday">Bugun dars yo'q (sovuq kun)</button><button class="btn alt" data-a="offtom">Ertaga dars yo'q</button></div><div class="form"><label>Nomi<input id="hn" placeholder="Qishki ta'til"></label><label>Boshlanishi<input id="ha" type="date"></label><label>Tugashi<input id="hb" type="date"></label><button class="btn" data-a="holadd">Ta'til qo'shish</button></div>`+holList(s,true);
 if(t==='imp')h+=`<div class="banner">
   <b>Excel / CSV orqali dars jadvalini yuklash.</b><br>
   Ustunlar tartibi: <span class="mono">Kun | Sinf | Soat | Fan | Ustoz | Xona</span><br>
-  <small style="margin-top:4px;color:var(--muted)">Kun: 1–6 yoki Du, Se, Ch, Pa, Ju, Sh. Sinf: 1-A, 1-B, 11-D... Soat: 1–7. Birinchi qator sarlavha bo‘lishi mumkin.</small>
+  <small style="margin-top:4px;color:var(--muted)">Kun: 1–6 yoki Du, Se, Ch, Pa, Ju, Sh. Sinf: 1-A, 1-B, 11-D... Soat: 1–7. Birinchi qator sarlavha bo'lishi mumkin.</small>
 </div>
 <div style="display:flex;gap:10px;margin:14px 0;flex-wrap:wrap;align-items:center;">
   <button class="btn" data-a="dl_template">📥 Excel shablonni yuklab olish (.xlsx)</button>
@@ -398,21 +405,22 @@ if(t==='imp')h+=`<div class="banner">
   <input type="file" accept=".xlsx,.xls,.csv" data-c="file" style="margin-top:6px;">
 </label>
 <div class="form" style="margin-top:16px;">
-  <button class="btn alt sm" data-a="clearsched">🧹 Barcha darslarni tozalash (bo‘sh jadval)</button>
+  <button class="btn" data-a="synctoserver" style="background:#059669;color:#fff;font-weight:700;">🔄 Jadvalni Bot va Serverga saqlash</button>
+  <button class="btn alt sm" data-a="clearsched">🧹 Barcha darslarni tozalash (bo'sh jadval)</button>
   <button class="btn alt sm" data-a="reset">Namuna jadvalni tiklash</button>
-  ${allClash(s)?`<button class="btn sm" data-a="autoresolve" style="background:var(--coral);color:#111;">⚡ To‘qnashuvlarni avtomatik tuzatish (${allClash(s)} ta)</button>`:''}
+  ${allClash(s)?`<button class="btn sm" data-a="autoresolve" style="background:var(--coral);color:#111;">⚡ To'qnashuvlarni avtomatik tuzatish (${allClash(s)} ta)</button>`:''}
 </div>
-<p class="note" style="margin-top:8px;">Hozir tizimda ${allClash(s)} ta to‘qnashuv bor.</p>`;
-if(t==='msg')h+=`<div class="form"><button class="btn" data-a="bcast">06:00 ertalabki jadvalni yuborish (sinov)</button></div><label>Xabar / e’lon<textarea id="mt" placeholder="Eslatma matni..."></textarea></label><div class="form"><label>Kimga<select id="mc">${opts([['all','Barcha sinflar'],...s.classes.map((name,i)=>[i,name.replace(/\s*sinf$/i,'')+' sinf'])],'all')}</select></label><button class="btn" data-a="send">Yuborish</button></div><p class="note">Avtomatik qoidalar: har kuni 06:00 da Telegram orqali tarqatish; yakshanba va ta’tillarda jim turish; dars boshlanishidan 5 daqiqa oldin eslatma.</p><h3 class="disp">Jurnal</h3>${s.log.slice(0,8).map(l=>`<div class="nt">${esc(l.text)}<small>${new Date(l.ts).toLocaleString('uz-UZ')}</small></div>`).join('')||'<p class="note">Hali yuborilmagan</p>'}<h3 class="disp">Yuborilgan xabarlar</h3>`+noteList(s.notes);
+<p class="note" style="margin-top:8px;">Hozir tizimda ${allClash(s)} ta to'qnashuv bor.</p>`;
+if(t==='msg')h+=`<div class="form"><button class="btn" data-a="bcast">06:00 ertalabki jadvalni yuborish (sinov)</button></div><label>Xabar / e'lon<textarea id="mt" placeholder="Eslatma matni..."></textarea></label><div class="form"><label>Kimga<select id="mc">${opts([['all','Barcha sinflar'],...s.classes.map((name,i)=>[i,name.replace(/\s*sinf$/i,'')+' sinf'])],'all')}</select></label><button class="btn" data-a="send">Yuborish</button></div><p class="note">Avtomatik qoidalar: har kuni 06:00 da Telegram orqali tarqatish; yakshanba va ta'tillarda jim turish; dars boshlanishidan 5 daqiqa oldin eslatma.</p><h3 class="disp">Jurnal</h3>${s.log.slice(0,8).map(l=>`<div class="nt">${esc(l.text)}<small>${new Date(l.ts).toLocaleString('uz-UZ')}</small></div>`).join('')||'<p class="note">Hali yuborilmagan</p>'}<h3 class="disp">Yuborilgan xabarlar</h3>`+noteList(s.notes);
 return h}
 
 function login(){const ic=d=>`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
-return `<div class="lg"><img src="/img/schedule-logo.jpg" alt="Maktab Jadvali" class="lgi-img"><h1 class="disp lgt">Maktab Jadvali</h1><p class="lgs">Zavuch boshqaruv paneli</p><div class="lgc"><label>Foydalanuvchi nomi<span class="fld"><i>${ic('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')}</i><input id="u" value="${esc(V.pre||'')}" placeholder="Maktab kodi yoki email" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false"></span></label><label>Parol<span class="fld"><i>${ic('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>')}</i><input id="pw" type="password" autocomplete="current-password"><button type="button" class="eye" data-a="eye" aria-label="Parolni ko‘rsatish">${ic('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>')}</button></span></label><p class="err">${esc(V.err)}</p><button class="btn lgb" data-a="login">Kirish</button></div></div>`}
+return `<div class="lg"><img src="/img/schedule-logo.jpg" alt="Maktab Jadvali" class="lgi-img"><h1 class="disp lgt">Maktab Jadvali</h1><p class="lgs">Zavuch boshqaruv paneli</p><div class="lgc"><label>Foydalanuvchi nomi<span class="fld"><i>${ic('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')}</i><input id="u" value="${esc(V.pre||'')}" placeholder="Maktab kodi yoki email" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false"></span></label><label>Parol<span class="fld"><i>${ic('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>')}</i><input id="pw" type="password" autocomplete="current-password"><button type="button" class="eye" data-a="eye" aria-label="Parolni ko'rsatish">${ic('<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>')}</button></span></label><p class="err">${esc(V.err)}</p><button class="btn lgb" data-a="login">Kirish</button></div></div>`}
 
 function modal(){const s=sch(),m=V.modal;
 const clsName=s.classes[m.c]||(m.c+1)+'-sinf';
 const x=s.g[V.day]&&s.g[V.day][m.c]?s.g[V.day][m.c][m.p]:null||['','',String(101+m.c)],tl=s.teachers.includes(x[1])||!x[1]?s.teachers:[x[1],...s.teachers],nd=(()=>{let d=today();for(let i=0;i<7&&wdOf(d)!==V.day+1;i++)d=addDays(d,1);return d})();
-return `<div class="ov"><div class="md"><h3 class="disp">${esc(clsName)} · ${m.p+1}-soat · ${DAYS[V.day]}</h3><label>Fan<input id="ms" list="sl" value="${esc(x[0])}"></label><datalist id="sl">${[...new Set(TEACH.map(t=>t[1]))].map(v=>`<option value="${v}">`).join('')}</datalist><label>Ustoz<select id="mt">${opts(tl.map(v=>[v,v]),x[1])}</select></label><label>Xona<input id="mr" value="${esc(x[2])}"></label><div class="form"><button class="btn" data-a="csave">Saqlash</button><button class="btn red" data-a="cdel">Darsni o‘chirish</button></div><hr><b>Darsni almashtirish (zamena)</b><label>Sana<input id="sd" type="date" value="${nd}"></label><label>Yangi ustoz<select id="st">${opts(s.teachers.map(v=>[v,v]),'')}</select></label><label>Yangi fan (ixtiyoriy)<input id="ss" list="sl"></label><div class="form"><button class="btn" data-a="dosub">Almashtirish va Telegramga yuborish</button><button class="btn alt" data-a="close">Yopish</button></div></div></div>`}
+return `<div class="ov"><div class="md"><h3 class="disp">${esc(clsName)} · ${m.p+1}-soat · ${DAYS[V.day]}</h3><label>Fan<input id="ms" list="sl" value="${esc(x[0])}"></label><datalist id="sl">${[...new Set(TEACH.map(t=>t[1]))].map(v=>`<option value="${v}">`).join('')}</datalist><label>Ustoz<select id="mt">${opts(tl.map(v=>[v,v]),x[1])}</select></label><label>Xona<input id="mr" value="${esc(x[2])}"></label><div class="form"><button class="btn" data-a="csave">Saqlash</button><button class="btn red" data-a="cdel">Darsni o'chirish</button></div><hr><b>Darsni almashtirish (zamena)</b><label>Sana<input id="sd" type="date" value="${nd}"></label><label>Yangi ustoz<select id="st">${opts(s.teachers.map(v=>[v,v]),'')}</select></label><label>Yangi fan (ixtiyoriy)<input id="ss" list="sl"></label><div class="form"><button class="btn" data-a="dosub">Almashtirish va Telegramga yuborish</button><button class="btn alt" data-a="close">Yopish</button></div></div></div>`}
 
 function R(){
 const hd=`<header><div style="display:flex;align-items:center;gap:10px;"><img src="/img/schedule-logo.jpg" alt="Logo" style="width:30px;height:30px;border-radius:9px;object-fit:cover;box-shadow:0 2px 8px rgba(61,90,255,.2);"><b class="disp">Maktab Jadvali</b></div><div style="display:flex;align-items:center;gap:8px;"><button class="btn sm alt" data-a="theme" title="Rejimni almashtirish">🌓</button>${V.in?'<button class="btn sm alt" data-a="out">Chiqish</button>':''}</div></header>`;
@@ -420,10 +428,10 @@ const b=V.in?zav():login();
 let modals=(V.modal?modal():'');
 if(V.clsEdit!==null&&V.clsEdit!==undefined){
   const s=sch();
-  modals+=`<div class="ov"><div class="md"><h3 class="disp">Sinf nomini o‘zgartirish</h3><label style="margin-top:10px;">Sinf nomi (masalan: 1-A, 1-B, 5-A)<input id="edit_cls_input" value="${esc(s.classes[V.clsEdit])}" autofocus></label><div class="form" style="margin-top:16px;"><button class="btn" data-a="saveclsname">Saqlash</button><button class="btn alt" data-a="closeclsmodal">Bekor</button></div></div></div>`;
+  modals+=`<div class="ov"><div class="md"><h3 class="disp">Sinf nomini o'zgartirish</h3><label style="margin-top:10px;">Sinf nomi (masalan: 1-A, 1-B, 5-A)<input id="edit_cls_input" value="${esc(s.classes[V.clsEdit])}" autofocus></label><div class="form" style="margin-top:16px;"><button class="btn" data-a="saveclsname">Saqlash</button><button class="btn alt" data-a="closeclsmodal">Bekor</button></div></div></div>`;
 }
 if(V.clsAddModal){
-  modals+=`<div class="ov"><div class="md"><h3 class="disp">Yangi sinf qo‘shish</h3><label style="margin-top:10px;">Sinf nomi (masalan: 1-B, 2-A)<input id="add_cls_input" placeholder="1-B" autofocus></label><div class="form" style="margin-top:16px;"><button class="btn" data-a="saveaddcls">Qo‘shish</button><button class="btn alt" data-a="closeclsmodal">Bekor</button></div></div></div>`;
+  modals+=`<div class="ov"><div class="md"><h3 class="disp">Yangi sinf qo'shish</h3><label style="margin-top:10px;">Sinf nomi (masalan: 1-B, 2-A)<input id="add_cls_input" placeholder="1-B" autofocus></label><div class="form" style="margin-top:16px;"><button class="btn" data-a="saveaddcls">Qo'shish</button><button class="btn alt" data-a="closeclsmodal">Bekor</button></div></div></div>`;
 }
 $('#app').innerHTML=hd+'<main>'+b+'</main>'+modals}
 
@@ -447,35 +455,35 @@ async login(){
   }catch(e){}
   const s=S.schools.find(x=>x.code.toUpperCase()===u.toUpperCase()||(x.email&&x.email.toLowerCase()===u.toLowerCase()));
   if(s&&(s.pass===p||p==='darsjadvoli0751')){Object.assign(V,{sid:s.code,in:true,tab:'matrix',err:''});return R()}
-  V.pre=u;V.err='Login yoki parol noto‘g‘ri';R()
+  V.pre=u;V.err="Login yoki parol noto'g'ri";R()
 },
 cell(v){const[c,p]=v.split('-').map(Number);V.modal={c,p};R()},
 csave(){const s=sch(),m=V.modal,f=$('#ms').value.trim();s.g[V.day][m.c][m.p]=f?[f,$('#mt').value,$('#mr').value.trim()]:null;save();V.modal=null;R()},
 cdel(){const m=V.modal;sch().g[V.day][m.c][m.p]=null;save();V.modal=null;R()},
 async dosub(){
   const s=sch(),m=V.modal,x=s.g[V.day][m.c][m.p],d=$('#sd').value,t=$('#st').value,ns=$('#ss').value.trim();
-  if(!x)return toast('Bu katakda dars yo‘q');if(!d||wdOf(d)!==V.day+1)return toast('Sana '+DAYS[V.day]+' kuniga to‘g‘ri kelishi kerak');
+  if(!x)return toast("Bu katakda dars yo'q");if(!d||wdOf(d)!==V.day+1)return toast("Sana "+DAYS[V.day]+" kuniga to'g'ri kelishi kerak");
   s.subs=s.subs.filter(z=>!(z.d===d&&z.c===m.c&&z.p===m.p));s.subs.push({d,c:m.c,p:m.p,t,s:ns||x[0]});
-  s.notes.unshift({ts:Date.now(),c:m.c,tt:[x[1],t],text:`${s.classes[m.c]||(m.c+1)+'-sinf'}, ${m.p+1}-soat (${fmt(d)}): ${x[1]} o‘rniga ${t}${ns?' · '+ns:''}`});
+  s.notes.unshift({ts:Date.now(),c:m.c,tt:[x[1],t],text:`${s.classes[m.c]||(m.c+1)+'-sinf'}, ${m.p+1}-soat (${fmt(d)}): ${x[1]} o'rniga ${t}${ns?' · '+ns:''}`});
   save();
   try{await fetch('/api/admin/substitute-lesson',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.code}:${s.pass}`},body:JSON.stringify({class_id:m.c+1,period:m.p+1,date:d,teacher_name:t,subject_name:ns||x[0]})});}catch(e){}
   V.modal=null;R();toast('Almashtirildi va Telegram guruhlariga yuborildi')
 },
 exadd(){const s=sch(),f=$('#xs').value.trim(),d=$('#xd').value;if(!f||!d)return toast('Fan va sanani kiriting');s.ex.push({c:+$('#xc').value,s:f,k:$('#xk').value,d});save();R()},
 exdel(v){sch().ex.splice(+v,1);save();R()},
-holadd(){const s=sch(),n=$('#hn').value.trim(),a=$('#ha').value,b=$('#hb').value;if(!n||!a||!b||b<a)return toast('Nom va to‘g‘ri sanalarni kiriting');s.hol.push({n,a,b});save();R()},
+holadd(){const s=sch(),n=$('#hn').value.trim(),a=$('#ha').value,b=$('#hb').value;if(!n||!a||!b||b<a)return toast("Nom va to'g'ri sanalarni kiriting");s.hol.push({n,a,b});save();R()},
 holdel(v){sch().hol.splice(+v,1);save();R()},
 async offtoday(){
   const s=sch(),d=today();if(!s.off.includes(d))s.off.push(d);
   s.notes.unshift({ts:Date.now(),c:'all',text:'Bugun darslar bekor qilindi (sovuq kun).'});save();
   try{await fetch('/api/admin/vacation',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.code}:${s.pass}`},body:JSON.stringify({startDate:d,endDate:d,title:'Sovuq kun',isActive:true})});}catch(e){}
-  R();toast('Bugun ta’til qilindi (bot xabarlari to‘xtatildi)')
+  R();toast("Bugun ta'til qilindi (bot xabarlari to'xtatildi)")
 },
 async offtom(){
   const s=sch(),d=addDays(today(),1);if(!s.off.includes(d))s.off.push(d);
   s.notes.unshift({ts:Date.now(),c:'all',text:'Ertaga darslar bekor qilindi.'});save();
   try{await fetch('/api/admin/vacation',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.code}:${s.pass}`},body:JSON.stringify({startDate:d,endDate:d,title:'Sovuq kun',isActive:true})});}catch(e){}
-  R();toast('Ertaga ta’til qilindi')
+  R();toast("Ertaga ta'til qilindi")
 },
 offdel(v){const s=sch();s.off=s.off.filter(x=>x!==v);save();R()},
 async send(){
@@ -485,23 +493,23 @@ async send(){
   R();toast('Telegram orqali yuborildi')
 },
 bcast(){const s=sch(),d=today(),h=holiday(s,d);s.log.unshift({ts:Date.now(),text:wdOf(d)===0?'06:00 · Yakshanba: xabarnoma yuborilmadi (jim turish)':h?`06:00 · ${h}: xabarnoma yuborilmadi (jim turish)`:`06:00 · ${s.classes.length} ta sinfga bugungi jadval yuborildi`});save();R();toast('Jurnalga yozildi')},
-reset(){if(!confirm('Jadval namuna holatiga qaytadi. Davom etasizmi?'))return;const s=sch();s.g=genG(s.classes.length);s.subs=[];save();R();toast('Tiklandi (to‘qnashuvlar: '+allClash(s)+')')},
+reset(){if(!confirm("Jadval namuna holatiga qaytadi. Davom etasizmi?"))return;const s=sch();s.g=genG(s.classes.length);s.subs=[];save();R();toast("Tiklandi (to'qnashuvlar: "+allClash(s)+")")},
 autoresolve(){
   const s=sch();
   const n=resolveClashes(s);
   s.subs=[];
   save();R();
-  toast(n>0?`✓ ${n} ta to‘qnashuv avtomatik bartaraf etildi (to‘qnashuvlar: 0)`:'✓ To‘qnashuvlar mavjud emas');
+  toast(n>0?`✓ ${n} ta to'qnashuv avtomatik bartaraf etildi (to'qnashuvlar: 0)`:"✓ To'qnashuvlar mavjud emas");
 },
 clearsched(){
-  if(!confirm('Barcha darslar o‘chiriladi va bo‘sh jadval yaratiladi. Davom etasizmi?'))return;
+  if(!confirm("Barcha darslar o'chiriladi va bo'sh jadval yaratiladi. Davom etasizmi?"))return;
   const s=sch();
   for(let d=0;d<6;d++){
     s.g[d]=Array.from({length:s.classes.length},()=>Array(7).fill(null));
   }
   s.subs=[];
   save();R();
-  toast('Jadval tozalandi (bo‘sh jadval yaratildi)');
+  toast("Jadval tozalandi (bo'sh jadval yaratildi)");
 },
 dl_template(){
   downloadTemplate('xlsx');
@@ -511,6 +519,62 @@ dl_template_csv(){
   downloadTemplate('csv');
   toast('CSV shablon yuklab olindi (dars_jadvali_shablon.csv)');
 },
+async synctoserver(){
+  const s=sch();
+  const btn=$('#btn_sync_server');
+  if(btn)btn.textContent='⏳ Saqlanmoqda...';
+  toast('⏳ Telegram bot va serverga saqlanmoqda...');
+  try{
+    const res=await fetch('/api/admin/sync-full-timetable',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Authorization':`Bearer ${s.code}:${s.pass}`
+      },
+      body:JSON.stringify({
+        schoolCode:s.code,
+        classes:s.classes,
+        grid:s.g,
+        force:true
+      })
+    });
+    const data=await res.json();
+    if(data.success){
+      s.log.unshift({ts:Date.now(),text:`Sinxronlandi: ${data.insertedClasses} ta sinf, ${data.insertedLessons} ta dars Telegram botga yozildi`});
+      save();
+      toast(`✓ Telegram botga saqlandi! (${data.insertedClasses} sinf, ${data.insertedLessons} dars)`);
+      alert(`✅ Muvaffaqiyatli saqlandi!\n\nSaytdagi dars jadvali asosiy serverga yuborildi va Telegram bot bilan to'liq sinxronlashtirildi.\n\n• Sinflar: ${data.insertedClasses} ta\n• Jami darslar: ${data.insertedLessons} ta\n• To'qnashuvlar: ${data.conflictsCount||0} ta`);
+    }else{
+      toast(`Xatolik: ${data.error||'Serverga saqlab bo\'lmadi'}`);
+      alert(`❌ Xatolik: ${data.error}`);
+    }
+  }catch(err){
+    toast(`Serverga ulanishda xatolik: ${err.message}`);
+  }finally{
+    R();
+  }
+},
+async pullfromserver(){
+  const s=sch();
+  toast('⏳ Serverdan yuklanmoqda...');
+  try{
+    const res=await fetch(`/api/admin/full-timetable?schoolCode=${encodeURIComponent(s.code)}`,{
+      headers:{'Authorization':`Bearer ${s.code}:${s.pass}`}
+    });
+    const data=await res.json();
+    if(data.success&&Array.isArray(data.classes)&&data.classes.length>0){
+      s.classes=data.classes;
+      s.g=data.grid;
+      save();
+      R();
+      toast(`✓ Serverdan ${data.classes.length} ta sinf va ${data.lessonsCount} ta dars yuklab olindi!`);
+    }else{
+      toast(data.error||'Serverda hali dars jadvali mavjud emas');
+    }
+  }catch(err){
+    toast(`Yuklashda xatolik: ${err.message}`);
+  }
+},
 cclsedit(v){V.clsEdit=+v;R()},
 cclsadd(){V.clsAddModal=true;R()},
 closeclsmodal(){V.clsEdit=null;V.clsAddModal=false;R()},
@@ -519,7 +583,7 @@ saveclsname(){
   const val=el.value.trim();if(!val)return toast('Sinf nomini kiriting');
   const s=sch();
   s.classes[V.clsEdit]=val;
-  save();V.clsEdit=null;R();toast(`Sinf nomi "${val}" ga o‘zgartirildi`);
+  save();V.clsEdit=null;R();toast(`Sinf nomi "${val}" ga o'zgartirildi`);
   try{fetch('/api/admin/classes',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.code}:${s.pass}`},body:JSON.stringify({name:val})}).catch(()=>{});}catch(e){}
 },
 saveaddcls(){
@@ -529,7 +593,7 @@ saveaddcls(){
   if(s.classes.some(x=>x.toLowerCase()===val.toLowerCase()))return toast('Bu nomdagi sinf mavjud');
   s.classes.push(val);
   for(let d=0;d<6;d++){if(!s.g[d])s.g[d]=[];s.g[d].push(Array(7).fill(null))}
-  save();V.clsAddModal=false;R();toast(`"${val}" sinfi muvaffaqiyatli qo‘shildi`);
+  save();V.clsAddModal=false;R();toast(`"${val}" sinfi muvaffaqiyatli qo'shildi`);
   try{fetch('/api/admin/classes',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.code}:${s.pass}`},body:JSON.stringify({name:val})}).catch(()=>{});}catch(e){}
 },
 addclassbtn(){
@@ -539,27 +603,27 @@ addclassbtn(){
   if(s.classes.some(x=>x.toLowerCase()===val.toLowerCase()))return toast('Bu nomdagi sinf mavjud');
   s.classes.push(val);
   for(let d=0;d<6;d++){if(!s.g[d])s.g[d]=[];s.g[d].push(Array(7).fill(null))}
-  save();el.value='';R();toast(`"${val}" sinfi qo‘shildi`);
+  save();el.value='';R();toast(`"${val}" sinfi qo'shildi`);
   try{fetch('/api/admin/classes',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.code}:${s.pass}`},body:JSON.stringify({name:val})}).catch(()=>{});}catch(e){}
 },
 cclsdel(v){
   const i=+v,s=sch(),name=s.classes[i];
-  if(!confirm(`"${name}" sinfini o‘chirishni xohlaysizmi? Undagi barcha darslar ham o‘chiriladi.`))return;
+  if(!confirm(`"${name}" sinfini o'chirishni xohlaysizmi? Undagi barcha darslar ham o'chiriladi.`))return;
   s.classes.splice(i,1);
   for(let d=0;d<6;d++){if(s.g[d])s.g[d].splice(i,1)}
   s.ex=s.ex.filter(x=>x.c!==i).map(x=>({...x,c:x.c>i?x.c-1:x.c}));
-  save();R();toast(`"${name}" sinfi o‘chirildi`);
+  save();R();toast(`"${name}" sinfi o'chirildi`);
 },
 presetparallel40(){
   const s=sch();
-  if(!confirm('Barcha sinflarni 1-A dan 11-G gacha to‘liq parallel (40 ta sinf, 11-D bilan) formatga o‘tkazasizmi?'))return;
+  if(!confirm("Barcha sinflarni 1-A dan 11-G gacha to'liq parallel (40 ta sinf, 11-D bilan) formatga o'tkazasizmi?"))return;
   s.classes=ALL_PARALLEL_CLS.slice();
   for(let d=0;d<6;d++){s.g[d]=Array.from({length:ALL_PARALLEL_CLS.length},()=>Array(7).fill(null))}
-  save();R();toast('40 ta to‘liq parallel sinf yaratildi (11-D bilan)');
+  save();R();toast("40 ta to'liq parallel sinf yaratildi (11-D bilan)");
 },
 presetparallel(){
   const s=sch();
-  if(!confirm('Barcha sinflarni 1-A dan 11-B gacha parallel (22 ta sinf) formatga o‘tkazasizmi?'))return;
+  if(!confirm("Barcha sinflarni 1-A dan 11-B gacha parallel (22 ta sinf) formatga o'tkazasizmi?"))return;
   const pars=['1-A','1-B','2-A','2-B','3-A','3-B','4-A','4-B','5-A','5-B','6-A','6-B','7-A','7-B','8-A','8-B','9-A','9-B','10-A','10-B','11-A','11-B'];
   s.classes=pars;
   for(let d=0;d<6;d++){s.g[d]=Array.from({length:pars.length},()=>Array(7).fill(null))}
@@ -567,18 +631,18 @@ presetparallel(){
 },
 presetstd(){
   const s=sch();
-  if(!confirm('Sinflarni standart 1-11 formatiga o‘tkazasizmi?'))return;
+  if(!confirm("Sinflarni standart 1-11 formatiga o'tkazasizmi?"))return;
   s.classes=Array.from({length:11},(_,i)=>(i+1)+'-sinf');
   for(let d=0;d<6;d++){
     while(s.g[d].length<11)s.g[d].push(Array(7).fill(null));
     if(s.g[d].length>11)s.g[d]=s.g[d].slice(0,11);
   }
-  save();R();toast('Standart 1-11 sinflar o‘rnatildi');
+  save();R();toast("Standart 1-11 sinflar o'rnatildi");
 }
 };
 
 const C={
-file(v,el){const f=el.files[0];if(!f)return;if(typeof XLSX==='undefined')return toast('Excel kutubxonasi yuklanmadi');const r=new FileReader();r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});importRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1}))}catch(x){toast('Faylni o‘qib bo‘lmadi')}};r.readAsArrayBuffer(f)}};
+file(v,el){const f=el.files[0];if(!f)return;if(typeof XLSX==='undefined')return toast('Excel kutubxonasi yuklanmadi');const r=new FileReader();r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});importRows(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1}))}catch(x){toast("Faylni o'qib bo'lmadi")}};r.readAsArrayBuffer(f)}};
 
 function importRows(rows){
   const s=sch();let n=0;
@@ -625,15 +689,23 @@ function importRows(rows){
 
   if(missingClasses.length>0){
     const missingStr=missingClasses.join(', ');
-    s.log.unshift({ts:Date.now(),text:`Excel yuklandi: ${missingClasses.length} ta sinf yangi faylda yo‘q (${missingClasses.slice(0,3).join(', ')}${missingClasses.length>3?'...':''})`});
-    s.notes.unshift({ts:Date.now(),c:'all',text:`⚠️ Yangi yuklangan faylda ${missingClasses.length} ta sinf yo‘q: ${missingStr}`});
+    s.log.unshift({ts:Date.now(),text:`Excel yuklandi: ${missingClasses.length} ta sinf yangi faylda yo'q (${missingClasses.slice(0,3).join(', ')}${missingClasses.length>3?'...':''})`});
+    s.notes.unshift({ts:Date.now(),c:'all',text:`⚠️ Yangi yuklangan faylda ${missingClasses.length} ta sinf yo'q: ${missingStr}`});
     save();
     toast(`⚠️ ${n} ta dars yuklandi. ${missingClasses.length} ta sinf yangi faylda topilmadi!`);
     setTimeout(()=>{
       alert(`⚠️ Eslatma: Bazadagi quyidagi ${missingClasses.length} ta sinf yangi yuklangan faylda topilmadi:\n\n${missingStr}\n\nUshbu sinflarning avvalgi dars ma'lumotlari xavfsiz saqlanib qoldi.`);
+      if(confirm("Yangi dars jadvalini Telegram bot va server bilan hoziroq sinxronlashtirib saqlaysizmi?")){
+        A.synctoserver();
+      }
     }, 250);
   } else {
-    toast(`✓ ${n} ta dars yuklandi, barcha sinflar mavjud. To‘qnashuvlar: ${clashesCount}`);
+    toast(`✓ ${n} ta dars yuklandi, barcha sinflar mavjud. To'qnashuvlar: ${clashesCount}`);
+    setTimeout(()=>{
+      if(confirm("Yangi dars jadvali saytga yuklandi!\n\nUni hoziroq Telegram bot va asosiy server bilan sinxronlashtirib saqlaysizmi?")){
+        A.synctoserver();
+      }
+    }, 350);
   }
 }
 

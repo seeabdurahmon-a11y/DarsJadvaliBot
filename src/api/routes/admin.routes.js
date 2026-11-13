@@ -361,6 +361,168 @@ adminRouter.post('/import-timetable', (req, res) => {
 });
 
 /**
+ * POST /api/admin/sync-full-timetable
+ * Saytdagi barcha sinflar va 6 kunlik dars jadvalini asosiy serverga yozish va Telegram bot bilan sinxronlash
+ */
+adminRouter.post('/sync-full-timetable', (req, res) => {
+  try {
+    const schoolId = getEffectiveSchoolId(req);
+    const { classes, grid } = req.body;
+
+    if (!Array.isArray(classes) || classes.length === 0) {
+      return res.status(400).json({ success: false, error: 'Sinflar ro‘yxati bo‘sh bo‘lishi mumkin emas' });
+    }
+
+    const PERIOD_TIMES = [
+      { start: '08:00', end: '08:45' },
+      { start: '08:50', end: '09:35' },
+      { start: '09:40', end: '10:25' },
+      { start: '10:40', end: '11:25' },
+      { start: '11:30', end: '12:15' },
+      { start: '12:20', end: '13:05' },
+      { start: '13:10', end: '13:55' }
+    ];
+
+    // 1. Ensure all groups exist in DB
+    const groupMap = new Map();
+    for (const rawName of classes) {
+      if (!rawName || !String(rawName).trim()) continue;
+      const cleanName = String(rawName).trim();
+      let grp = groupsRepo.getGroupByName(cleanName, schoolId);
+      if (!grp) {
+        grp = groupsRepo.addGroup({
+          school_id: schoolId,
+          name: cleanName,
+          send_time: '06:00'
+        });
+      }
+      groupMap.set(cleanName, grp);
+    }
+
+    // 2. Delete existing lessons for this school to avoid duplicates
+    lessonsRepo.deleteLessonsBySchoolId(schoolId);
+
+    // 3. Insert all lessons from grid
+    let insertedLessons = 0;
+    if (Array.isArray(grid)) {
+      for (let dayIdx = 0; dayIdx < Math.min(6, grid.length); dayIdx++) {
+        const dayOfWeek = dayIdx + 1; // 1 to 6
+        const dayRows = grid[dayIdx];
+        if (!Array.isArray(dayRows)) continue;
+
+        for (let classIdx = 0; classIdx < Math.min(classes.length, dayRows.length); classIdx++) {
+          const className = classes[classIdx];
+          const grp = groupMap.get(className);
+          if (!grp) continue;
+
+          const periods = dayRows[classIdx];
+          if (!Array.isArray(periods)) continue;
+
+          for (let periodIdx = 0; periodIdx < Math.min(7, periods.length); periodIdx++) {
+            const cell = periods[periodIdx];
+            if (!cell || !Array.isArray(cell) || !cell[0]) continue;
+
+            const subject = String(cell[0]).trim();
+            const teacher = cell[1] ? String(cell[1]).trim() : null;
+            const room = cell[2] ? String(cell[2]).trim() : null;
+            const timeObj = PERIOD_TIMES[periodIdx] || { start: `0${8 + periodIdx}:00`, end: `0${8 + periodIdx}:45` };
+
+            if (!subject) continue;
+
+            lessonsRepo.addLesson({
+              school_id: schoolId,
+              group_id: grp.id,
+              day_of_week: dayOfWeek,
+              start_time: timeObj.start,
+              end_time: timeObj.end,
+              subject,
+              teacher,
+              room
+            });
+            insertedLessons++;
+          }
+        }
+      }
+    }
+
+    const conflicts = lessonsRepo.detectTeacherConflicts(schoolId);
+
+    res.json({
+      success: true,
+      message: `Telegram bot va server bilan muvaffaqiyatli sinxronlandi! ${groupMap.size} ta sinf, ${insertedLessons} ta dars saqlandi.`,
+      insertedClasses: groupMap.size,
+      insertedLessons,
+      conflictsCount: conflicts.length,
+      conflicts
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/admin/full-timetable
+ * Serverdagi barcha sinflar va darslarni sayt formati (matrix grid) ko‘rinishida qaytarish
+ */
+adminRouter.get('/full-timetable', (req, res) => {
+  try {
+    const schoolId = getEffectiveSchoolId(req);
+    const groups = groupsRepo.getAllGroups(true, schoolId);
+    const allLessons = lessonsRepo.getWeeklyLessons(null, schoolId);
+
+    const classes = groups.map(g => g.name);
+    const grid = Array.from({ length: 6 }, () =>
+      Array.from({ length: classes.length }, () => Array(7).fill(null))
+    );
+
+    const timeToPeriod = (startTime) => {
+      if (!startTime) return 0;
+      const parts = startTime.split(':');
+      const totalMin = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+      if (totalMin < 520) return 0;
+      if (totalMin < 570) return 1;
+      if (totalMin < 620) return 2;
+      if (totalMin < 680) return 3;
+      if (totalMin < 730) return 4;
+      if (totalMin < 780) return 5;
+      return 6;
+    };
+
+    const groupIndexMap = new Map();
+    groups.forEach((g, idx) => groupIndexMap.set(g.id, idx));
+
+    let lessonsCount = 0;
+    for (const l of allLessons) {
+      const classIdx = groupIndexMap.get(l.group_id);
+      if (classIdx === undefined) continue;
+
+      const dayIdx = Number(l.day_of_week) - 1;
+      if (dayIdx < 0 || dayIdx > 5) continue;
+
+      const pIdx = timeToPeriod(l.start_time);
+      if (pIdx < 0 || pIdx > 6) continue;
+
+      grid[dayIdx][classIdx][pIdx] = [
+        l.subject,
+        l.teacher || '',
+        l.room || ''
+      ];
+      lessonsCount++;
+    }
+
+    res.json({
+      success: true,
+      schoolId,
+      classes,
+      grid,
+      lessonsCount
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
  * GET /api/admin/conflicts
  * Returns all active teacher clashes/conflicts in the school
  */
